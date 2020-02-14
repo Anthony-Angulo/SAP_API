@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
@@ -141,6 +138,7 @@ namespace SAP_API.Controllers
                     ""WhsCode"",
                     ""UomCode"",
                     ""FromWhsCod"",
+                    ""OpenInvQty"",
                     ""OpenQty""
                 From WTQ1 WHERE ""DocEntry"" = " + request["OWTQ"]["DocEntry"]);
 
@@ -222,24 +220,102 @@ namespace SAP_API.Controllers
 
             JToken transfer = JToken.Parse("{}");
             transfer["OWTQ"] = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"][0];
-            int docentry = transfer["OWTQ"]["DocEntry"].ToObject<int>(); ;
+            int docentry = transfer["OWTQ"]["DocEntry"].ToObject<int>();
             int docnum = transfer["OWTQ"]["DocNum"].ToObject<int>();
 
-            oRecSet.DoQuery(@"SELECT ""DocEntry"", ""LineNum"", ""LineStatus"", ""ItemCode"", ""Dscription"", ""Quantity"", ""OpenQty"", ""WhsCode"", ""UomCode"" FROM WTQ1 WHERE ""DocEntry"" = " + docentry);
+            //oRecSet.DoQuery(@"
+            //    SELECT
+            //        *
+            //    From  IBT1 Where ""WhsCode"" = 'S01' AND ""ItemCode"" = 'A0305243'");
+
+            //transfer["IBT1"] = context.XMLTOJSON(oRecSet.GetAsXML())["IBT1"];
+
+            // Inventory Transfer Request Rows
+            //oRecSet.DoQuery(@"
+            //    SELECT
+            //        ""DocEntry"",
+            //        ""LineNum"",
+            //        ""LineStatus"",
+            //        ""ItemCode"",
+            //        ""Dscription"",
+            //        ""Quantity"",
+            //        ""OpenQty"",
+            //        ""WhsCode"",
+            //        ""UomCode""
+            //    FROM WTQ1 WHERE ""DocEntry"" = " + docentry);
+            oRecSet.DoQuery(@"
+                SELECT
+                    ""LineNum"",
+                    ""LineStatus"",
+                    ""ItemCode"",
+                    ""Dscription"",
+                    ""Quantity"",
+                    ""UomCode""
+                FROM WTQ1 WHERE ""DocEntry"" = " + docentry);
             transfer["WTQ1"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTQ1"];
 
-            oRecSet.DoQuery(@"SELECT * FROM OWTR WHERE ""DocEntry"" in (SELECT ""DocEntry"" FROM WTR1 WHERE ""BaseEntry"" = " + docentry + ")");
+            // Inventory Transfer
+            oRecSet.DoQuery(@"
+                SELECT
+                    ""DocEntry"",
+                    ""DocNum"",
+                    ""DocDate"",
+                    ""DocDueDate"",
+                    ""ToWhsCode"",
+                    ""Filler""
+                FROM OWTR 
+                WHERE ""DocEntry"" in (SELECT ""DocEntry"" FROM WTR1 WHERE ""BaseEntry"" = " + docentry + ")");
+
             if (oRecSet.RecordCount != 0)
             {
                 transfer["Transfers"] = context.XMLTOJSON(oRecSet.GetAsXML())["OWTR"];
-                oRecSet.DoQuery(@"SELECT * FROM WTR1 WHERE ""BaseEntry"" = " + docentry);
+
+                oRecSet.DoQuery(@"
+                    SELECT
+                        ""DocEntry"",
+                        ""ItemCode"",
+                        ""Dscription"",
+                        ""Quantity"",
+                        ""UomCode""
+                    FROM WTR1
+                    WHERE ""BaseEntry"" = " + docentry);
                 transfer["TransfersDetail"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTR1"];
-                
-                oRecSet.DoQuery(@"SELECT * From OWTQ WHERE ""U_SO1_02NUMRECEPCION"" = " + docnum);
+
+                string docEntrys = "";
+                foreach (JToken transfers in transfer["Transfers"])
+                {
+                    docEntrys += transfers["DocEntry"] + ",";
+                }
+                docEntrys = docEntrys.Substring(0, docEntrys.Length-1);
+                oRecSet.DoQuery(@"
+                    SELECT
+                        ""ItemCode"",
+                        ""BatchNum"",
+                        ""LineNum"",
+                        ""BaseEntry"",
+                        ""Quantity""
+                    From IBT1 WHERE ""BaseEntry"" in (" + docEntrys + @") AND ""WhsCode"" = '" + transfer["OWTQ"]["Filler"].ToString() + "'");
+                transfer["Codes"] = context.XMLTOJSON(oRecSet.GetAsXML())["IBT1"];
+
+                //foreach (JToken transferDetail in transfer["TransfersDetail"])
+                //{
+                //    oRecSet.DoQuery(@"SELECT * From IBT1 WHERE ""ItemCode"" = '" + transferDetail["ItemCode"] + @"' AND ""BaseEntry"" = " + transferDetail["DocEntry"] + @" AND ""WhsCode"" = '" + transferDetail["FromWhsCod"] + "'");
+                //    transferDetail["Codes"] = context.XMLTOJSON(oRecSet.GetAsXML())["IBT1"];
+                //}
+
+                oRecSet.DoQuery(@"SELECT ""DocNum"", ""DocEntry"", ""DocDate"" From OWTQ WHERE ""U_SO1_02NUMRECEPCION"" = " + docnum);
+
                 if (oRecSet.RecordCount != 0)
                 {
                     transfer["Requests"] = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"];
-                    oRecSet.DoQuery(@"SELECT * FROM WTQ1 WHERE ""DocEntry"" in (SELECT ""DocEntry"" From OWTQ WHERE ""U_SO1_02NUMRECEPCION"" = " + docnum + ")");
+
+                    oRecSet.DoQuery(@"
+                        SELECT
+                            ""DocEntry"",
+                            ""ItemCode"",
+                            ""Quantity"",
+                            ""UomCode""
+                        FROM WTQ1 WHERE ""DocEntry"" in (SELECT ""DocEntry"" From OWTQ WHERE ""U_SO1_02NUMRECEPCION"" = " + docnum + ")");
                     transfer["RequestsDetail"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTQ1"];
                 }
             }
@@ -383,10 +459,5 @@ namespace SAP_API.Controllers
     
         }
 
-        //// DELETE: api/ApiWithActions/5
-        //[HttpDelete("{id}")]
-        //public void Delete(int id)
-        //{
-        //}
     }
 }

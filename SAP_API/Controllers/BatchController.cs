@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
@@ -44,13 +41,6 @@ namespace SAP_API.Controllers
         //    return Ok(batchListDDD);
         //}
 
-        //// GET: api/Batch/5
-        //[HttpGet("{id}")]
-        //public string Get(int id)
-        //{
-        //    return "value";
-        //}
-
         // GET: api/Batch/(Sucursal:S01)/(Codigo:A0305869)
         [HttpGet("{sucursal}/{cod}")]
         public async Task<IActionResult> Get(string sucursal, string cod)
@@ -75,7 +65,7 @@ namespace SAP_API.Controllers
                 Where ""ItemCode"" = '" + cod + "'");
             oRecSet.MoveFirst();
             string ManBtnNum = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["ManBtchNum"].ToString();
-            //return Ok(context.XMLTOJSON(oRecSet.GetAsXML()));
+
             if (ManBtnNum == "N")
             {
                 oRecSet.DoQuery(@"
@@ -87,7 +77,6 @@ namespace SAP_API.Controllers
                 double stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"][0]["OnHand"].ToObject<double>();
                 return Ok(new { value = "No Maneja Lote" , stock });
             }
-
 
             oRecSet.DoQuery(@"
                 Select
@@ -103,22 +92,5 @@ namespace SAP_API.Controllers
             return Ok(batchList);
         }
 
-        //// POST: api/Batch
-        //[HttpPost]
-        //public void Post([FromBody] string value)
-        //{
-        //}
-
-        //// PUT: api/Batch/5
-        //[HttpPut("{id}")]
-        //public void Put(int id, [FromBody] string value)
-        //{
-        //}
-
-        //// DELETE: api/ApiWithActions/5
-        //[HttpDelete("{id}")]
-        //public void Delete(int id)
-        //{
-        //}
     }
 }

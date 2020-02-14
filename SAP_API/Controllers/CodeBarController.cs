@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,12 +11,6 @@ namespace SAP_API.Controllers
     [ApiController]
     public class CodeBarController : ControllerBase
     {
-        //// GET: api/CodeBar
-        //[HttpGet]
-        //public IEnumerable<string> Get()
-        //{
-        //    return new string[] { "value1", "value2" };
-        //}
 
         // GET: api/CodeBar/5
         [HttpGet("{id}")]
@@ -39,13 +31,13 @@ namespace SAP_API.Controllers
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
             oRecSet.DoQuery(@"
-                    Select
-                        ""BcdEntry"",
-                        ""BcdCode"",
-                        ""BcdName"",
-                        ""ItemCode"",
-                        ""UomEntry""
-                    From OBCD Where ""BcdCode"" = '" + id + "'");
+                Select
+                    ""BcdEntry"",
+                    ""BcdCode"",
+                    ""BcdName"",
+                    ""ItemCode"",
+                    ""UomEntry""
+                From OBCD Where ""BcdCode"" = '" + id + "'");
             oRecSet.MoveFirst();
             if (oRecSet.RecordCount == 0)
             {
@@ -99,34 +91,21 @@ namespace SAP_API.Controllers
                 }
             }
             SAPbobsCOM.CompanyService services = context.oCompany.GetCompanyService();
-
             SAPbobsCOM.BarCodesService barCodesService = (SAPbobsCOM.BarCodesService)services.GetBusinessService(SAPbobsCOM.ServiceTypes.BarCodesService);
             SAPbobsCOM.BarCode barCode = (SAPbobsCOM.BarCode)barCodesService.GetDataInterface(SAPbobsCOM.BarCodesServiceDataInterfaces.bsBarCode);
+
             barCode.ItemNo = value.ItemCode;
             barCode.BarCode = value.Barcode;
             barCode.UoMEntry = value.UOMEntry;
-            try
-            {
+            
+            try {
                 SAPbobsCOM.BarCodeParams result = barCodesService.Add(barCode);
                 return Ok(result.AbsEntry);
-            } catch (Exception x)
-            {
+            } catch (Exception x) {
                 return BadRequest(x.Message);
             }
             
-            
         }
 
-        //// PUT: api/CodeBar/5
-        //[HttpPut("{id}")]
-        //public void Put(int id, [FromBody] string value)
-        //{
-        //}
-
-        //// DELETE: api/ApiWithActions/5
-        //[HttpDelete("{id}")]
-        //public void Delete(int id)
-        //{
-        //}
     }
 }

@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using System.Xml;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
 
@@ -267,6 +264,7 @@ namespace SAP_API.Controllers
                     ""UomEntry"",
                     ""WhsCode"",
                     ""UomCode"",
+                    ""OpenInvQty"",
                     ""OpenQty""
                 From POR1 WHERE ""DocEntry"" = " + POrder["OPOR"]["DocEntry"]);
 

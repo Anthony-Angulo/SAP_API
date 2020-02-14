@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using System.Xml;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
 
@@ -15,41 +11,19 @@ namespace SAP_API.Controllers
     [ApiController]
     public class ContactController : ControllerBase
     {
-
-        //// GET: api/Contact
-        //[HttpGet]
-        //public async Task<IActionResult> Get()
-        //{
-        //    SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-        //    if (!context.oCompany.Connected)
-        //    {
-        //        int code = context.oCompany.Connect();
-        //        if (code != 0)
-        //        {
-        //            string error = context.oCompany.GetLastErrorDescription();
-        //            return BadRequest(new { error });
-        //        }
-        //    }
-
-        //    SAPbobsCOM.BusinessPartners items = context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
-        //    SAPbobsCOM.Recordset oRecSet = context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
-        //    List<Object> list = new List<Object>();
-
-        //    oRecSet.DoQuery("Select TOP 1 * From OCRD");
+        //SAPbobsCOM.BusinessPartners items = context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
+        //SAPbobsCOM.Recordset oRecSet = context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+        //List<Object> list = new List<Object>();
+        //oRecSet.DoQuery("Select TOP 1 * From OCRD");
         //    items.Browser.Recordset = oRecSet;
         //    items.Browser.MoveFirst();
-
         //    while (items.Browser.EoF == false)
         //    {
         //        JToken temp = context.XMLTOJSON(items.GetAsXML());
         //        list.Add(temp);
         //        items.Browser.MoveNext();
         //    }
-
         //    return Ok(list);
-        //}
 
         // GET: api/Contact/CRM/5
         [HttpGet("CRM/{id}")]
@@ -147,9 +121,9 @@ namespace SAP_API.Controllers
             return Ok(contacts);
         }
 
-        // GET: api/Contact/APPCRM
-        [HttpGet("APPCRM")]
-        public async Task<IActionResult> GetAPPCRM()
+        // GET: api/Contact/APPCRM/200
+        [HttpGet("APPCRM/{id}")]
+        public async Task<IActionResult> GetAPPCRM(int id)
         {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
@@ -173,7 +147,45 @@ namespace SAP_API.Controllers
                     ""ZipCode"",
                     ""Country"",
                     ""Block"",
-                    ""GroupNum""
+                    ""GroupNum"",
+                    ""ListNum""
+                From OCRD Where ""CardType"" = 'C' AND ""SlpCode"" = " + id + @" AND ""CardCode"" LIKE '%-P'");
+            oRecSet.MoveFirst();
+            JToken contacts = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            //return Ok(await context.comp(contacts, 3));
+            return Ok(contacts);
+        }
+
+        // GET: api/Contact/APPCRM
+        [HttpGet("APPCRM")]
+        public async Task<IActionResult> GetAPPCRMs()
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+
+            if (!context.oCompany.Connected)
+            {
+                int code = context.oCompany.Connect();
+                if (code != 0)
+                {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                Select
+                    ""CardCode"",
+                    ""CardName"",
+                    ""CardFName"",
+                    ""Address"",
+                    ""ZipCode"",
+                    ""Country"",
+                    ""Block"",
+                    ""GroupNum"",
+                    ""ListNum""
                 From OCRD Where ""CardType"" = 'C' AND ""CardCode"" LIKE '%-P'");
             oRecSet.MoveFirst();
             JToken contacts = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"];
@@ -183,22 +195,5 @@ namespace SAP_API.Controllers
             return Ok(contacts);
         }
 
-        //// POST: api/Contact
-        //[HttpPost]
-        //public void Post([FromBody] string value)
-        //{
-        //}
-
-        //// PUT: api/Contact/5
-        //[HttpPut("{id}")]
-        //public void Put(int id, [FromBody] string value)
-        //{
-        //}
-
-        //// DELETE: api/ApiWithActions/5
-        //[HttpDelete("{id}")]
-        //public void Delete(int id)
-        //{
-        //}
     }
 }

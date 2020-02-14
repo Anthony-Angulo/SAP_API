@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -91,12 +90,6 @@ namespace SAP_API.Controllers
 
             return Ok(list);
         }
-        // // GET: api/Delivery/5
-        // [HttpGet("{id}")]
-        // public string Get(int id)
-        // {
-        //     return "value";
-        // }
 
         // POST: api/Delivery
         [HttpPost]
@@ -236,16 +229,5 @@ namespace SAP_API.Controllers
 
         }
 
-        //// PUT: api/Delivery/5
-        //[HttpPut("{id}")]
-        //public void Put(int id, [FromBody] string value)
-        //{
-        //}
-
-        //// DELETE: api/ApiWithActions/5
-        //[HttpDelete("{id}")]
-        //public void Delete(int id)
-        //{
-        //}
     }
 }

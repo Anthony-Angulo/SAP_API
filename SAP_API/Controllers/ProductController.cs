@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
-using System.Xml;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
 
@@ -16,46 +12,6 @@ namespace SAP_API.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        //// GET: api/Products
-        //[HttpGet]
-        //public async Task<IActionResult> Get()
-        //{
-        //    SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-        //    if (!context.oCompany.Connected)
-        //    {
-        //        int code = context.oCompany.Connect();
-        //        if (code != 0)
-        //        {
-        //            //return [context.oCompany.GetLastErrorDescription()];
-        //        }
-        //    }
-
-        //    SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
-        //    List<Object> list = new List<Object>();
-
-        //    oRecSet.DoQuery("Select TOP 1 * From OITM where \"ItemCode\" = 'LMCA0305450'");
-        //    oRecSet.MoveFirst();
-        //    oRecSet.GetAsXML();
-        //    //items.Browser.Recordset = oRecSet;
-        //    //items.Browser.MoveFirst();
-
-        //    //while (items.Browser.EoF == false)
-        //    //{
-        //    //    XmlDocument doc = new XmlDocument();
-        //    //    doc.LoadXml(items.GetAsXML());
-        //    //    var temp = JObject.Parse(JsonConvert.SerializeXmlNode(doc))["BOM"]["BO"];//["OHEM"]["row"];
-        //    //    list.Add(temp);
-        //    //    items.Browser.MoveNext();
-        //    //}
-        //    //items = null;
-        //    //oRecSet = null;
-        //    //GC.Collect();
-        //    //GC.WaitForPendingFinalizers();
-        //    return Ok(oRecSet.GetAsXML());
-
-        //}
 
         // GET: api/Products/CRMList
         [HttpGet("CRMList")]
@@ -135,7 +91,8 @@ namespace SAP_API.Controllers
                     ""WhsCode"",
                     ""OnHand""
                 From OITW
-                Where ""Freezed"" = 'N'
+                Where ""OnHand"" != 0
+                    AND ""Freezed"" = 'N'
                     AND ""Locked"" = 'N'
                     AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55')
                     AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
@@ -253,7 +210,11 @@ namespace SAP_API.Controllers
             }
 
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery("Select \"ItemName\", \"ItemCode\", \"U_IL_PesProm\" From OITM Where \"SellItem\" = 'Y' AND \"QryGroup3\" = 'Y' AND \"Canceled\" = 'N'  AND \"validFor\" = 'Y'");
+            oRecSet.DoQuery(@"Select 
+                ""ItemName"",
+                ""ItemCode"",
+                RTRIM(RTRIM(""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm""
+                From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y'");
             oRecSet.MoveFirst();
             JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
             oRecSet.DoQuery(@"
@@ -261,7 +222,7 @@ namespace SAP_API.Controllers
                     ""PriceList"",
                     ""ItemCode"",
                     ""Currency"",
-                    ""Price"",
+                    RTRIM(RTRIM(""Price"", '0'), '.') AS ""Price"",
                     ""UomEntry""
                 From ITM1
                 Where ""PriceList"" = '2'
@@ -272,7 +233,7 @@ namespace SAP_API.Controllers
                 Select 
                     ""ItemCode"",
                     ""WhsCode"",
-                    ""OnHand""
+                    RTRIM(RTRIM(""OnHand"", '0'), '.') AS ""OnHand""
                 From OITW
                 Where ""Freezed"" = 'N'
                     AND ""Locked"" = 'N'
@@ -287,7 +248,7 @@ namespace SAP_API.Controllers
                     baseUOM.""UomCode"" as baseUOM,
                     detail.""UomEntry"",
                     UOM.""UomCode"",
-                    detail.""BaseQty""
+                    RTRIM(RTRIM(detail.""BaseQty"", '0'), '.') AS ""BaseQty""
                 From OUGP header
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
@@ -309,6 +270,79 @@ namespace SAP_API.Controllers
             //oRecSet.MoveFirst();
             //JToken priceUOM = context.XMLTOJSON(oRecSet.GetAsXML())["ITM9"];
             var returnValue = new { products, priceList, stock, uom /*, priceUOM */};
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(returnValue);
+        }
+
+        // CON NUEVA VERSION APP NO PUBLICADA
+        // GET: api/Products/APPCRM/200
+        [HttpGet("APPCRM/{id}")]
+        public async Task<IActionResult> GetCRMSContact(int id)
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+
+            if (!context.oCompany.Connected)
+            {
+                int code = context.oCompany.Connect();
+                if (code != 0)
+                {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"Select 
+                ""ItemName"",
+                ""ItemCode"",
+                RTRIM(RTRIM(""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm""
+                From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y'");
+            oRecSet.MoveFirst();
+            JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
+            oRecSet.DoQuery(@"
+                Select 
+                    ""PriceList"",
+                    ""ItemCode"",
+                    ""Currency"",
+                    RTRIM(RTRIM(""Price"", '0'), '.') AS ""Price"",
+                    ""UomEntry""
+                From ITM1
+                Where ""Currency"" is not NULL
+                AND ""Price"" != 0
+                AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')
+                AND ""PriceList"" in (SELECT Distinct ""ListNum"" From OCRD Where ""CardType"" = 'C' AND ""SlpCode"" = " + id + @" AND ""CardCode"" LIKE '%-P');");
+            oRecSet.MoveFirst();
+            JToken priceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"];
+            oRecSet.DoQuery(@"
+                Select 
+                    ""ItemCode"",
+                    ""WhsCode"",
+                    RTRIM(RTRIM(""OnHand"", '0'), '.') AS ""OnHand""
+                From OITW
+                Where ""OnHand"" != 0 
+                AND ""Freezed"" = 'N'
+                AND ""Locked"" = 'N'
+                AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55')
+                AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
+            oRecSet.MoveFirst();
+            JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
+            oRecSet.DoQuery(@"
+                Select 
+                    header.""UgpCode"",
+                    header.""BaseUom"",
+                    baseUOM.""UomCode"" as baseUOM,
+                    detail.""UomEntry"",
+                    UOM.""UomCode"",
+                    RTRIM(RTRIM(detail.""BaseQty"", '0'), '.') AS ""BaseQty""
+                From OUGP header
+                JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                Where header.""UgpCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
+            oRecSet.MoveFirst();
+            JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            var returnValue = new { products, priceList, stock, uom };
             GC.Collect();
             GC.WaitForPendingFinalizers();
             return Ok(returnValue);
@@ -514,40 +548,150 @@ namespace SAP_API.Controllers
 
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             oRecSet.DoQuery(@"
-                Select
-                    product.""ItemCode"",
+                SELECT
+                    T0.""ItemCode"",
+                    T1.""ItemName"",
+                    T0.""OnHand"" as ""StockBase"",
+
+                    (case when T1.""InvntryUom"" = 'H87' then 'PZ'
+                    when T1.""InvntryUom"" = 'XPK' then 'PQ'
+                    when T1.""InvntryUom"" = 'XSA' then 'SC'
+                    when T1.""InvntryUom"" = 'H87' then 'PZ'
+                    when T1.""InvntryUom"" = 'KGM' then 'KG'
+                    when T1.""InvntryUom"" = 'XBX' then 'CJ'
+                    when T1.""InvntryUom"" = 'XBJ' then 'CB'
+                    when T1.""InvntryUom"" = 'BLL' then 'GALON'
+                    else T1.""InvntryUom"" end)  AS  ""UOMBase"",
+
+                    (T0.""OnHand""/
+                    case 
+                    when (T1.""QryGroup5""  = 'Y') then T1.""NumInSale"" 
+                    when (T1.""QryGroup6""  = 'Y' and T1.""U_IL_PesProm"" <> 0 ) then  T1.""U_IL_PesProm"" 
+                    when (T1.""QryGroup6""  = 'Y' and T1.""U_IL_PesProm""= 0 ) then T1.""NumInSale"" 
+                    when (T1.""QryGroup6""  = 'Y') then T1.""NumInSale"" 
+                    when (T1.""InvntryUom"" = 'XPK') then T1.""NumInSale"" 
+                    when T1.""U_IL_PesProm""= 0 then 1 
+                    else T1.""U_IL_PesProm"" end) as ""Stock"",
+
+                    (case when (T1.""QryGroup5""  = 'Y') then T2.""UomCode""
+                    when (T1.""QryGroup6"" = 'Y' and T1.""InvntryUom"" = 'H87') then 'Cajas'
+                    when (T1.""QryGroup6"" = 'Y' and T1.""InvntryUom"" = 'KGM') then 'Cajas'
+                    when (T1.""QryGroup6""  = 'Y') then T2.""UomCode""
+                    when (T1.""QryGroup7""  = 'Y' and T1.""U_IL_PesProm""= 0) then 'KGM'                
+                    when (T1.""QryGroup7""  = 'Y' and ""U_IL_PesProm""= 0) then 'Cajas'
+                    when (T1.""QryGroup7""  = 'Y' and T1.""InvntryUom"" = 'H87') then 'KGM' 
+                    when (T1.""QryGroup7""  = 'Y' and T1.""InvntryUom"" = 'XPK') then T2.""UomCode"" 
+                    else 'Cajas' end) AS ""UOM""
+
+                FROM OITW T0 
+                INNER JOIN OITM T1 ON T0.""ItemCode"" = T1.""ItemCode"" 
+                INNER JOIN OUOM T2 ON T1.""PUoMEntry"" = T2.""UomEntry"" 
+                INNER JOIN OUGP T3 ON T1.""UgpEntry"" = T3.""UgpEntry"" 
+                INNER JOIN UGP1 T4 ON T3.""UgpEntry"" = T4.""UgpEntry"" AND T1.""PUoMEntry"" = T4.""UomEntry""
+                INNER JOIN OUOM T5 ON T1.""PUoMEntry"" = T5.""UomEntry""
+
+                WHERE T0.""WhsCode"" = '" + sucursal + @"' 
+                AND T1.""QryGroup" + group + @""" = 'Y' 
+                AND T0.""OnHand"" > 0 
+                ORDER BY T1.""ItemName"";");
+
+            //(
+            //    Select
+            //        product.""ItemCode"",
+            //        product.""ItemName"",
+            //        stock.""OnHand"",
+            //        baseUOM.""UomCode"" as base,
+            //        stock.""OnHand"" / detail.""BaseQty"" as stock,
+            //        UOM.""UomCode""
+            //    From OITM product
+            //    JOIN OITW stock ON stock.""ItemCode"" = product.""ItemCode""
+            //    LEFT JOIN OUGP header ON header.""UgpCode"" = product.""ItemCode""
+            //    LEFT JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+            //    LEFT JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+            //    LEFT JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry"" AND UOM.""UomEntry"" != baseUOM.""UomEntry""
+            //    Where product.""QryGroup" + group + @""" = 'Y' AND stock.""WhsCode"" = '" + sucursal + @"' AND UOM.""UomCode"" is not null 
+            //    ) UNION (
+            //    Select
+            //        product.""ItemCode"",
+            //        product.""ItemName"",
+            //        stock.""OnHand"",
+            //        baseUOM.""UomCode"" as base,
+            //        stock.""OnHand"" / product.""U_IL_PesProm"" as stock,
+            //        'Caja' as ""UomCode""
+            //    From OITM product
+            //    JOIN OITW stock ON stock.""ItemCode"" = product.""ItemCode""
+            //    LEFT JOIN OUGP header ON header.""UgpCode"" = product.""ItemCode""
+            //    LEFT JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+            //    LEFT JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+            //    LEFT JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry"" AND UOM.""UomEntry"" != baseUOM.""UomEntry""
+            //    Where product.""QryGroup" + group + @""" = 'Y' AND stock.""WhsCode"" = '" + sucursal + @"' AND UOM.""UomCode"" is null AND product.""U_IL_PesProm""  != 0
+            //    ) UNION (
+            //    Select
+            //        product.""ItemCode"",
+            //        product.""ItemName"",
+            //        stock.""OnHand"",
+            //        baseUOM.""UomCode"" as base,
+            //        0 as stock,
+            //        '' as ""UomCode""
+            //    From OITM product
+            //    JOIN OITW stock ON stock.""ItemCode"" = product.""ItemCode""
+            //    LEFT JOIN OUGP header ON header.""UgpCode"" = product.""ItemCode""
+            //    LEFT JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+            //    LEFT JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+            //    LEFT JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry"" AND UOM.""UomEntry"" != baseUOM.""UomEntry""
+            //    Where product.""QryGroup" + group + @""" = 'Y' AND stock.""WhsCode"" = '" + sucursal + @"' AND UOM.""UomCode"" is null AND product.""U_IL_PesProm"" = 0
+            //    )");
+            oRecSet.MoveFirst();
+            JToken temp = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
+            //List<JToken> pro = temp.ToObject<List<JToken>>();
+            //List<JToken>  products = new List<JToken>();
+            //for(int i = 0; i< pro.Count; i++) {
+            //    int index = products.FindIndex(a => a["ItemCode"].ToString() == pro[i]["ItemCode"].ToString());
+            //    if(index > -1) {
+            //        if (products[index]["UomCode"].ToString() == "") {
+            //            products[index] = pro[i];
+            //        }
+            //    } else {
+            //        if (pro[i]["UomCode"].ToString() == "") {
+            //            pro[i]["STOCK"] = 0;
+            //        }
+            //        products.Add(pro[i]);
+            //    }
+                
+            //}
+            GC.WaitForPendingFinalizers();
+            return Ok(temp);
+        }
+
+
+        // GET: api/Products/S01/5
+        [HttpGet("{sucursal}/{group}")]
+        public async Task<IActionResult> GetWarehouseGroup(string sucursal, string group)
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
+                int code = context.oCompany.Connect();
+                if (code != 0){
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                Select 
                     product.""ItemName"",
-                    stock.""OnHand"",
-                    baseUOM.""UomCode"" as base,
-                    stock.""OnHand"" / detail.""BaseQty"" as stock,
-                    UOM.""UomCode""
+                    product.""ItemCode"",
+                    RTRIM(RTRIM(stock.""OnHand"", '0'), '.') AS ""OnHand""
                 From OITM product
                 JOIN OITW stock ON stock.""ItemCode"" = product.""ItemCode""
-                LEFT JOIN OUGP header ON header.""UgpCode"" = product.""ItemCode""
-                LEFT JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
-                LEFT JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
-                LEFT JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry"" AND UOM.""UomEntry"" != baseUOM.""UomEntry""
-                Where product.""QryGroup" + group + @""" = 'Y' AND stock.""WhsCode"" = '" + sucursal + @"'");
+                Where product.""QryGroup" + group + @""" = 'Y' 
+                AND product.""Canceled"" = 'N'
+                AND product.""validFor"" = 'Y'
+                AND stock.""WhsCode"" = '" + sucursal + @"'");
             oRecSet.MoveFirst();
             JToken temp = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
-            List<JToken> pro = temp.ToObject<List<JToken>>();
-            List<JToken>  products = new List<JToken>();
-            for(int i = 0; i< pro.Count; i++) {
-                int index = products.FindIndex(a => a["ItemCode"].ToString() == pro[i]["ItemCode"].ToString());
-                if(index > -1) {
-                    if (products[index]["UomCode"].ToString() == "") {
-                        products[index] = pro[i];
-                    }
-                } else {
-                    if (pro[i]["UomCode"].ToString() == "") {
-                        pro[i]["STOCK"] = 0;
-                    }
-                    products.Add(pro[i]);
-                }
-                
-            }
             GC.WaitForPendingFinalizers();
-            return Ok(products);
+            return Ok(temp);
         }
 
         // GET: api/Products/Properties
@@ -609,18 +753,24 @@ namespace SAP_API.Controllers
                 From OITM Where ""ItemCode"" = '" + id + "'");
             oRecSet.MoveFirst();
             JToken Detail = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
-            oRecSet.DoQuery(@"
-                Select
-                    ""BcdEntry"",
-                    ""BcdCode"",
-                    ""BcdName"",
-                    ""ItemCode"",
-                    ""UomEntry""
-                From OBCD Where ""ItemCode"" = '" + id + "'");
-            oRecSet.MoveFirst();
-            JToken CodeBars = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
 
-            return Ok(new { Detail, CodeBars});
+            oRecSet.DoQuery(@"
+                Select 
+                    header.""UgpCode"",
+                    header.""BaseUom"",
+                    baseUOM.""UomCode"" as baseUOM,
+                    detail.""UomEntry"",
+                    UOM.""UomCode"",
+                    detail.""BaseQty""
+                From OUGP header
+                JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                Where header.""UgpCode"" = '" + id + "'");
+            oRecSet.MoveFirst();
+            JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+
+            return Ok(new { Detail, uom});
         }
 
         // GET: api/Products/5

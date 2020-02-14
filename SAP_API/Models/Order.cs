@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SAP_API.Models
 {
@@ -12,7 +10,9 @@ namespace SAP_API.Models
         public string comments { set; get; }
         public int series { set; get; }
         public int payment { set; get; }
+        //public int priceList { set; get; }
         public int auth { set; get; }
+        //public DateTime date { set; get; }
         public List<OrderRow> rows { set; get; }
     }
 

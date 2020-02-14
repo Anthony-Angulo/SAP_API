@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using System.Xml;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
 
@@ -15,42 +12,6 @@ namespace SAP_API.Controllers
     [ApiController]
     public class OrderController : ControllerBase
     {
-        // GET: api/Order
-        // Todas Las Ordenes
-        [HttpGet]
-        public async Task<IActionResult> Get()
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            if (!context.oCompany.Connected)
-            {
-                int code = context.oCompany.Connect();
-                if (code != 0)
-                {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-
-            SAPbobsCOM.Documents items = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
-            List<Object> list = new List<Object>();
-
-            oRecSet.DoQuery("Select * From ORDR");
-            items.Browser.Recordset = oRecSet;
-            items.Browser.MoveFirst();
-
-            while (items.Browser.EoF == false)
-            {
-                JToken temp = context.XMLTOJSON(items.GetAsXML());
-                temp["ORDR"] = temp["ORDR"][0];
-                list.Add(temp);
-                items.Browser.MoveNext();
-            }
-            return Ok(list);
-        }
-
 
         // GET: api/Order/CRMList
         // Todas las Ordernes - Encabezado para lista CRM
@@ -68,7 +29,8 @@ namespace SAP_API.Controllers
                     return BadRequest(new { error });
                 }
             }
-
+            //CONCAT(SUBSTRING(ord.""DocDate"", 0, 8), CONCAT('/', CONCAT(SUBSTRING(ord.""DocDate"", 4, 2), CONCAT('/', SUBSTRING(ord.""DocDate"", 0, 4))))),
+            //        SUBSTRING(ord.""DocDate"", 0, 10),
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             oRecSet.DoQuery(@"
                 Select
@@ -219,8 +181,73 @@ namespace SAP_API.Controllers
                 list.Add(temp);
                 items.Browser.MoveNext();
             }
-
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
             return Ok(list);
+        }
+
+        // GET: api/order/list
+        // Ordenes Filtradas por dia
+        [HttpGet("CRMAPP/list/{date}/{employee}")]
+        public async Task<IActionResult> GetCRMAPPList(string date, int employee)
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+
+            if (!context.oCompany.Connected)
+            {
+                int code = context.oCompany.Connect();
+                if (code != 0)
+                {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery(@"
+                Select
+                    ord.""DocEntry"",
+                    ord.""DocNum"",
+                    ord.""CardName"",
+                    ord.""PeyMethod"",
+                    ord.""DocCur"",
+                    ord.""DocStatus"",
+                    ord.""CANCELED"",
+                    ord.""DocDueDate"",
+                    ord.""Address"",
+                    ord.""DocTotal"",
+                    ord.""DocTotalFC"",
+                    contact.""CardFName""
+                FROM ORDR ord
+                LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode""
+                WHERE ""DocDate"" = '" + date + "' AND ord.\"SlpCode\" = 149");
+            oRecSet.MoveFirst();
+            JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"];
+            int rc = oRecSet.RecordCount;
+            if (rc == 0)
+            {
+                return NotFound();
+            }
+
+            oRecSet.DoQuery(@"
+                Select 
+                    ""DocEntry"",
+                    ""ItemCode"",
+                    ""Dscription"",
+                    ""Price"",
+                    ""Currency"",
+                    ""Quantity"",
+                    ""UomCode"",
+                    ""InvQty"",
+                    ""UomCode2""
+                From RDR1
+                Where ""DocEntry"" in (Select ""DocEntry"" From ORDR Where ""DocDate"" = '" + date + "' AND \"SlpCode\" = 149)");
+            oRecSet.MoveFirst();
+            JToken rows = context.XMLTOJSON(oRecSet.GetAsXML())["RDR1"];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(new { orders, rows});
         }
 
         // GET: api/Order/5
@@ -240,39 +267,58 @@ namespace SAP_API.Controllers
                 }
             }
 
-            SAPbobsCOM.Documents items = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                SELECT
+                    ord.""DocStatus"",
+                    ord.""DocEntry"",
+                    ord.""DocNum"",
+                    ord.""DocDate"",
+                    ord.""DocDueDate"",
+                    ord.""CancelDate"",
+                    ord.""Address"",
+                    ord.""Address2"",
+                    ord.""DocCur"",
+                    ord.""Comments"",
+                    ord.""DocTotal"",
+                    ord.""DocTotalFC"",
+                    payment.""PymntGroup"",
+                    contact.""CardName"",
+                    contact.""CardCode"",
+                    contact.""CardFName"",
+                    employee.""SlpCode"",
+                    employee.""SlpName"",
+                    warehouse.""WhsName""
+                FROM ORDR ord
+                LEFT JOIN NNM1 series ON series.""Series"" = ord.""Series""
+                LEFT JOIN OWHS warehouse ON warehouse.""WhsCode"" = series.""SeriesName""
+                LEFT JOIN OSLP employee ON employee.""SlpCode"" = ord.""SlpCode""
+                LEFT JOIN OCTG payment ON payment.""GroupNum"" = ord.""GroupNum""
+                LEFT JOIN OCRD contact ON contact.""CardCode"" = ord.""CardCode""
+                WHERE ord.""DocEntry"" = '" + id + "' ");
 
-            if (items.GetByKey(id))
-            {
-                JToken temp = context.XMLTOJSON(items.GetAsXML());
-                temp["ORDR"] = temp["ORDR"][0];
+            JToken temp = context.XMLTOJSON(oRecSet.GetAsXML());
+            temp["ORDR"] = temp["ORDR"][0];
+            temp["AdmInfo"]?.Parent.Remove();
 
-                oRecSet.DoQuery(@"
+            oRecSet.DoQuery(@"
                 Select
-                    warehouse.""WhsName"",
-                    serie.""Series""
-                From OWHS warehouse
-                LEFT JOIN NNM1 serie ON serie.""SeriesName"" = warehouse.""WhsCode""
-                Where serie.""Series"" = '" + temp["ORDR"]["Series"] + "'");
+                    ""ItemCode"",
+                    ""Dscription"",
+                    ""Price"",
+                    ""Currency"",
+                    ""Quantity"",
+                    ""UomCode"",
+                    ""InvQty"",
+                    ""UomCode2"",
+                    ""LineTotal"",
+                    ""TotalFrgn""
+                From RDR1 Where ""DocEntry"" = '" + id + "'");
+            oRecSet.MoveFirst();
+            JToken products = context.XMLTOJSON(oRecSet.GetAsXML());
+            temp["RDR1"] = products["RDR1"];
 
-                oRecSet.MoveFirst();
-                JToken series = context.XMLTOJSON(oRecSet.GetAsXML());
-                temp["WHS"] = series["OWHS"][0];
-
-                oRecSet.DoQuery("Select * From OSLP Where \"SlpCode\" = '" + temp["ORDR"]["SlpCode"] + "'");
-                oRecSet.MoveFirst();
-                JToken vendedor = context.XMLTOJSON(oRecSet.GetAsXML());
-                temp["SELLER"] = vendedor["OSLP"][0];
-
-
-                oRecSet.DoQuery("Select \"CardCode\", \"CardName\", \"Currency\", \"CardFName\"  From OCRD Where \"CardCode\" = '" + temp["ORDR"]["CardCode"] +"'");
-                oRecSet.MoveFirst();
-                temp["contact"] = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0];
-
-                return Ok(temp);
-            }
-            return NotFound("No Existe Documento");
+            return Ok(temp);
         }
 
 
@@ -282,12 +328,9 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> GetReception(int id)
         {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            if (!context.oCompany.Connected)
-            {
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -328,6 +371,7 @@ namespace SAP_API.Controllers
                     ""UomEntry"",
                     ""WhsCode"",
                     ""UomCode"",
+                    ""OpenInvQty"",
                     ""OpenQty""
                 From RDR1 WHERE ""DocEntry"" = " + order["ORDR"]["DocEntry"]);
 
@@ -341,6 +385,7 @@ namespace SAP_API.Controllers
                         ""ItemName"",
                         ""QryGroup7"",
                         ""QryGroup41"",
+                        ""QryGroup42"",
                         ""ManBtchNum"",
                         ""U_IL_PesMax"",
                         ""U_IL_PesMin"",
@@ -413,7 +458,7 @@ namespace SAP_API.Controllers
             oRecSet.DoQuery(@"
                 SELECT 'True' as Result, 'FacturasVencidasMXM' as Auth
                 FROM Dummy
-                WHERE '" + CardCode + @"' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE)
+                WHERE '" + CardCode + @"' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE AND T0.""DocStatus"" = 'O')
                 AND  '" + Series + @"' IN (
                     SELECT T1.""Series"" FROM NNM1 T1
                     WHERE T1.""ObjectCode"" = 17
@@ -428,7 +473,7 @@ namespace SAP_API.Controllers
             oRecSet.DoQuery(@"
                 SELECT 'True' as Result, 'FacturasVencidasENS' as Auth
                 FROM Dummy
-                WHERE '" + CardCode + @"' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE)
+                WHERE '" + CardCode + @"' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE AND T0.""DocStatus"" = 'O')
                 AND  '" + Series + @"' IN (
                     SELECT T1.""Series"" FROM NNM1 T1
                     WHERE T1.""ObjectCode"" = 17
@@ -443,7 +488,7 @@ namespace SAP_API.Controllers
             oRecSet.DoQuery(@"
                 SELECT 'True' as Result, 'FacturasVencidasTJ' as Auth
                 FROM Dummy
-                WHERE '" + CardCode + @"' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE)
+                WHERE '" + CardCode + @"' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE AND T0.""DocStatus"" = 'O')
                 AND  '" + Series + @"' IN (
                     SELECT T1.""Series"" FROM NNM1 T1
                     WHERE T1.""ObjectCode"" = 17
@@ -458,7 +503,7 @@ namespace SAP_API.Controllers
             oRecSet.DoQuery(@"
                 SELECT 'True' as Result, 'FacturasVencidasSLR' as Auth
                 FROM Dummy
-                WHERE '" + CardCode + @"' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE)
+                WHERE '" + CardCode + @"' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE AND T0.""DocStatus"" = 'O')
                 AND  '" + Series + @"' IN (
                     SELECT T1.""Series"" FROM NNM1 T1
                     WHERE T1.""ObjectCode"" = 17
@@ -497,11 +542,20 @@ namespace SAP_API.Controllers
                 }
             }
 
-            if(value.auth == 0) {
-                List<JToken> resultAuth = auth(value.cardcode, value.series.ToString(), context);
-                if (resultAuth[0]["RESULT"].ToString() == "True" || resultAuth[1]["RESULT"].ToString() == "True") {
-                    return Conflict(resultAuth);
+            if (value.auth == 0 && value.payment != 2) {
+                List<JToken> resultAuth = new List<JToken>();
+                if (value.payment == -1) {
+                    resultAuth.Add(facturasPendientes(value.cardcode, value.series.ToString(), context));
+                    if (resultAuth[0]["RESULT"].ToString() == "True") {
+                        return Conflict(resultAuth);
+                    }
+                } else {
+                    resultAuth = auth(value.cardcode, value.series.ToString(), context);
+                    if (resultAuth[0]["RESULT"].ToString() == "True" || resultAuth[1]["RESULT"].ToString() == "True") {
+                        return Conflict(resultAuth);
+                    }
                 }
+
             }
 
             SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
@@ -524,6 +578,7 @@ namespace SAP_API.Controllers
             order.Series = value.series;
             order.DocCurrency = value.currency;
             order.DocDueDate = DateTime.Now.AddDays(1);
+            //order.DocDueDate = value.date; /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             order.PaymentGroupCode = value.payment;
 
             if (contact.GetByKey(value.cardcode)) {
@@ -553,7 +608,7 @@ namespace SAP_API.Controllers
 
                 for (int j = 0; j < items.PriceList.Count; j++) {
                     items.PriceList.SetCurrentLine(j);
-                    if(items.PriceList.PriceList == 2) {
+                    if (items.PriceList.PriceList == 2) { ///////////////////////////////////////////
                         if (value.rows[i].uom == -2) {
                             order.Lines.UnitPrice = items.PriceList.Price;
                         } else {
