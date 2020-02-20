@@ -28,12 +28,17 @@ namespace SAP_API.Controllers
             }
 
             SAPbobsCOM.SBObob SBO = (SAPbobsCOM.SBObob)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoBridge);
-            SAPbobsCOM.Recordset oRecSet = SBO.GetCurrencyRate("USD", DateTime.Today);
-            oRecSet.MoveFirst();
-            JToken set = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            return Ok(set);
+            try {
+                SAPbobsCOM.Recordset oRecSet = SBO.GetCurrencyRate("USD", DateTime.Today);
+                oRecSet.MoveFirst();
+                JToken set = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                return Ok(set);
+            } catch(Exception ex) {
+                return NotFound(ex.Message);
+            }
+            
         }
 
     }

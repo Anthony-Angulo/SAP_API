@@ -204,32 +204,45 @@ namespace SAP_API.Controllers
                         //    return BadRequest(new {id = 1,  error });
                         //}
 
-                        SAPbobsCOM.StockTransfer newRequest = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
-
-                        newRequest.FromWarehouse = request.FromWarehouse;
-                        newRequest.ToWarehouse = request.ToWarehouse;
-                        newRequest.Series = request.Series;
-
-                        newRequest.UserFields.Fields.Item("U_SO1_02NUMRECEPCION").Value = request.DocNum.ToString();
-
-                        for (int i = 0; i < value.products.Count; i++)
+                        try
                         {
-                            request.Lines.SetCurrentLine(value.products[i].Line);
-                            newRequest.Lines.ItemCode = value.products[i].ItemCode;
-                            newRequest.Lines.UoMEntry = request.Lines.UoMEntry;
-                            newRequest.Lines.UseBaseUnits = request.Lines.UseBaseUnits;
-                            newRequest.Lines.Quantity = value.products[i].Count;
-                            newRequest.Lines.FromWarehouseCode = request.Lines.WarehouseCode;
-                            newRequest.Lines.WarehouseCode = request.ToWarehouse;
-                            newRequest.Lines.Add();
-                        }
-                        int result2 = newRequest.Add();
-                        if (result2 != 0)
+                            SAPbobsCOM.StockTransfer newRequest = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
+
+                            newRequest.FromWarehouse = request.FromWarehouse;
+                            newRequest.ToWarehouse = request.ToWarehouse;
+                            newRequest.Series = request.Series;
+
+                            newRequest.UserFields.Fields.Item("U_SO1_02NUMRECEPCION").Value = request.DocNum.ToString();
+
+                            for (int i = 0; i < value.products.Count; i++)
+                            {
+                                request.Lines.SetCurrentLine(value.products[i].Line);
+                                newRequest.Lines.ItemCode = value.products[i].ItemCode;
+                                newRequest.Lines.UoMEntry = request.Lines.UoMEntry;
+                                newRequest.Lines.UseBaseUnits = request.Lines.UseBaseUnits;
+                                newRequest.Lines.Quantity = value.products[i].Count;
+                                newRequest.Lines.FromWarehouseCode = request.Lines.WarehouseCode;
+                                newRequest.Lines.WarehouseCode = request.ToWarehouse;
+                                newRequest.Lines.Add();
+                            }
+                            int result2 = newRequest.Add();
+                            if (result2 != 0)
+                            {
+                                string error = context.oCompany.GetLastErrorDescription();
+                                Console.WriteLine(2);
+                                Console.WriteLine(error);
+                                Console.WriteLine(value);
+                                Console.WriteLine(context.XMLTOJSON(newRequest.GetAsXML()));
+                                return BadRequest(new { id = 2, error, value, va = context.XMLTOJSON(newRequest.GetAsXML()) });
+                            }
+                            return Ok(context.oCompany.GetNewObjectKey());
+                        } catch (Exception ex)
                         {
-                            string error = context.oCompany.GetLastErrorDescription();
-                            return BadRequest(new { id = 2, error , value ,va = context.XMLTOJSON(newRequest.GetAsXML())});
+                            Console.WriteLine(6);
+                            Console.WriteLine(ex);
+                            Console.WriteLine(value);
+                            return BadRequest(new { id = 5, ex.Message, value });
                         }
-                        return Ok(context.oCompany.GetNewObjectKey());
                     }
                 }
                 else

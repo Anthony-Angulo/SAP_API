@@ -13,6 +13,154 @@ namespace SAP_API.Controllers
     public class OrderController : ControllerBase
     {
 
+        [HttpPost("search")]
+        public async Task<IActionResult> Get([FromBody] SearchRequest request)
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+
+            if (!context.oCompany.Connected)
+            {
+                int code = context.oCompany.Connect();
+                if (code != 0)
+                {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            List<string> where = new List<string>();
+            if (request.columns[0].search.value != String.Empty)
+            {
+                where.Add($"LOWER(ord.\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
+            }
+            if (request.columns[1].search.value != String.Empty)
+            {
+                where.Add($"LOWER(employee.\"SlpName\") Like LOWER('%{request.columns[1].search.value}%')");
+            }
+            if (request.columns[2].search.value != String.Empty)
+            {
+                where.Add($"LOWER(contact.\"CardFName\") Like LOWER('%{request.columns[2].search.value}%')");
+            }
+            if (request.columns[3].search.value != String.Empty)
+            {
+                where.Add($"LOWER(contact.\"CardName\") Like LOWER('%{request.columns[3].search.value}%')");
+            }
+            if (request.columns[4].search.value != String.Empty)
+            {
+                where.Add($"LOWER(warehouse.\"WhsName\") Like LOWER('%{request.columns[4].search.value}%')");
+            }
+            if (request.columns[5].search.value != String.Empty)
+            {
+                List<string> whereOR = new List<string>();
+                if ("Abierto".Contains(request.columns[5].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    whereOR.Add(@"ord.""DocStatus"" = 'O' ");
+                }
+                if ("Cerrado".Contains(request.columns[5].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    whereOR.Add(@"ord.""DocStatus"" = 'C' ");
+                }
+                if ("Cancelado".Contains(request.columns[5].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    whereOR.Add(@"ord.""CANCELED"" = 'Y' ");
+                }
+
+                string whereORClause = "(" + String.Join(" OR ", whereOR) + ")";
+                where.Add(whereORClause);
+            }
+            if (request.columns[6].search.value != String.Empty)
+            {
+                where.Add($"to_char(to_date(SUBSTRING(ord.\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[6].search.value}%'");
+            }
+
+            string orderby = "";
+            if (request.order[0].column == 0) {
+                orderby = $" ORDER BY ord.\"DocNum\" {request.order[0].dir}";
+            } else if (request.order[0].column == 1) {
+                orderby = $" ORDER BY employee.\"SlpName\" {request.order[0].dir}";
+            } else if (request.order[0].column == 2) {
+                orderby = $" ORDER BY contact.\"CardFName\" {request.order[0].dir}";
+            } else if (request.order[0].column == 3) {
+                orderby = $" ORDER BY contact.\"CardName\" {request.order[0].dir}";
+            } else if (request.order[0].column == 4) {
+                orderby = $" ORDER BY warehouse.\"WhsName\" {request.order[0].dir}";
+            } else if (request.order[0].column == 5) {
+                orderby = $" ORDER BY ord.\"DocStatus\" {request.order[0].dir}";
+            } else if (request.order[0].column == 6) {
+                orderby = $" ORDER BY ord.\"DocDate\" {request.order[0].dir}";
+            } else {
+                orderby = $" ORDER BY ord.\"DocNum\" DESC";
+            } 
+
+            string whereClause = String.Join(" AND ", where);
+
+            string query = @"
+                Select
+                    ord.""DocEntry"",
+                    ord.""DocNum"",
+
+                    to_char(to_date(SUBSTRING(ord.""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDate"",
+
+                    (case when ord.""CANCELED"" = 'Y' then 'Cancelado'
+                    when ord.""DocStatus"" = 'O' then 'Abierto'
+                    when ord.""DocStatus"" = 'C' then 'Cerrado'
+                    else ord.""DocStatus"" end)  AS  ""DocStatus"",
+
+                    ord.""CardName"",
+                    contact.""CardFName"",
+                    employee.""SlpName"",
+                    warehouse.""WhsName""
+                From ORDR ord
+                LEFT JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
+                LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OSLP employee ON ord.""SlpCode"" = employee.""SlpCode""
+                LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode"" ";
+
+            if (where.Count != 0)
+            {
+                query += "Where " + whereClause;
+            }
+
+            query += orderby;
+            
+            query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+
+            oRecSet.DoQuery(query);
+            oRecSet.MoveFirst();
+            var orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"].ToObject<List<OrderSearchDetail>>();
+
+            string queryCount = @"
+                Select
+                    Count (*) as COUNT
+                From ORDR ord
+                LEFT JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
+                LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OSLP employee ON ord.""SlpCode"" = employee.""SlpCode""
+                LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode"" ";
+
+            if (where.Count != 0)
+            {
+                queryCount += "Where " + whereClause;
+            }
+            oRecSet.DoQuery(queryCount);
+            oRecSet.MoveFirst();
+            int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"][0]["COUNT"].ToObject<int>();
+
+            var respose = new OrderSearchResponse
+            {
+                Data = orders,
+                Draw = request.Draw,
+                RecordsFiltered = COUNT,
+                RecordsTotal = COUNT,
+            };
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(respose);
+        }
+
+
         // GET: api/Order/CRMList
         // Todas las Ordernes - Encabezado para lista CRM
         [HttpGet("CRMList")]
@@ -29,8 +177,6 @@ namespace SAP_API.Controllers
                     return BadRequest(new { error });
                 }
             }
-            //CONCAT(SUBSTRING(ord.""DocDate"", 0, 8), CONCAT('/', CONCAT(SUBSTRING(ord.""DocDate"", 4, 2), CONCAT('/', SUBSTRING(ord.""DocDate"", 0, 4))))),
-            //        SUBSTRING(ord.""DocDate"", 0, 10),
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             oRecSet.DoQuery(@"
                 Select
@@ -212,16 +358,21 @@ namespace SAP_API.Controllers
                     ord.""CardName"",
                     ord.""PeyMethod"",
                     ord.""DocCur"",
-                    ord.""DocStatus"",
-                    ord.""CANCELED"",
-                    ord.""DocDueDate"",
+
+                    to_char(to_date(SUBSTRING(ord.""DocDueDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDueDate"",
+
+                    (case when ord.""CANCELED"" = 'Y' then 'Cancelado'
+                    when ord.""DocStatus"" = 'O' then 'Abierto'
+                    when ord.""DocStatus"" = 'C' then 'Cerrado'
+                    else ord.""DocStatus"" end)  AS  ""DocStatus"",
+
                     ord.""Address"",
                     ord.""DocTotal"",
                     ord.""DocTotalFC"",
                     contact.""CardFName""
                 FROM ORDR ord
                 LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode""
-                WHERE ""DocDate"" = '" + date + "' AND ord.\"SlpCode\" = 149");
+                WHERE ""DocDate"" = '" + date + "' AND ord.\"SlpCode\" = " + employee);
             oRecSet.MoveFirst();
             JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"];
             int rc = oRecSet.RecordCount;
@@ -242,7 +393,7 @@ namespace SAP_API.Controllers
                     ""InvQty"",
                     ""UomCode2""
                 From RDR1
-                Where ""DocEntry"" in (Select ""DocEntry"" From ORDR Where ""DocDate"" = '" + date + "' AND \"SlpCode\" = 149)");
+                Where ""DocEntry"" in (Select ""DocEntry"" From ORDR Where ""DocDate"" = '" + date + "' AND \"SlpCode\" = " + employee + ")");
             oRecSet.MoveFirst();
             JToken rows = context.XMLTOJSON(oRecSet.GetAsXML())["RDR1"];
             GC.Collect();
@@ -282,6 +433,7 @@ namespace SAP_API.Controllers
                     ord.""Comments"",
                     ord.""DocTotal"",
                     ord.""DocTotalFC"",
+                    ord.""DocRate"",
                     payment.""PymntGroup"",
                     contact.""CardName"",
                     contact.""CardCode"",
@@ -312,7 +464,9 @@ namespace SAP_API.Controllers
                     ""InvQty"",
                     ""UomCode2"",
                     ""LineTotal"",
-                    ""TotalFrgn""
+                    ""U_CjsPsVr"",
+                    ""TotalFrgn"",
+                    ""Rate""
                 From RDR1 Where ""DocEntry"" = '" + id + "'");
             oRecSet.MoveFirst();
             JToken products = context.XMLTOJSON(oRecSet.GetAsXML());
@@ -530,7 +684,7 @@ namespace SAP_API.Controllers
         // POST: api/Order
         // Creacion de Orden
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] Order value)
+        public async Task<IActionResult> Post([FromBody] CreateOrder value)
         {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
@@ -577,7 +731,10 @@ namespace SAP_API.Controllers
             order.CardCode = value.cardcode;
             order.Series = value.series;
             order.DocCurrency = value.currency;
-            order.DocDueDate = DateTime.Now.AddDays(1);
+            //if (value.currency == "USD") {
+            //    order.DocRate = value.currencyRate;
+            //}
+            order.DocDueDate = DateTime.Now.AddDays(1); //////////////////////////////////////////
             //order.DocDueDate = value.date; /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             order.PaymentGroupCode = value.payment;
 
@@ -608,13 +765,19 @@ namespace SAP_API.Controllers
 
                 for (int j = 0; j < items.PriceList.Count; j++) {
                     items.PriceList.SetCurrentLine(j);
-                    if (items.PriceList.PriceList == 2) { ///////////////////////////////////////////
+                    if (items.PriceList.PriceList == 2)
+                    {
+                        //if (items.PriceList.PriceList == value.priceList) { ///////////////////////////////////////////
                         if (value.rows[i].uom == -2) {
                             order.Lines.UnitPrice = items.PriceList.Price;
                         } else {
                             order.Lines.UnitPrice = items.PriceList.Price * value.rows[i].equivalentePV;
                         }
                         order.Lines.Currency = items.PriceList.Currency;
+                        //if (value.currency == "MXN" && items.PriceList.Currency == "USD")
+                        //{
+                        //    order.Lines.Rate = value.currencyRate;
+                        //}
                         break;
                     }
                 }

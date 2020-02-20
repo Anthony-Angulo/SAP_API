@@ -314,6 +314,23 @@ namespace SAP_API.Controllers
                 AND ""PriceList"" in (SELECT Distinct ""ListNum"" From OCRD Where ""CardType"" = 'C' AND ""SlpCode"" = " + id + @" AND ""CardCode"" LIKE '%-P');");
             oRecSet.MoveFirst();
             JToken priceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"];
+
+
+            oRecSet.DoQuery($"Select \"Fax\" From OSLP Where \"SlpCode\" = {id}");
+            oRecSet.MoveFirst();
+            string warehouses = context.XMLTOJSON(oRecSet.GetAsXML())["OSLP"][0]["Fax"].ToString();
+            warehouses = warehouses.Trim();
+            if (warehouses.Equals(""))
+            {
+                warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55'";
+            }
+            else
+            {
+                warehouses = warehouses.ToUpper();
+                warehouses = "'" + warehouses + "'";
+                warehouses = warehouses.Replace(",", "','");
+            }
+
             oRecSet.DoQuery(@"
                 Select 
                     ""ItemCode"",
@@ -323,10 +340,11 @@ namespace SAP_API.Controllers
                 Where ""OnHand"" != 0 
                 AND ""Freezed"" = 'N'
                 AND ""Locked"" = 'N'
-                AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55')
+                AND ""WhsCode"" in (" + warehouses + @")
                 AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
+            
             oRecSet.DoQuery(@"
                 Select 
                     header.""UgpCode"",
@@ -454,7 +472,8 @@ namespace SAP_API.Controllers
             }
 
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery("Select \"ItemName\", \"ItemCode\", \"ItmsGrpCod\", \"U_IL_PesProm\" From OITM where \"ItemCode\" = '" + id + "'");
+            //oRecSet.DoQuery("Select \"ItemName\", \"ItemCode\", \"ItmsGrpCod\", \"U_IL_PesProm\" From OITM where \"ItemCode\" = '" + id + "'");
+            oRecSet.DoQuery("Select * From OITM where \"ItemCode\" = '" + id + "'");
             oRecSet.MoveFirst();
             JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
             oRecSet.DoQuery("Select \"PriceList\", \"ItemCode\", \"Currency\", \"Price\", \"UomEntry\", \"PriceType\" From ITM1 Where \"ItemCode\" = '" + id + "'");
