@@ -160,6 +160,162 @@ namespace SAP_API.Controllers
             return Ok(respose);
         }
 
+        [HttpPost("search/{warehouse}")]
+        public async Task<IActionResult> GetWWW(string warehouse, [FromBody] SearchRequest request)
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+
+            if (!context.oCompany.Connected)
+            {
+                int code = context.oCompany.Connect();
+                if (code != 0)
+                {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            List<string> where = new List<string>();
+            where.Add($"warehouse.\"WhsCode\" = '{warehouse}'");
+
+            if (request.columns[0].search.value != String.Empty)
+            {
+                where.Add($"LOWER(ord.\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
+            }
+            if (request.columns[1].search.value != String.Empty)
+            {
+                where.Add($"LOWER(employee.\"SlpName\") Like LOWER('%{request.columns[1].search.value}%')");
+            }
+            if (request.columns[2].search.value != String.Empty)
+            {
+                where.Add($"LOWER(contact.\"CardFName\") Like LOWER('%{request.columns[2].search.value}%')");
+            }
+            if (request.columns[3].search.value != String.Empty)
+            {
+                where.Add($"LOWER(contact.\"CardName\") Like LOWER('%{request.columns[3].search.value}%')");
+            }
+            if (request.columns[5].search.value != String.Empty)
+            {
+                List<string> whereOR = new List<string>();
+                if ("Abierto".Contains(request.columns[5].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    whereOR.Add(@"ord.""DocStatus"" = 'O' ");
+                }
+                if ("Cerrado".Contains(request.columns[5].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    whereOR.Add(@"ord.""DocStatus"" = 'C' ");
+                }
+                if ("Cancelado".Contains(request.columns[5].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    whereOR.Add(@"ord.""CANCELED"" = 'Y' ");
+                }
+
+                string whereORClause = "(" + String.Join(" OR ", whereOR) + ")";
+                where.Add(whereORClause);
+            }
+            if (request.columns[6].search.value != String.Empty)
+            {
+                where.Add($"to_char(to_date(SUBSTRING(ord.\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[6].search.value}%'");
+            }
+
+            string orderby = "";
+            if (request.order[0].column == 0)
+            {
+                orderby = $" ORDER BY ord.\"DocNum\" {request.order[0].dir}";
+            }
+            else if (request.order[0].column == 1)
+            {
+                orderby = $" ORDER BY employee.\"SlpName\" {request.order[0].dir}";
+            }
+            else if (request.order[0].column == 2)
+            {
+                orderby = $" ORDER BY contact.\"CardFName\" {request.order[0].dir}";
+            }
+            else if (request.order[0].column == 3)
+            {
+                orderby = $" ORDER BY contact.\"CardName\" {request.order[0].dir}";
+            }
+            else if (request.order[0].column == 5)
+            {
+                orderby = $" ORDER BY ord.\"DocStatus\" {request.order[0].dir}";
+            }
+            else if (request.order[0].column == 6)
+            {
+                orderby = $" ORDER BY ord.\"DocDate\" {request.order[0].dir}";
+            }
+            else
+            {
+                orderby = $" ORDER BY ord.\"DocNum\" DESC";
+            }
+
+            string whereClause = String.Join(" AND ", where);
+
+            string query = @"
+                Select
+                    ord.""DocEntry"",
+                    ord.""DocNum"",
+
+                    to_char(to_date(SUBSTRING(ord.""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDate"",
+
+                    (case when ord.""CANCELED"" = 'Y' then 'Cancelado'
+                    when ord.""DocStatus"" = 'O' then 'Abierto'
+                    when ord.""DocStatus"" = 'C' then 'Cerrado'
+                    else ord.""DocStatus"" end)  AS  ""DocStatus"",
+
+                    ord.""CardName"",
+                    contact.""CardFName"",
+                    employee.""SlpName"",
+                    warehouse.""WhsName""
+                From ORDR ord
+                LEFT JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
+                LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OSLP employee ON ord.""SlpCode"" = employee.""SlpCode""
+                LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode"" ";
+
+            if (where.Count != 0)
+            {
+                query += "Where " + whereClause;
+            }
+
+            query += orderby;
+
+            query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+
+            oRecSet.DoQuery(query);
+            oRecSet.MoveFirst();
+            var orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"].ToObject<List<OrderSearchDetail>>();
+
+            string queryCount = @"
+                Select
+                    Count (*) as COUNT
+                From ORDR ord
+                LEFT JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
+                LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OSLP employee ON ord.""SlpCode"" = employee.""SlpCode""
+                LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode"" ";
+
+            if (where.Count != 0)
+            {
+                queryCount += "Where " + whereClause;
+            }
+            oRecSet.DoQuery(queryCount);
+            oRecSet.MoveFirst();
+            int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"][0]["COUNT"].ToObject<int>();
+
+            var respose = new OrderSearchResponse
+            {
+                Data = orders,
+                Draw = request.Draw,
+                RecordsFiltered = COUNT,
+                RecordsTotal = COUNT,
+            };
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(respose);
+        }
+
 
         // GET: api/Order/CRMList
         // Todas las Ordernes - Encabezado para lista CRM
