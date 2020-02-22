@@ -11,18 +11,22 @@ namespace SAP_API.Controllers
     [ApiController]
     public class CodeBarController : ControllerBase
     {
-
+        /// <summary>
+        ///     Busqueda de Producto por codigo de barra 
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>
+        ///     Regresa Detalle del Producto, sus codigos y su unidades de medida
+        /// </returns>
         // GET: api/CodeBar/5
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(string id)
         {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-            if (!context.oCompany.Connected)
-            {
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -39,10 +43,10 @@ namespace SAP_API.Controllers
                     ""UomEntry""
                 From OBCD Where ""BcdCode"" = '" + id + "'");
             oRecSet.MoveFirst();
-            if (oRecSet.RecordCount == 0)
-            {
+            if (oRecSet.RecordCount == 0) {
                 return NotFound();
             }
+
             string itemcode = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"][0]["ItemCode"].ToString();
 
             oRecSet.DoQuery(@"
@@ -72,24 +76,45 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             JToken CodeBars = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
 
-            return Ok(new { Detail, CodeBars });
+            oRecSet.DoQuery(@"
+                Select 
+                    header.""UgpCode"",
+                    header.""BaseUom"",
+                    baseUOM.""UomCode"" as baseUOM,
+                    detail.""UomEntry"",
+                    UOM.""UomCode"",
+                    detail.""BaseQty""
+                From OUGP header
+                JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                Where header.""UgpCode"" = '" + itemcode + "'");
+            oRecSet.MoveFirst();
+            JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+
+            return Ok(new { Detail, CodeBars, uom });
         }
 
+        /// <summary>
+        ///     Agregar Codigo a un producto Relacionado con una unidad de medida
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns>
+        ///     Regresa el identificador del codigo creado
+        /// </returns>
         // POST: api/CodeBar
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] Codebar value)
         {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            if (!context.oCompany.Connected)
-            {
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
             }
+
             SAPbobsCOM.CompanyService services = context.oCompany.GetCompanyService();
             SAPbobsCOM.BarCodesService barCodesService = (SAPbobsCOM.BarCodesService)services.GetBusinessService(SAPbobsCOM.ServiceTypes.BarCodesService);
             SAPbobsCOM.BarCode barCode = (SAPbobsCOM.BarCode)barCodesService.GetDataInterface(SAPbobsCOM.BarCodesServiceDataInterfaces.bsBarCode);
