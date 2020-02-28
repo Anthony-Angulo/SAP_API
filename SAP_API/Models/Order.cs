@@ -35,9 +35,6 @@ namespace SAP_API.Models
         public string dir { get; set; }
     }
 
-
-
-
     public abstract class SearchDetail
     {
     }

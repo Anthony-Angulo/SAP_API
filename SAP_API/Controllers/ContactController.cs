@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,21 +12,137 @@ namespace SAP_API.Controllers
     [ApiController]
     public class ContactController : ControllerBase
     {
-        //SAPbobsCOM.BusinessPartners items = context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
-        //SAPbobsCOM.Recordset oRecSet = context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-        //List<Object> list = new List<Object>();
-        //oRecSet.DoQuery("Select TOP 1 * From OCRD");
-        //    items.Browser.Recordset = oRecSet;
-        //    items.Browser.MoveFirst();
-        //    while (items.Browser.EoF == false)
-        //    {
-        //        JToken temp = context.XMLTOJSON(items.GetAsXML());
-        //        list.Add(temp);
-        //        items.Browser.MoveNext();
-        //    }
-        //    return Ok(list);
+        public class ClientSearchDetail : SearchDetail
+        {
+            public string CardCode { get; set; }
+            public string CardFName { get; set; }
+            public string CardName { get; set; }
+        }
 
-        // GET: api/Contact/CRM/5
+        public class ClientSearchResponse : SearchResponse<ClientSearchDetail>
+        {
+        }
+
+        [HttpPost("clients/search")]
+        public async Task<IActionResult> Get([FromBody] SearchRequest request)
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
+                int code = context.oCompany.Connect();
+                if (code != 0) {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            List<string> where = new List<string>();
+
+            if (request.columns[0].search.value != String.Empty) {
+                where.Add($"LOWER(\"CardCode\") Like LOWER('%{request.columns[0].search.value}%')");
+            }
+            if (request.columns[1].search.value != String.Empty) {
+                where.Add($"LOWER(\"CardFName\") Like LOWER('%{request.columns[1].search.value}%')");
+            }
+            if (request.columns[2].search.value != String.Empty) {
+                where.Add($"LOWER(\"CardName\") Like LOWER('%{request.columns[2].search.value}%')");
+            }
+
+            string orderby = "";
+            if (request.order[0].column == 0) {
+                orderby = $" ORDER BY \"CardCode\" {request.order[0].dir}";
+            } else if (request.order[0].column == 1) {
+                orderby = $" ORDER BY \"CardFName\" {request.order[0].dir}";
+            } else if (request.order[0].column == 2) {
+                orderby = $" ORDER BY \"CardName\" {request.order[0].dir}";
+            } else {
+                orderby = $" ORDER BY \"CardCode\" DESC";
+            }
+
+            string whereClause = String.Join(" AND ", where);
+
+            string query = @"
+                Select ""CardCode"", ""CardName"", ""CardFName""
+                From OCRD Where ""CardType"" = 'C' AND ""CardCode"" LIKE '%-P'";
+
+            if (where.Count != 0) {
+                query += " AND " + whereClause;
+            }
+
+            query += orderby;
+
+            query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+
+            oRecSet.DoQuery(query);
+            oRecSet.MoveFirst();
+            var orders = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"].ToObject<List<ClientSearchDetail>>();
+
+            string queryCount = @"
+                Select
+                    Count (*) as COUNT
+                 From OCRD Where ""CardType"" = 'C' AND ""CardCode"" LIKE '%-P' ";
+
+            if (where.Count != 0) {
+                queryCount += " AND " + whereClause;
+            }
+            oRecSet.DoQuery(queryCount);
+            oRecSet.MoveFirst();
+            int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0]["COUNT"].ToObject<int>();
+
+            var respose = new ClientSearchResponse
+            {
+                Data = orders,
+                Draw = request.Draw,
+                RecordsFiltered = COUNT,
+                RecordsTotal = COUNT,
+            };
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(respose);
+        }
+
+        [HttpGet("CRMClientToSell/{id}")]
+        public async Task<IActionResult> GetCRMClientToSell(string id)
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
+                int code = context.oCompany.Connect();
+                if (code != 0) {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                Select
+                    ""CardCode"",
+                    ""CardName"",
+                    ""CardFName"",
+                    contact.""ListNum"",
+                    payment.""GroupNum"",
+                    payment.""PymntGroup"",
+                    ""SlpName"",
+                    ""ListName""
+                From OCRD contact
+                JOIN OSLP seller ON contact.""SlpCode"" = seller.""SlpCode""
+                JOIN OCTG payment ON payment.""GroupNum"" = contact.""GroupNum""
+                JOIN OPLN priceList ON priceList.""ListNum"" = contact.""ListNum"" 
+                Where ""CardCode"" = '" + id + "'");
+            oRecSet.MoveFirst();
+            if (oRecSet.RecordCount == 0) {
+                return NotFound("No Existe Contacto");
+            }
+
+            JToken contact = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(contact);
+        }
+
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
         [HttpGet("CRM/{id}")]
         public async Task<IActionResult> GetCRMID(string id)
         {

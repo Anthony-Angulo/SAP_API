@@ -86,7 +86,18 @@ namespace SAP_API.Models
             return node;
         }
 
-        
+
+        public JToken XMLTOJSONService(string XML)
+        {
+            XmlDocument doc = new XmlDocument();
+            doc.LoadXml(XML);
+
+            JToken node = JObject.Parse(JsonConvert.SerializeXmlNode(doc));
+            node = WalkNode(node);
+
+            return node;
+        }
+
         static JToken ArrayFormatRow(JToken temp)
         {
             if (temp["row"] is JArray)

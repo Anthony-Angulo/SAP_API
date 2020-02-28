@@ -581,6 +581,7 @@ namespace SAP_API.Controllers
                     ord.""DocEntry"",
                     ord.""DocNum"",
                     ord.""DocDate"",
+                    ord.""DocTime"",
                     ord.""DocDueDate"",
                     ord.""CancelDate"",
                     ord.""Address"",
@@ -887,8 +888,9 @@ namespace SAP_API.Controllers
             order.CardCode = value.cardcode;
             order.Series = value.series;
             order.DocCurrency = value.currency;
-            //if (value.currency == "USD") {
-            //    order.DocRate = value.currencyRate;
+            //if (value.currency == "MXN") {
+            //    order.UserFields.Fields.Item("SysRate").Value = value.currencyRate;
+            //    //order.DocRate = value.currencyRate;
             //}
             order.DocDueDate = DateTime.Now.AddDays(1); //////////////////////////////////////////
             //order.DocDueDate = value.date; /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
