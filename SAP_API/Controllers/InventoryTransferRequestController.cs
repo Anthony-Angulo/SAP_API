@@ -134,6 +134,7 @@ namespace SAP_API.Controllers
                     ""LineNum"",
                     ""ItemCode"",
                     ""Dscription"",
+                    ""UseBaseUn"",
                     ""UomEntry"",
                     ""WhsCode"",
                     ""UomCode"",

@@ -14,6 +14,7 @@ namespace SAP_API.Models
         public double Count { set; get; }
         public int Line { set; get; }
         public int UoMEntry { set; get; }
+        public SAPbobsCOM.BoYesNoEnum  UseBaseUnits { set; get; }
         public string WarehouseCode { set; get; }
         public string Pallet { set; get; }
         public List<TranferRowBatch> batch { set; get; }

@@ -23,6 +23,18 @@ namespace SAP_API.Controllers
         {
         }
 
+        public class ProviderSearchDetail : SearchDetail
+        {
+            public string CardCode { get; set; }
+            public string CardFName { get; set; }
+            public string CardName { get; set; }
+            public string Currency { get; set; }
+        }
+
+        public class ProviderSearchResponse : SearchResponse<ProviderSearchDetail>
+        {
+        }
+
         [HttpPost("clients/search")]
         public async Task<IActionResult> Get([FromBody] SearchRequest request)
         {
@@ -101,6 +113,89 @@ namespace SAP_API.Controllers
             return Ok(respose);
         }
 
+        [HttpPost("providers/search")]
+        public async Task<IActionResult> GetProviders([FromBody] SearchRequest request)
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
+                int code = context.oCompany.Connect();
+                if (code != 0) {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            List<string> where = new List<string>();
+
+            if (request.columns[0].search.value != String.Empty) {
+                where.Add($"LOWER(\"CardCode\") Like LOWER('%{request.columns[0].search.value}%')");
+            }
+            if (request.columns[1].search.value != String.Empty) {
+                where.Add($"LOWER(\"CardName\") Like LOWER('%{request.columns[1].search.value}%')");
+            }
+            if (request.columns[2].search.value != String.Empty) {
+                where.Add($"LOWER(\"CardFName\") Like LOWER('%{request.columns[2].search.value}%')");
+            }
+            if (request.columns[3].search.value != String.Empty) {
+                where.Add($"LOWER(\"Currency\") Like LOWER('%{request.columns[3].search.value}%')");
+            }
+
+            string orderby = "";
+            if (request.order[0].column == 0) {
+                orderby = $" ORDER BY \"CardCode\" {request.order[0].dir}";
+            } else if (request.order[0].column == 1) {
+                orderby = $" ORDER BY \"CardName\" {request.order[0].dir}";
+            } else if (request.order[0].column == 2) {
+                orderby = $" ORDER BY \"CardFName\" {request.order[0].dir}";
+            } else if (request.order[0].column == 3) {
+                orderby = $" ORDER BY \"Currency\" {request.order[0].dir}";
+            } else {
+                orderby = $" ORDER BY \"CardCode\" DESC";
+            }
+
+            string whereClause = String.Join(" AND ", where);
+
+            string query = @"
+                Select ""CardCode"", ""CardName"", ""CardFName"", ""Currency""
+                From OCRD Where ""CardType"" = 'S' ";
+
+            if (where.Count != 0) {
+                query += " AND " + whereClause;
+            }
+
+            query += orderby;
+
+            query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+
+            oRecSet.DoQuery(query);
+            oRecSet.MoveFirst();
+            var orders = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"].ToObject<List<ProviderSearchDetail>>();
+
+            string queryCount = @"
+                Select
+                    Count (*) as COUNT
+                 From OCRD Where ""CardType"" = 'S' ";
+
+            if (where.Count != 0) {
+                queryCount += " AND " + whereClause;
+            }
+            oRecSet.DoQuery(queryCount);
+            oRecSet.MoveFirst();
+            int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0]["COUNT"].ToObject<int>();
+
+            var respose = new ProviderSearchResponse
+            {
+                Data = orders,
+                Draw = request.Draw,
+                RecordsFiltered = COUNT,
+                RecordsTotal = COUNT,
+            };
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(respose);
+        }
+
         [HttpGet("CRMClientToSell/{id}")]
         public async Task<IActionResult> GetCRMClientToSell(string id)
         {
@@ -128,6 +223,38 @@ namespace SAP_API.Controllers
                 JOIN OSLP seller ON contact.""SlpCode"" = seller.""SlpCode""
                 JOIN OCTG payment ON payment.""GroupNum"" = contact.""GroupNum""
                 JOIN OPLN priceList ON priceList.""ListNum"" = contact.""ListNum"" 
+                Where ""CardCode"" = '" + id + "'");
+            oRecSet.MoveFirst();
+            if (oRecSet.RecordCount == 0) {
+                return NotFound("No Existe Contacto");
+            }
+
+            JToken contact = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(contact);
+        }
+
+        [HttpGet("CRMProviderToBuy/{id}")]
+        public async Task<IActionResult> CRMProviderToBuy(string id) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
+                int code = context.oCompany.Connect();
+                if (code != 0) {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                Select
+                    ""CardCode"",
+                    ""CardName"",
+                    ""CardFName"",
+                    ""Currency""
+                From OCRD
                 Where ""CardCode"" = '" + id + "'");
             oRecSet.MoveFirst();
             if (oRecSet.RecordCount == 0) {

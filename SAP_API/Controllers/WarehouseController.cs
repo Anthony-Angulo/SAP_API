@@ -118,7 +118,7 @@ namespace SAP_API.Controllers
         }
 
         // GET: api/Warehouse/porderlist
-        [HttpGet("porderlist")]
+        [HttpGet("purchaseorderlist")]
         public async Task<IActionResult> GetPList()
         {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;

@@ -204,8 +204,8 @@ namespace SAP_API.Controllers
                         //    return BadRequest(new {id = 1,  error });
                         //}
 
-                        try
-                        {
+                        try {
+                            
                             SAPbobsCOM.StockTransfer newRequest = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
 
                             newRequest.FromWarehouse = request.FromWarehouse;
@@ -214,20 +214,26 @@ namespace SAP_API.Controllers
 
                             newRequest.UserFields.Fields.Item("U_SO1_02NUMRECEPCION").Value = request.DocNum.ToString();
 
-                            for (int i = 0; i < value.products.Count; i++)
-                            {
-                                request.Lines.SetCurrentLine(value.products[i].Line);
+                            for (int i = 0; i < value.products.Count; i++) {
+                                //request.Lines.SetCurrentLine(value.products[i].Line);
+
                                 newRequest.Lines.ItemCode = value.products[i].ItemCode;
-                                newRequest.Lines.UoMEntry = request.Lines.UoMEntry;
-                                newRequest.Lines.UseBaseUnits = request.Lines.UseBaseUnits;
+                                
+                                //newRequest.Lines.UoMEntry = request.Lines.UoMEntry;
+
+                                newRequest.Lines.UoMEntry = value.products[i].UoMEntry;
+
+                                //newRequest.Lines.UseBaseUnits = request.Lines.UseBaseUnits;
+
+                                newRequest.Lines.UseBaseUnits = value.products[i].UseBaseUnits;
+
                                 newRequest.Lines.Quantity = value.products[i].Count;
                                 newRequest.Lines.FromWarehouseCode = request.Lines.WarehouseCode;
                                 newRequest.Lines.WarehouseCode = request.ToWarehouse;
                                 newRequest.Lines.Add();
                             }
                             int result2 = newRequest.Add();
-                            if (result2 != 0)
-                            {
+                            if (result2 != 0) {
                                 string error = context.oCompany.GetLastErrorDescription();
                                 Console.WriteLine(2);
                                 Console.WriteLine(error);
@@ -236,8 +242,7 @@ namespace SAP_API.Controllers
                                 return BadRequest(new { id = 2, error, value, va = context.XMLTOJSON(newRequest.GetAsXML()) });
                             }
                             return Ok(context.oCompany.GetNewObjectKey());
-                        } catch (Exception ex)
-                        {
+                        } catch (Exception ex) {
                             Console.WriteLine(6);
                             Console.WriteLine(ex);
                             Console.WriteLine(value);
