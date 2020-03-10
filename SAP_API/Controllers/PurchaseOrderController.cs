@@ -255,8 +255,12 @@ namespace SAP_API.Controllers
                     Select
                         ""ItemCode"",
                         ""ItemName"",
+                        ""QryGroup2"",
                         ""QryGroup7"",
                         ""QryGroup41"",
+                        ""QryGroup43"",
+                        ""QryGroup44"",
+                        ""QryGroup45"",
                         ""ManBtchNum"",
                         ""U_IL_PesMax"",
                         ""U_IL_PesMin"",

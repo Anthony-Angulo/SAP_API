@@ -314,8 +314,10 @@ namespace SAP_API.Controllers
                     contact.""CardName"",
                     contact.""CardCode"",
                     contact.""CardFName"",
+                    contact.""ListNum"",
                     employee.""SlpCode"",
                     employee.""SlpName"",
+                    warehouse.""WhsCode"",
                     warehouse.""WhsName""
                 FROM ORDR ord
                 LEFT JOIN NNM1 series ON series.""Series"" = ord.""Series""
@@ -329,6 +331,7 @@ namespace SAP_API.Controllers
 
             oRecSet.DoQuery(@"
                 Select
+                    ""LineNum"",
                     ""ItemCode"",
                     ""Dscription"",
                     ""Price"",
@@ -336,6 +339,8 @@ namespace SAP_API.Controllers
                     ""Quantity"",
                     ""UomCode"",
                     ""InvQty"",
+                    ""OpenQty"",
+                    ""UomEntry"",
                     ""UomCode2"",
                     ""LineTotal"",
                     ""U_CjsPsVr"",

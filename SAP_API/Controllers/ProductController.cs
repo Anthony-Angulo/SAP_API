@@ -318,8 +318,8 @@ namespace SAP_API.Controllers
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpCode"" = '" + id + @"'
-                AND detail.""UomEntry"" in (Select ""UomEntry"" FROM ITM4 Where ""UomType"" = 'S' AND ""ItemCode"" = '" + id + "')");
+                Where header.""UgpCode"" = '" + id + @"'");
+                //AND detail.""UomEntry"" in (Select ""UomEntry"" FROM ITM4 Where ""UomType"" = 'S' AND ""ItemCode"" = '" + id + "')");
             oRecSet.MoveFirst();
             product["uom"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             GC.Collect();
@@ -328,7 +328,53 @@ namespace SAP_API.Controllers
         }
 
 
-        // GET: api/Products/CRMToSell/5
+        // GET: api/Products/CRMToSellEdit/5
+        [HttpGet("CRMToSellEdit/{id}")]
+        public async Task<IActionResult> GetCRMToSellEdit(string id) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
+                int code = context.oCompany.Connect();
+                if (code != 0) {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                Select 
+                    product.""ItemName"", 
+                    product.""ItemCode"", 
+                    RTRIM(RTRIM(product.""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm"",
+                    product.""SUoMEntry""
+                From OITM product
+                Where product.""ItemCode"" = '" + id + @"'");
+            oRecSet.MoveFirst();
+            JToken product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+            oRecSet.DoQuery(@"
+                Select 
+                    header.""UgpCode"",
+                    header.""BaseUom"",
+                    baseUOM.""UomCode"" as ""BaseCode"",
+                    detail.""UomEntry"",
+                    UOM.""UomCode"",
+                    RTRIM(RTRIM(detail.""BaseQty"", '0'), '.') AS ""BaseQty""
+                From OUGP header
+                JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                Where header.""UgpCode"" = '" + id + @"'");
+            //AND detail.""UomEntry"" in (Select ""UomEntry"" FROM ITM4 Where ""UomType"" = 'S' AND ""ItemCode"" = '" + id + "')");
+            oRecSet.MoveFirst();
+            product["uom"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(product);
+        }
+
+
+        // GET: api/Products/CRMToBuy/5
         [HttpGet("CRMToBuy/{id}")]
         public async Task<IActionResult> GetCRMToBuy(string id) {
 
