@@ -425,6 +425,49 @@ namespace SAP_API.Controllers
             return NotFound("No Existe Producto");
         }
 
+        // GET: api/Products/UomDetail
+        [HttpGet("UomDetail/{id}")]
+        public async Task<IActionResult> GetUomDetail(string id) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
+                int code = context.oCompany.Connect();
+                if (code != 0) {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery("Select \"ItemCode\", \"ItemName\", \"NumInSale\", \"SUoMEntry\", \"IUoMEntry\", \"U_IL_PesProm\" From OITM Where \"ItemCode\" = '" + id + "'");
+            oRecSet.MoveFirst();
+            JToken product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(product);
+        }
+
+        // GET: api/Products/Uoms
+        [HttpGet("Uoms")]
+        public async Task<IActionResult> GetUoms() {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
+                int code = context.oCompany.Connect();
+                if (code != 0) {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery("Select \"UomEntry\", \"UomCode\" From OUOM");
+            oRecSet.MoveFirst();
+            JToken uoms = context.XMLTOJSON(oRecSet.GetAsXML())["OUOM"];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(uoms);
+        }
 
         // GET: api/Products/CRMList
         [HttpGet("CRMList")]

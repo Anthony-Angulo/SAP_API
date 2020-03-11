@@ -154,6 +154,7 @@ namespace SAP_API.Controllers
                         ""QryGroup7"",
                         ""QryGroup41"",
                         ""QryGroup42"",
+                        ""QryGroup45"",
                         ""ManBtchNum"",
                         ""U_IL_PesMax"",
                         ""U_IL_PesMin"",
