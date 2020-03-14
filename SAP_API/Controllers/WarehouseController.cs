@@ -9,26 +9,21 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class WarehouseController : ControllerBase
-    {
+    public class WarehouseController : ControllerBase {
         // GET: api/Warehouse
         [HttpGet]
-        public async Task<IActionResult> Get()
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Get() {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
             }
 
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
             oRecSet.DoQuery(@"
                 Select
                     ""WhsCode"",
@@ -42,22 +37,18 @@ namespace SAP_API.Controllers
         // Sucursales y serie del documento orden de venta
         // GET: api/Warehouse/orderlist
         [HttpGet("list")]
-        public async Task<IActionResult> GetList()
-        {
+        public async Task<IActionResult> GetList() {
+            
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            if (!context.oCompany.Connected)
-            {
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
             }
 
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
             oRecSet.DoQuery(@"
                 Select
                     warehouse.""WhsCode"",
@@ -74,15 +65,12 @@ namespace SAP_API.Controllers
         // Sucursales y serie del documento orden de venta, filtradas por vendedor
         // GET: api/Warehouse/list/200
         [HttpGet("list/{id}")]
-        public async Task<IActionResult> GetList(int id)
-        {
+        public async Task<IActionResult> GetList(int id) {
+            
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            if (!context.oCompany.Connected)
-            {
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -119,15 +107,12 @@ namespace SAP_API.Controllers
 
         // GET: api/Warehouse/porderlist
         [HttpGet("purchaseorderlist")]
-        public async Task<IActionResult> GetPList()
-        {
+        public async Task<IActionResult> GetPList() {
+            
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            if (!context.oCompany.Connected)
-            {
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -150,15 +135,12 @@ namespace SAP_API.Controllers
 
         // GET: api/Warehouse/TSR
         [HttpGet("tsr")]
-        public async Task<IActionResult> GetTSRList()
-        {
+        public async Task<IActionResult> GetTSRList() {
+            
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            if (!context.oCompany.Connected)
-            {
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -185,11 +167,9 @@ namespace SAP_API.Controllers
         //{
         //    SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-        //    if (!context.oCompany.Connected)
-        //    {
+        //    if (!context.oCompany.Connected) {
         //        int code = context.oCompany.Connect();
-        //        if (code != 0)
-        //        {
+        //        if (code != 0) {
         //            string error = context.oCompany.GetLastErrorDescription();
         //            return BadRequest(new { error });
         //        }

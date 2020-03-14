@@ -5,19 +5,16 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ValuesController : ControllerBase
-    {
+    public class ValuesController : ControllerBase {
 
         //[HttpGet("us/{id}")]
         //public IEnumerable<string> Us(int id)
         //{
         //    SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-        //    if (!context.oCompany.Connected)
-        //    {
+        //    if (!context.oCompany.Connected) {
         //        int code = context.oCompany.Connect();
-        //        if (code != 0)
-        //        {
+        //        if (code != 0) {
         //            //return [context.oCompany.GetLastErrorDescription()];
         //        }
         //    }
@@ -29,8 +26,7 @@ namespace SAP_API.Controllers
         //    items.Browser.Recordset = oRecSet;
         //    items.Browser.MoveFirst();
 
-        //    while (items.Browser.EoF == false)
-        //    {
+        //    while (items.Browser.EoF == false) {
         //        list.Add(items.FirstName+ ' ' + items.LastName);
         //        items.Browser.MoveNext();
         //    }
@@ -41,8 +37,7 @@ namespace SAP_API.Controllers
 
         // GET api/values
         [HttpGet]
-        public ActionResult<IEnumerable<string>> Get()
-        {
+        public ActionResult<IEnumerable<string>> Get() {
             return new string[] { "value1", "value2" };
         }
 

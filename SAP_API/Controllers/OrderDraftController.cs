@@ -10,19 +10,15 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class OrderDraftController : ControllerBase
-    {
+    public class OrderDraftController : ControllerBase {
         // GET: api/OrderDraft
         [HttpGet]
-        public async Task<IActionResult> Get()
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Get() {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -34,20 +30,16 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["OWDD"];
             return Ok(orders);
-
         }
 
         // GET: api/OrderDraft/5
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(int id)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Get(int id) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -56,8 +48,7 @@ namespace SAP_API.Controllers
             SAPbobsCOM.Documents items = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oDrafts);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
-            if (items.GetByKey(id))
-            {
+            if (items.GetByKey(id)) {
                 JToken temp = context.XMLTOJSON(items.GetAsXML());
                 temp["ODRF"] = temp["ODRF"][0];
 
@@ -92,15 +83,12 @@ namespace SAP_API.Controllers
 
         // POST: api/OrderDraft
         [HttpPost]
-        public async Task<IActionResult> Post()
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Post() {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -114,12 +102,10 @@ namespace SAP_API.Controllers
             oRecSet.DoQuery(@"Select * FROM OWDD WHERE ""ObjType"" = 17 AND ""Status"" = 'Y' AND ""OwnerID"" = '10' AND ""IsDraft"" = 'Y'");
             oRecSet.MoveFirst();
             JToken orders = context.XMLTOJSON(oRecSet.GetAsXML());
-            foreach (JToken draft in orders["OWDD"])
-            {
+            foreach (JToken draft in orders["OWDD"]) {
                 items.GetByKey(draft["DraftEntry"].ToObject<int>());
                 result = items.SaveDraftToDocument();
-                if (result != 0)
-                {
+                if (result != 0) {
                     errors.Add(context.oCompany.GetLastErrorDescription());
                 }
             }
@@ -127,8 +113,7 @@ namespace SAP_API.Controllers
             GC.Collect();
             GC.WaitForPendingFinalizers();
 
-            if (errors.Count > 0)
-            {
+            if (errors.Count > 0) {
                 return BadRequest(errors);
             }
             return Ok();

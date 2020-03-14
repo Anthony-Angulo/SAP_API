@@ -10,8 +10,7 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ProductsController : ControllerBase
-    {
+    public class ProductsController : ControllerBase {
         public class ProductSearchDetail : SearchDetail {
             public string ItemName { get; set; }
             public string ItemCode { get; set; }
@@ -92,8 +91,7 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["COUNT"].ToObject<int>();
 
-            var respose = new ProductSearchResponse
-            {
+            var respose = new ProductSearchResponse {
                 Data = orders,
                 Draw = request.Draw,
                 RecordsFiltered = COUNT,
@@ -179,8 +177,7 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["COUNT"].ToObject<int>();
 
-            var respose = new ProductWithStockSearchResponse
-            {
+            var respose = new ProductWithStockSearchResponse {
                 Data = orders,
                 Draw = request.Draw,
                 RecordsFiltered = COUNT,
@@ -232,8 +229,7 @@ namespace SAP_API.Controllers
                 From OITM
                 Where ""PrchseItem"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y' AND ""ItemCode"" LIKE 'G%' ";
 
-            if (where.Count != 0)
-            {
+            if (where.Count != 0) {
                 query += " AND " + whereClause;
             }
 
@@ -251,16 +247,14 @@ namespace SAP_API.Controllers
                 From OITM
                 Where ""PrchseItem"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y' AND ""ItemCode"" LIKE 'G%' ";
 
-            if (where.Count != 0)
-            {
+            if (where.Count != 0) {
                 queryCount += " AND " + whereClause;
             }
             oRecSet.DoQuery(queryCount);
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["COUNT"].ToObject<int>();
 
-            var respose = new ProductSearchResponse
-            {
+            var respose = new ProductSearchResponse {
                 Data = orders,
                 Draw = request.Draw,
                 RecordsFiltered = COUNT,
@@ -406,8 +400,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/5
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(string id)
-        {
+        public async Task<IActionResult> Get(string id) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -484,8 +478,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/CRMList
         [HttpGet("CRMList")]
-        public async Task<IActionResult> GetCRMList()
-        {
+        public async Task<IActionResult> GetCRMList() {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -506,8 +500,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/ProvidersProducts
         [HttpGet("ProvidersProducts")]
-        public async Task<IActionResult> GetProvidersProducts()
-        {
+        public async Task<IActionResult> GetProvidersProducts() {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -528,8 +522,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/CRMList/Stocks
         [HttpGet("CRMList/Stocks")]
-        public async Task<IActionResult> GetCRMListStocks()
-        {
+        public async Task<IActionResult> GetCRMListStocks() {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -597,8 +591,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/TranferList
         [HttpGet("TransferList")]
-        public async Task<IActionResult> GetTransferList()
-        {
+        public async Task<IActionResult> GetTransferList() {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -619,8 +613,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/Stock
         [HttpGet("Stock/{sucursal}")]
-        public async Task<IActionResult> GetStock(string sucursal)
-        {
+        public async Task<IActionResult> GetStock(string sucursal) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -650,8 +644,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/APPCRM
         [HttpGet("APPCRM")]
-        public async Task<IActionResult> GetCRMS()
-        {
+        public async Task<IActionResult> GetCRMS() {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -721,8 +715,8 @@ namespace SAP_API.Controllers
         // CON NUEVA VERSION APP NO PUBLICADA
         // GET: api/Products/APPCRM/200
         [HttpGet("APPCRM/{id}")]
-        public async Task<IActionResult> GetCRMSContact(int id)
-        {
+        public async Task<IActionResult> GetCRMSContact(int id) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -765,12 +759,10 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             string warehouses = context.XMLTOJSON(oRecSet.GetAsXML())["OSLP"][0]["Fax"].ToString();
             warehouses = warehouses.Trim();
-            if (warehouses.Equals(""))
-            {
+            if (warehouses.Equals("")) {
                 warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55'";
             }
-            else
-            {
+            else {
                 warehouses = warehouses.ToUpper();
                 warehouses = "'" + warehouses + "'";
                 warehouses = warehouses.Replace(",", "','");
@@ -817,11 +809,9 @@ namespace SAP_API.Controllers
         //{
         //    SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-        //    if (!context.oCompany.Connected)
-        //    {
+        //    if (!context.oCompany.Connected) {
         //        int code = context.oCompany.Connect();
-        //        if (code != 0)
-        //        {
+        //        if (code != 0) {
         //            string error = context.oCompany.GetLastErrorDescription();
         //            return BadRequest(new { error });
         //        }
@@ -831,16 +821,14 @@ namespace SAP_API.Controllers
         //    SAPbobsCOM.Recordset oRecSet1 = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
         //    SAPbobsCOM.Recordset oRecSet2 = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
         //    SAPbobsCOM.Recordset oRecSet3 = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-        //    Task<List<List<object>>> pro = Task.Run(() =>
-        //    {
+        //    Task<List<List<object>>> pro = Task.Run(() => {
         //        oRecSet.DoQuery("Select \"ItemName\", \"ItemCode\", \"U_IL_PesProm\" From OITM Where \"SellItem\" = 'Y' AND \"QryGroup3\" = 'Y' AND \"Canceled\" = 'N'");
         //        oRecSet.MoveFirst();
         //        JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
         //        return context.comp(products, 2);
         //    });
 
-        //    Task<List<List<object>>> pl = Task.Run(() =>
-        //    {
+        //    Task<List<List<object>>> pl = Task.Run(() => {
         //        oRecSet1.DoQuery(@"
         //            Select 
         //                ""PriceList"",
@@ -856,8 +844,7 @@ namespace SAP_API.Controllers
         //        return context.comp(priceList, 2);
         //    });
 
-        //    Task<List<List<object>>> sto = Task.Run(() =>
-        //    {
+        //    Task<List<List<object>>> sto = Task.Run(() => {
         //        oRecSet2.DoQuery(@"
         //            Select 
         //                ""ItemCode"",
@@ -873,8 +860,7 @@ namespace SAP_API.Controllers
         //        return context.comp(stock, 1);
         //    });
 
-        //    Task<List<List<object>>> um = Task.Run(() =>
-        //    {
+        //    Task<List<List<object>>> um = Task.Run(() => {
         //        oRecSet3.DoQuery(@"
         //            Select 
         //                header.""UgpCode"",
@@ -901,8 +887,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/CRM/5
         [HttpGet("CRM/{id}")]
-        public async Task<IActionResult> GetCRM(string id)
-        {
+        public async Task<IActionResult> GetCRM(string id) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -966,8 +952,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/CRM/5
         [HttpGet("UM/{id}")]
-        public async Task<IActionResult> GetUM(string id)
-        {
+        public async Task<IActionResult> GetUM(string id) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -997,8 +983,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/WMSReport
         [HttpGet("WMSReport/{sucursal}/{group}")]
-        public async Task<IActionResult> GetWMSReport(string sucursal, string group)
-        {
+        public async Task<IActionResult> GetWMSReport(string sucursal, string group) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -1129,8 +1115,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/S01/5
         [HttpGet("{sucursal}/{group}")]
-        public async Task<IActionResult> GetWarehouseGroup(string sucursal, string group)
-        {
+        public async Task<IActionResult> GetWarehouseGroup(string sucursal, string group) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -1184,8 +1170,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/Detail/5
         [HttpGet("Detail/{id}")]
-        public async Task<IActionResult> GetDetail(string id)
-        {
+        public async Task<IActionResult> GetDetail(string id) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -1229,7 +1215,6 @@ namespace SAP_API.Controllers
                 Where header.""UgpCode"" = '" + id + "'");
             oRecSet.MoveFirst();
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
-
 
             GC.Collect();
             GC.WaitForPendingFinalizers();

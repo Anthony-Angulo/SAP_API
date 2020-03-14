@@ -11,27 +11,22 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ReportController : ControllerBase
-    {
+    public class ReportController : ControllerBase {
 
         // GET: api/Report/5
         [HttpGet("{id}", Name = "Get")]
-        public string Get(int id)
-        {
+        public string Get(int id) {
             return "value";
         }
 
         // GET: api/Report/5
         [HttpGet("WarehouseGroupDate/{warehouseCode}/{group}/{fromDate}/{toDate}")]
-        public async Task<IActionResult> GetByWarehouseGroupDate(string warehouseCode, int group, string fromDate, string toDate)
-        {
+        public async Task<IActionResult> GetByWarehouseGroupDate(string warehouseCode, int group, string fromDate, string toDate) {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-            if (!context.oCompany.Connected)
-            {
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }

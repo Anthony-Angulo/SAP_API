@@ -10,12 +10,11 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PurchaseOrderController : ControllerBase
-    {
+    public class PurchaseOrderController : ControllerBase {
 
         [HttpPost("search")]
-        public async Task<IActionResult> GetSearch([FromBody] SearchRequest request)
-        {
+        public async Task<IActionResult> GetSearch([FromBody] SearchRequest request) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -39,8 +38,7 @@ namespace SAP_API.Controllers
             if (request.columns[3].search.value != String.Empty) {
                 where.Add($"LOWER(warehouse.\"WhsName\") Like LOWER('%{request.columns[3].search.value}%')");
             }
-            if (request.columns[4].search.value != String.Empty)
-            {
+            if (request.columns[4].search.value != String.Empty) {
                 List<string> whereOR = new List<string>();
                 if ("Abierto".Contains(request.columns[4].search.value, StringComparison.CurrentCultureIgnoreCase)) {
                     whereOR.Add(@"ord.""DocStatus"" = 'O' ");
@@ -125,8 +123,7 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OPOR"][0]["COUNT"].ToObject<int>();
 
-            var respose = new OrderSearchResponse
-            {
+            var respose = new OrderSearchResponse {
                 Data = orders,
                 Draw = request.Draw,
                 RecordsFiltered = COUNT,
@@ -139,8 +136,8 @@ namespace SAP_API.Controllers
 
         // GET: api/PurchaseOrder/
         [HttpGet("CRMDetail/{id}")]
-        public async Task<IActionResult> GetCRMDetail(int id)
-        {
+        public async Task<IActionResult> GetCRMDetail(int id) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -338,11 +335,9 @@ namespace SAP_API.Controllers
         //{
         //    SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-        //    if (!context.oCompany.Connected)
-        //    {
+        //    if (!context.oCompany.Connected) {
         //        int code = context.oCompany.Connect();
-        //        if (code != 0)
-        //        {
+        //        if (code != 0) {
         //            string error = context.oCompany.GetLastErrorDescription();
         //            return BadRequest(new { error });
         //        }
@@ -357,8 +352,7 @@ namespace SAP_API.Controllers
         //    items.Browser.Recordset = oRecSet;
         //    items.Browser.MoveFirst();
 
-        //    while (items.Browser.EoF == false)
-        //    {
+        //    while (items.Browser.EoF == false) {
         //        JToken temp = context.XMLTOJSON(items.GetAsXML());
         //        temp["OPOR"] = temp["OPOR"][0];
         //        list.Add(temp);
@@ -371,15 +365,12 @@ namespace SAP_API.Controllers
         // GET: api/PurchaseOrder/CRMList
         // Todas las Ordernes - Encabezado para lista CRM
         [HttpGet("CRMList")]
-        public async Task<IActionResult> GetCRMList()
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetCRMList() {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -408,15 +399,12 @@ namespace SAP_API.Controllers
         // GET: api/PurchaseOrder/CRMList
         // Todas las Ordernes - Encabezado para lista CRM
         [HttpGet("CRMList/Sucursal/{id}")]
-        public async Task<IActionResult> GetCRMSucursalList(string id)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetCRMSucursalList(string id) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -447,15 +435,12 @@ namespace SAP_API.Controllers
 
         // GET: api/PurchaseOrder/list
         [HttpGet("list/{date}")]
-        public async Task<IActionResult> GetList(string date)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetList(string date) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -468,15 +453,13 @@ namespace SAP_API.Controllers
 
             oRecSet.DoQuery("Select * From OPOR Where \"DocDate\" = '" + date + "'");
             int rc = oRecSet.RecordCount;
-            if (rc == 0)
-            {
+            if (rc == 0) {
                 return NotFound();
             }
             items.Browser.Recordset = oRecSet;
             items.Browser.MoveFirst();
 
-            while (items.Browser.EoF == false)
-            {
+            while (items.Browser.EoF == false) {
                 JToken temp = context.XMLTOJSON(items.GetAsXML());
                 temp["OPOR"] = temp["OPOR"][0];
                 temp["POR4"]?.Parent.Remove();
@@ -490,15 +473,12 @@ namespace SAP_API.Controllers
 
         // GET: api/PurchaseOrder/5
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(int id)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Get(int id) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -507,8 +487,7 @@ namespace SAP_API.Controllers
             SAPbobsCOM.Documents items = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
-            if (items.GetByKey(id))
-            {
+            if (items.GetByKey(id)) {
                 JToken temp = context.XMLTOJSON(items.GetAsXML());
                 temp["OPOR"] = temp["OPOR"][0];
 
@@ -532,8 +511,6 @@ namespace SAP_API.Controllers
             }
             return NotFound("No Existe Documento");
         }
-
-        
 
         //// PUT: api/PurchaseOrder/5
         //[HttpPut("{id}")]

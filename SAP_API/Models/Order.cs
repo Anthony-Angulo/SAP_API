@@ -4,8 +4,7 @@ using System.Collections.Generic;
 namespace SAP_API.Models
 {
 
-    public class SearchRequest
-    {
+    public class SearchRequest {
         public int Draw { get; set; }
         public int start { get; set; }
         public int length { get; set; }
@@ -14,8 +13,7 @@ namespace SAP_API.Models
         public List<Order> order { get; set; }
     }
 
-    public class Column
-    {
+    public class Column {
         public string data { get; set; }
         public string name { get; set; }
         public bool searchable { get; set; }
@@ -23,24 +21,20 @@ namespace SAP_API.Models
         public Search search { get; set; }
     }
 
-    public class Search
-    {
+    public class Search {
         public string value { get; set; }
         public string regex { get; set; }
     }
 
-    public class Order
-    {
+    public class Order {
         public int column { get; set; }
         public string dir { get; set; }
     }
 
-    public abstract class SearchDetail
-    {
+    public abstract class SearchDetail {
     }
 
-    public class OrderSearchDetail : SearchDetail
-    {
+    public class OrderSearchDetail : SearchDetail {
         public int DocEntry { get; set; }
         public int DocNum { get; set; }
         public string DocDate { get; set; }
@@ -51,8 +45,7 @@ namespace SAP_API.Models
         public string WhsName { get; set; }
     }
 
-    public abstract class SearchResponse<T> where T : SearchDetail
-    {
+    public abstract class SearchResponse<T> where T : SearchDetail {
         public int Draw { get; set; }
 
         public int RecordsTotal { get; set; }
@@ -62,12 +55,10 @@ namespace SAP_API.Models
         public IList<T> Data { get; set; }
     }
 
-    public class OrderSearchResponse : SearchResponse<OrderSearchDetail>
-    {
+    public class OrderSearchResponse : SearchResponse<OrderSearchDetail> {
     }
 
-    public class CreateOrder
-    {
+    public class CreateOrder {
         public string cardcode { set; get; }
         public string currency { set; get; }
         public string comments { set; get; }
@@ -80,22 +71,19 @@ namespace SAP_API.Models
         public List<OrderRow> rows { set; get; }
     }
 
-    public class OrderRow
-    {
+    public class OrderRow {
         public double quantity { set; get; }
         public string code { set; get; }
         public int uom { set; get; }
         public double equivalentePV { set; get; }
     }
 
-    public class UpdateOrder
-    {
+    public class UpdateOrder {
         public List<OrderRow> newProducts { set; get; }
         public List<UpdateOrderRow> ProductsChanged { set; get; }
     }
 
-    public class UpdateOrderRow
-    {
+    public class UpdateOrderRow {
         public int LineNum { set; get; }
         public double quantity { set; get; }
         public int uom { set; get; }

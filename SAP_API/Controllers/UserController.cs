@@ -10,20 +10,16 @@ namespace SAP_API.Controllers
 
     [Route("api/[controller]")]
     [ApiController]
-    public class UsersController : ControllerBase
-    {
+    public class UsersController : ControllerBase {
 
         // GET: api/Users
         [HttpGet]
-        public IEnumerable<Object> Get()
-        {
+        public IEnumerable<Object> Get() {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-            if (!context.oCompany.Connected)
-            {
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     //return [context.oCompany.GetLastErrorDescription()];
                 }
             }
@@ -48,29 +44,24 @@ namespace SAP_API.Controllers
             items.Browser.Recordset = oRecSet;
             items.Browser.MoveFirst();
 
-            while (items.Browser.EoF == false)
-            {
+            while (items.Browser.EoF == false) {
                 JToken temp = context.XMLTOJSON(items.GetAsXML());
                 temp = temp["OHEM"]["row"];
                 int value;
-                if(int.TryParse(temp["dept"].ToString(), out value))
-                {
+                if(int.TryParse(temp["dept"].ToString(), out value)) {
                     departmentParams.Code = value;
                     department = departmentService.GetDepartment(departmentParams);
                     temp["department"] = department.Name;
-                } else
-                {
+                } else {
                     temp["department"] = null;
                 }
 
-                if (int.TryParse(temp["position"].ToString(), out value))
-                {
+                if (int.TryParse(temp["position"].ToString(), out value)) {
                     positionParams.PositionID = value;
                     position = positionService.Get(positionParams);
                     temp["positionName"] = position.Name;
                 }
-                else
-                {
+                else {
                     temp["positionName"] = null;
                 }
 

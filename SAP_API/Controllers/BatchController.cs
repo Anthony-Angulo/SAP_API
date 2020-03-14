@@ -9,8 +9,7 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class BatchController : ControllerBase
-    {
+    public class BatchController : ControllerBase {
         //// GET: api/Batch
         //[HttpGet]
         //public async Task<IActionResult> Get()

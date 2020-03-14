@@ -8,8 +8,7 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class InventoryTransferRequestController : ControllerBase
-    {
+    public class InventoryTransferRequestController : ControllerBase {
         //// GET: api/InventoryTransferRequest
         //[HttpGet]
         //public IEnumerable<string> Get()
@@ -19,15 +18,13 @@ namespace SAP_API.Controllers
 
         // GET: api/InventoryTransferRequest/list
         [HttpGet("list/{date}")]
-        public async Task<IActionResult> GetList(string date)
-        {
+        public async Task<IActionResult> GetList(string date) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-            if (!context.oCompany.Connected)
-            {
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -45,8 +42,7 @@ namespace SAP_API.Controllers
                 From OWTQ Where ""DocDate"" = '" + date + "'");
 
             int rc = oRecSet.RecordCount;
-            if (rc == 0)
-            {
+            if (rc == 0) {
                 return NotFound();
             }
 
@@ -57,15 +53,12 @@ namespace SAP_API.Controllers
 
         // GET: api/InventoryTransferRequest/5
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(int id)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Get(int id) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -74,8 +67,7 @@ namespace SAP_API.Controllers
             SAPbobsCOM.StockTransfer request = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
-            if (request.GetByKey(id))
-            {
+            if (request.GetByKey(id)) {
                 JToken temp = context.XMLTOJSON(request.GetAsXML());
                 temp["OWTQ"] = temp["OWTQ"][0];
                 temp["AdmInfo"]?.Parent.Remove();
@@ -88,15 +80,12 @@ namespace SAP_API.Controllers
 
         // GET: api/InventoryTransferRequest/Reception/5
         [HttpGet("Reception/{id}")]
-        public async Task<IActionResult> GetReception(int id)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetReception(int id) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -114,8 +103,7 @@ namespace SAP_API.Controllers
                 From OWTQ WHERE ""DocNum"" = " + id);
 
             int rc = oRecSet.RecordCount;
-            if (rc == 0)
-            {
+            if (rc == 0) {
                 return NotFound();
             }
 
@@ -123,8 +111,7 @@ namespace SAP_API.Controllers
             request["AdmInfo"]?.Parent.Remove();
             request["OWTQ"] = request["OWTQ"][0];
 
-            if (request["OWTQ"]["DocStatus"].ToString() != "O")
-            {
+            if (request["OWTQ"]["DocStatus"].ToString() != "O") {
                 return BadRequest("Documento Cerrado");
             }
 
@@ -145,8 +132,7 @@ namespace SAP_API.Controllers
 
             request["WTQ1"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTQ1"];
 
-            foreach (var pro in request["WTQ1"])
-            {
+            foreach (var pro in request["WTQ1"]) {
                 oRecSet.DoQuery(@"
                     Select
                         ""ItemCode"",
@@ -184,25 +170,20 @@ namespace SAP_API.Controllers
 
         // GET: api/InventoryTransferRequest/Detail/5
         [HttpGet("Detail/{id}/{doctype}")]
-        public async Task<IActionResult> GetDetail(int id, string doctype)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetDetail(int id, string doctype) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
             }
 
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
             
-            if (!doctype.Equals("DocEntry") && !doctype.Equals("DocNum"))
-            {
+            if (!doctype.Equals("DocEntry") && !doctype.Equals("DocNum")) {
                 return BadRequest(new { error  = "Doc Type to Search Invalid"});
             }
 
@@ -216,8 +197,7 @@ namespace SAP_API.Controllers
                     ""Filler"",
                     ""ToWhsCode""
                 From OWTQ WHERE """ + doctype + @""" = " + id);
-            if (oRecSet.RecordCount == 0)
-            {
+            if (oRecSet.RecordCount == 0) {
                 return NotFound("No Existe Documento");
             }
 
@@ -269,8 +249,7 @@ namespace SAP_API.Controllers
                 FROM OWTR 
                 WHERE ""DocEntry"" in (SELECT ""DocEntry"" FROM WTR1 WHERE ""BaseEntry"" = " + docentry + ")");
 
-            if (oRecSet.RecordCount != 0)
-            {
+            if (oRecSet.RecordCount != 0) {
                 transfer["Transfers"] = context.XMLTOJSON(oRecSet.GetAsXML())["OWTR"];
 
                 oRecSet.DoQuery(@"
@@ -285,8 +264,7 @@ namespace SAP_API.Controllers
                 transfer["TransfersDetail"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTR1"];
 
                 string docEntrys = "";
-                foreach (JToken transfers in transfer["Transfers"])
-                {
+                foreach (JToken transfers in transfer["Transfers"]) {
                     docEntrys += transfers["DocEntry"] + ",";
                 }
                 docEntrys = docEntrys.Substring(0, docEntrys.Length-1);
@@ -308,8 +286,7 @@ namespace SAP_API.Controllers
 
                 oRecSet.DoQuery(@"SELECT ""DocNum"", ""DocEntry"", ""DocDate"" From OWTQ WHERE ""U_SO1_02NUMRECEPCION"" = " + docnum);
 
-                if (oRecSet.RecordCount != 0)
-                {
+                if (oRecSet.RecordCount != 0) {
                     transfer["Requests"] = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"];
 
                     oRecSet.DoQuery(@"
@@ -328,15 +305,12 @@ namespace SAP_API.Controllers
 
         // POST: api/InventoryTransferRequest
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] TransferRequest value)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Post([FromBody] TransferRequest value) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -362,20 +336,17 @@ namespace SAP_API.Controllers
             newRequest.FromWarehouse = value.fromwhs.whscode;
             newRequest.ToWarehouse = value.towhs.whscode;
 
-            for (int i = 0; i < value.rows.Count; i++)
-            {
+            for (int i = 0; i < value.rows.Count; i++) {
                 newRequest.Lines.ItemCode = value.rows[i].code;
 
 
-                if (value.rows[i].uom == -2)
-                {
+                if (value.rows[i].uom == -2) {
                     newRequest.Lines.UoMEntry = 6;
                     newRequest.Lines.UserFields.Fields.Item("U_CjsPsVr").Value = value.rows[i].quantity;
                     newRequest.Lines.Quantity = value.rows[i].quantity * value.rows[i].equivalentePV;
                     newRequest.Lines.UseBaseUnits = SAPbobsCOM.BoYesNoEnum.tYES;
                 }
-                else
-                {
+                else {
                     newRequest.Lines.Quantity = value.rows[i].quantity;
                     newRequest.Lines.UoMEntry = value.rows[i].uom;
                     newRequest.Lines.UseBaseUnits = (SAPbobsCOM.BoYesNoEnum)value.rows[i].uomBase;
@@ -387,8 +358,7 @@ namespace SAP_API.Controllers
             }
 
             int result = newRequest.Add();
-            if (result != 0)
-            {
+            if (result != 0) {
                 string error = context.oCompany.GetLastErrorDescription();
                 return BadRequest(error);
             }
@@ -397,15 +367,12 @@ namespace SAP_API.Controllers
 
         // PUT: api/InventoryTransferRequest/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> Put(int id, [FromBody] UpdateTransferRequest value)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Put(int id, [FromBody] UpdateTransferRequest value) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -413,14 +380,12 @@ namespace SAP_API.Controllers
 
             SAPbobsCOM.StockTransfer request = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
 
-            if (request.GetByKey(id))
-            {
+            if (request.GetByKey(id)) {
                 request.Lines.SetCurrentLine(0);
                 string from = request.Lines.FromWarehouseCode;
                 string to = request.Lines.WarehouseCode;
                 request.Lines.Add();
-                for (int i = 0; i < value.newProducts.Count; i++)
-                {
+                for (int i = 0; i < value.newProducts.Count; i++) {
                     request.Lines.ItemCode = value.newProducts[i].code;
                     request.Lines.Quantity = value.newProducts[i].quantity;
                     request.Lines.UoMEntry = value.newProducts[i].uom;
@@ -430,28 +395,23 @@ namespace SAP_API.Controllers
                     request.Lines.Add();
                 }
 
-                for (int i = 0; i < value.ProductsChanged.Count; i++)
-                {
+                for (int i = 0; i < value.ProductsChanged.Count; i++) {
                     request.Lines.SetCurrentLine(value.ProductsChanged[i].LineNum);
-                    if (request.Lines.Quantity != value.ProductsChanged[i].quantity)
-                    {
+                    if (request.Lines.Quantity != value.ProductsChanged[i].quantity) {
                         request.Lines.Quantity = value.ProductsChanged[i].quantity;
                     }
 
-                    if (request.Lines.UoMEntry != value.ProductsChanged[i].uom)
-                    {
+                    if (request.Lines.UoMEntry != value.ProductsChanged[i].uom) {
                         request.Lines.UseBaseUnits = (SAPbobsCOM.BoYesNoEnum)value.ProductsChanged[i].uomBase;
                         request.Lines.UoMEntry = value.ProductsChanged[i].uom;
                     }
                 }
 
                 int result = request.Update();
-                if (result == 0)
-                {
+                if (result == 0) {
                     return Ok();
                 }
-                else
-                {
+                else {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -459,7 +419,6 @@ namespace SAP_API.Controllers
             }
 
             return BadRequest(new { error = "No Existe Documento" });
-    
         }
 
     }

@@ -10,19 +10,15 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class DeliveryController : ControllerBase
-    {
+    public class DeliveryController : ControllerBase {
         // GET: api/Delivery
         [HttpGet]
-        public async Task<IActionResult> Get()
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Get() {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -37,8 +33,7 @@ namespace SAP_API.Controllers
             items.Browser.Recordset = oRecSet;
             items.Browser.MoveFirst();
 
-            while (items.Browser.EoF == false)
-            {
+            while (items.Browser.EoF == false) {
                 JToken temp = context.XMLTOJSON(items.GetAsXML());
                 //temp["ODLN"] = temp["ODLN"][0];
                 list.Add(temp);
@@ -50,15 +45,12 @@ namespace SAP_API.Controllers
 
         // GET: api/Delivery/list/20191022
         [HttpGet("list/{date}")]
-        public async Task<IActionResult> GetList(string date)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetList(string date) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -70,15 +62,13 @@ namespace SAP_API.Controllers
 
             oRecSet.DoQuery("Select * From ODLN Where \"DocDate\" = '" + date + "'");
             int rc = oRecSet.RecordCount;
-            if (rc == 0)
-            {
+            if (rc == 0) {
                 return NotFound();
             }
             items.Browser.Recordset = oRecSet;
             items.Browser.MoveFirst();
 
-            while (items.Browser.EoF == false)
-            {
+            while (items.Browser.EoF == false) {
                 JToken temp = context.XMLTOJSON(items.GetAsXML());
                 temp["ODLN"] = temp["ODLN"][0];
                 // temp["PDN4"]?.Parent.Remove();
@@ -93,15 +83,12 @@ namespace SAP_API.Controllers
 
         // POST: api/Delivery
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] Delivery value)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Post([FromBody] Delivery value) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -111,8 +98,7 @@ namespace SAP_API.Controllers
             SAPbobsCOM.Documents delivery = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oDeliveryNotes);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
-            if (order.GetByKey(value.order))
-            {
+            if (order.GetByKey(value.order)) {
                 delivery.CardCode = order.CardCode;
                 delivery.DocDate = DateTime.Now;
                 delivery.DocDueDate = DateTime.Now;
@@ -131,9 +117,7 @@ namespace SAP_API.Controllers
                 oRecSet.MoveFirst();
                 delivery.Series = context.XMLTOJSON(oRecSet.GetAsXML())["NNM1"][0]["Series"].ToObject<int>();
 
-
-                for (int i = 0; i < value.products.Count; i++)
-                {
+                for (int i = 0; i < value.products.Count; i++) {
                     //delivery.Lines.ItemCode = value.products[i].ItemCode;
                     //delivery.Lines.Quantity = value.products[i].Count;
                     //delivery.Lines.UoMEntry = value.products[i].UoMEntry;
@@ -142,13 +126,9 @@ namespace SAP_API.Controllers
                     delivery.Lines.BaseEntry = order.DocEntry;
                     delivery.Lines.BaseLine = value.products[i].Line;
                     delivery.Lines.BaseType = 17;
-                    //if (value.products[i].UoMEntry == 6)
-                    {
-                        delivery.Lines.Quantity = value.products[i].Count;
-                        //order.Update();
-                    }
-                    for (int j = 0; j < value.products[i].batch.Count; j++)
-                    {
+                    delivery.Lines.Quantity = value.products[i].Count;
+                     
+                    for (int j = 0; j < value.products[i].batch.Count; j++) {
                         delivery.Lines.BatchNumbers.BaseLineNumber = delivery.Lines.LineNum;
                         delivery.Lines.BatchNumbers.BatchNumber = value.products[i].batch[j].name;
                         delivery.Lines.BatchNumbers.Quantity = value.products[i].batch[j].quantity;
@@ -160,12 +140,9 @@ namespace SAP_API.Controllers
 
                 //delivery.Comments = "Test";
                 int result = delivery.Add();
-                if (result == 0)
-                {
+                if (result == 0) {
                     return Ok(new { value });
-                }
-                else
-                {
+                } else {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -177,15 +154,12 @@ namespace SAP_API.Controllers
 
         // POST: api/Delivery/MASS
         [HttpPost("MASS")]
-        public async Task<IActionResult> PostMASS([FromBody] DeliveryModelMASS value)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> PostMASS([FromBody] DeliveryModelMASS value) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -197,16 +171,14 @@ namespace SAP_API.Controllers
             delivery.TaxDate = value.date;
             delivery.Comments = value.comments;
 
-            for (int i = 0; i < value.product.Count; i++)
-            {
+            for (int i = 0; i < value.product.Count; i++) {
                 delivery.Lines.ItemCode = value.product[i].ItemCode;
                 //delivery.Lines.UoMEntry = 6;
                 delivery.Lines.Quantity = value.product[i].Count;
                 delivery.Lines.AccountCode = value.product[i].AccCode;
                 delivery.Lines.WarehouseCode = value.sucursal;
                 //Console.WriteLine(value.product[i].batch.Count);
-                for (int j = 0; j < value.product[i].batch.Count; j++)
-                {
+                for (int j = 0; j < value.product[i].batch.Count; j++) {
                     delivery.Lines.BatchNumbers.BaseLineNumber = delivery.Lines.LineNum;
                     delivery.Lines.BatchNumbers.BatchNumber = value.product[i].batch[j].BatchNum;
                     delivery.Lines.BatchNumbers.Quantity = value.product[i].batch[j].Quantity;
@@ -217,17 +189,13 @@ namespace SAP_API.Controllers
             }
 
             int result = delivery.Add();
-            if (result == 0)
-            {
+            if (result == 0) {
                 return Ok(new { value });
-            }
-            else
-            {
+            } else {
                 string error = context.oCompany.GetLastErrorDescription();
                 return BadRequest(new { error });
             }
 
         }
-
     }
 }

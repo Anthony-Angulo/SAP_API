@@ -9,8 +9,7 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CodeBarController : ControllerBase
-    {
+    public class CodeBarController : ControllerBase {
         /// <summary>
         ///     Busqueda de Producto por codigo de barra 
         /// </summary>

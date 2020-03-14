@@ -3,14 +3,12 @@ using System.Collections.Generic;
 
 namespace SAP_API.Models
 {
-    public class PurchaseOrderDelivery
-    {
+    public class PurchaseOrderDelivery {
         public int order { set; get; }
         public List<PurchaseOrderDeliveryRow> products { set; get; }
 
     }
-    public class PurchaseOrderDeliveryRow
-    {
+    public class PurchaseOrderDeliveryRow {
         public string ItemCode { set; get; }
         public double Count { set; get; }
         public int Line { set; get; }
@@ -20,8 +18,7 @@ namespace SAP_API.Models
         public List<PurchaseOrderDeliveryRowBatch> batch { set; get; }
     }
 
-    public class PurchaseOrderDeliveryRowBatch
-    {
+    public class PurchaseOrderDeliveryRowBatch {
         public double quantity { set; get; }
         public string name { set; get; }
         public string code { set; get; }

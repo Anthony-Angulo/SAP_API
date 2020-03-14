@@ -10,19 +10,15 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PriceListController : ControllerBase
-    {
+    public class PriceListController : ControllerBase {
         // GET: api/PriceList
         [HttpGet]
-        public async Task<IActionResult> Get()
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Get() {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -37,8 +33,7 @@ namespace SAP_API.Controllers
             items.Browser.Recordset = oRecSet;
             items.Browser.MoveFirst();
 
-            while (items.Browser.EoF == false)
-            {
+            while (items.Browser.EoF == false) {
                 JToken temp = context.XMLTOJSON(items.GetAsXML());
                 list.Add(temp["OPLN"][0]);
                 items.Browser.MoveNext();
@@ -49,15 +44,12 @@ namespace SAP_API.Controllers
 
         // GET: api/PriceList/CRMList
         [HttpGet("CRMList")]
-        public async Task<IActionResult> GetCRMList()
-        {
+        public async Task<IActionResult> GetCRMList() {
+            
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            if (!context.oCompany.Connected)
-            {
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }

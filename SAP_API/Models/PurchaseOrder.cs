@@ -2,8 +2,7 @@
 
 namespace SAP_API.Models
 {
-    public class PurchaseOrder
-    {
+    public class PurchaseOrder {
         public string cardcode { set; get; }
         public string comments { set; get; }
         public int series { set; get; }
@@ -13,8 +12,7 @@ namespace SAP_API.Models
         
     }
 
-    public class PurchaseOrderRow
-    {
+    public class PurchaseOrderRow {
         public double quantity { set; get; }
         public string code { set; get; }
         public double price { set; get; }

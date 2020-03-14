@@ -10,8 +10,7 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class OrderController : ControllerBase
-    {
+    public class OrderController : ControllerBase {
 
         [HttpPost("search")]
         public async Task<IActionResult> Get([FromBody] SearchRequest request) {
@@ -133,8 +132,7 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"][0]["COUNT"].ToObject<int>();
 
-            var respose = new OrderSearchResponse
-            {
+            var respose = new OrderSearchResponse {
                 Data = orders,
                 Draw = request.Draw,
                 RecordsFiltered = COUNT,
@@ -262,8 +260,7 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"][0]["COUNT"].ToObject<int>();
 
-            var respose = new OrderSearchResponse
-            {
+            var respose = new OrderSearchResponse {
                 Data = orders,
                 Draw = request.Draw,
                 RecordsFiltered = COUNT,
@@ -358,15 +355,12 @@ namespace SAP_API.Controllers
         // GET: api/Order/CRMList
         // Todas las Ordernes - Encabezado para lista CRM
         [HttpGet("CRMList")]
-        public async Task<IActionResult> GetCRMList()
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetCRMList() {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -398,15 +392,12 @@ namespace SAP_API.Controllers
         // GET: api/Order/CRMList
         // Todas las Ordernes - Encabezado para lista CRM
         [HttpGet("CRMList/Sucursal/{id}")]
-        public async Task<IActionResult> GetCRMSucursalList(string id)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetCRMSucursalList(string id) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -437,19 +428,15 @@ namespace SAP_API.Controllers
             return Ok(orders);
         }
 
-
         // GET: api/Order/CRMList/Contact/C00000001
         // Todas las Ordernes - Encabezado para lista CRM filtrado por cliente
         [HttpGet("CRMList/Contact/{id}")]
-        public async Task<IActionResult> GetCRMListCLient(string id)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetCRMListCLient(string id) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -484,15 +471,12 @@ namespace SAP_API.Controllers
         // GET: api/order/list
         // Ordenes Filtradas por dia
         [HttpGet("list/{date}")]
-        public async Task<IActionResult> GetList(string date)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetList(string date) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -505,15 +489,13 @@ namespace SAP_API.Controllers
 
             oRecSet.DoQuery("Select * From ORDR Where \"DocDate\" = '" + date + "'");
             int rc = oRecSet.RecordCount;
-            if (rc == 0)
-            {
+            if (rc == 0) {
                 return NotFound();
             }
             items.Browser.Recordset = oRecSet;
             items.Browser.MoveFirst();
 
-            while (items.Browser.EoF == false)
-            {
+            while (items.Browser.EoF == false) {
                 JToken temp = context.XMLTOJSON(items.GetAsXML());
                 temp["ORDR"] = temp["ORDR"][0];
                 temp["RDR4"]?.Parent.Remove();
@@ -529,15 +511,12 @@ namespace SAP_API.Controllers
         // GET: api/order/list
         // Ordenes Filtradas por dia
         [HttpGet("CRMAPP/list/{date}/{employee}")]
-        public async Task<IActionResult> GetCRMAPPList(string date, int employee)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetCRMAPPList(string date, int employee) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -570,8 +549,7 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"];
             int rc = oRecSet.RecordCount;
-            if (rc == 0)
-            {
+            if (rc == 0) {
                 return NotFound();
             }
 
@@ -598,15 +576,12 @@ namespace SAP_API.Controllers
         // GET: api/Order/5
         // Orden Detalle
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(int id)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Get(int id) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -666,7 +641,6 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             JToken products = context.XMLTOJSON(oRecSet.GetAsXML());
             temp["RDR1"] = products["RDR1"];
-
             return Ok(temp);
         }
 
@@ -674,8 +648,8 @@ namespace SAP_API.Controllers
         // GET: api/Order/Delivery/5
         // Orden Con informacion extra para la entrega
         [HttpGet("Delivery/{id}")]
-        public async Task<IActionResult> GetReception(int id)
-        {
+        public async Task<IActionResult> GetReception(int id) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -697,8 +671,7 @@ namespace SAP_API.Controllers
                 From ORDR WHERE ""DocNum"" = " + id);
 
             int rc = oRecSet.RecordCount;
-            if (rc == 0)
-            {
+            if (rc == 0) {
                 return NotFound();
             }
 
@@ -706,8 +679,7 @@ namespace SAP_API.Controllers
             order["AdmInfo"]?.Parent.Remove();
             order["ORDR"] = order["ORDR"][0];
 
-            if (order["ORDR"]["DocStatus"].ToString() != "O")
-            {
+            if (order["ORDR"]["DocStatus"].ToString() != "O") {
                 return BadRequest("Documento Cerrado");
             }
 
@@ -726,8 +698,7 @@ namespace SAP_API.Controllers
 
             order["RDR1"] = context.XMLTOJSON(oRecSet.GetAsXML())["RDR1"];
 
-            foreach (var pro in order["RDR1"])
-            {
+            foreach (var pro in order["RDR1"]) {
                 oRecSet.DoQuery(@"
                     Select
                         ""ItemCode"",
@@ -756,52 +727,45 @@ namespace SAP_API.Controllers
                 oRecSet.MoveFirst();
                 pro["CodeBars"] = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
             }
-
             return Ok(order);
         }
 
-        public JToken limiteCredito(string CardCode, string Series, SAPContext context)
-        {
+        public JToken limiteCredito(string CardCode, string Series, SAPContext context) {
             JToken result;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
             oRecSet.DoQuery(@"CALL ""ValidaCreditoMXM"" ('" + CardCode + "','" + Series + "',0)");
             oRecSet.MoveFirst();
             result = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
-            if (result["False"] == null)
-            {
+            if (result["False"] == null) {
                 return JObject.Parse(@"{ RESULT: 'True', AUTH: 'ValidaCreditoMXM'}");
             }
 
             oRecSet.DoQuery(@"CALL ""ValidaCreditoENS"" ('" + CardCode + "','" + Series + "',0)");
             oRecSet.MoveFirst();
             result = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
-            if (result["False"] == null)
-            {
+            if (result["False"] == null) {
                 return JObject.Parse(@"{ RESULT: 'True', AUTH: 'ValidaCreditoENS'}");
             }
 
             oRecSet.DoQuery(@"CALL ""ValidaCreditoTJ"" ('" + CardCode + "','" + Series + "',0)");
             oRecSet.MoveFirst();
             result = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
-            if (result["False"] == null)
-            {
+            if (result["False"] == null) {
                 return JObject.Parse(@"{ RESULT: 'True', AUTH: 'ValidaCreditoTJ'}");
             }
 
             oRecSet.DoQuery(@"CALL ""ValidaCreditoSLR"" ('" + CardCode + "','" + Series + "',0)");
             oRecSet.MoveFirst();
             result = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
-            if (result["False"] == null)
-            {
+            if (result["False"] == null) {
                 return JObject.Parse(@"{ RESULT: 'True', AUTH: 'ValidaCreditoSLR'}");
             }
             return JObject.Parse(@"{ RESULT: 'False', AUTH: ''}");
 
         }
 
-        public JToken facturasPendientes(string CardCode, string Series, SAPContext context)
-        {
+        public JToken facturasPendientes(string CardCode, string Series, SAPContext context) {
             JToken result;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             oRecSet.DoQuery(@"
@@ -814,8 +778,7 @@ namespace SAP_API.Controllers
                     AND T1.""SeriesName"" IN (SELECT ""WhsCode"" FROM OWHS WHERE ""Location"" = 1))");
             oRecSet.MoveFirst();
             result = context.XMLTOJSON(oRecSet.GetAsXML())["Dummy"][0];
-            if (result["RESULT"].ToString() != String.Empty)
-            {
+            if (result["RESULT"].ToString() != String.Empty) {
                 return result;
             }
             
@@ -829,8 +792,7 @@ namespace SAP_API.Controllers
                     AND T1.""SeriesName"" IN (SELECT ""WhsCode"" FROM OWHS WHERE ""Location"" = 4))");
             oRecSet.MoveFirst();
             result = context.XMLTOJSON(oRecSet.GetAsXML())["Dummy"][0];
-            if (result["RESULT"].ToString() != String.Empty)
-            {
+            if (result["RESULT"].ToString() != String.Empty) {
                 return result;
             }
 
@@ -844,8 +806,7 @@ namespace SAP_API.Controllers
                     AND T1.""SeriesName"" IN (SELECT ""WhsCode"" FROM OWHS WHERE ""Location"" = 2))");
             oRecSet.MoveFirst();
             result = context.XMLTOJSON(oRecSet.GetAsXML())["Dummy"][0];
-            if (result["RESULT"].ToString() != String.Empty)
-            {
+            if (result["RESULT"].ToString() != String.Empty) {
                 return result;
             }
 
@@ -859,15 +820,13 @@ namespace SAP_API.Controllers
                     AND T1.""SeriesName"" IN (SELECT ""WhsCode"" FROM OWHS WHERE ""Location"" = 3))");
             oRecSet.MoveFirst();
             result = context.XMLTOJSON(oRecSet.GetAsXML())["Dummy"][0];
-            if (result["RESULT"].ToString() != String.Empty)
-            {
+            if (result["RESULT"].ToString() != String.Empty) {
                 return result;
             }
             return JObject.Parse(@"{ RESULT: 'False', AUTH: ''}");
         }
 
-        public List<JToken> auth(string CardCode, string Series, SAPContext context)
-        {
+        public List<JToken> auth(string CardCode, string Series, SAPContext context) {
             List <JToken> result = new List<JToken>();
             JToken resultfact = facturasPendientes(CardCode, Series, context);
             JToken resultcredit = limiteCredito(CardCode, Series, context);
@@ -880,6 +839,7 @@ namespace SAP_API.Controllers
         // Creacion de Orden
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] CreateOrder value) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -958,8 +918,7 @@ namespace SAP_API.Controllers
 
                 for (int j = 0; j < items.PriceList.Count; j++) {
                     items.PriceList.SetCurrentLine(j);
-                    if (items.PriceList.PriceList == 2) /////////////////////////////////////////////////
-                    {
+                    if (items.PriceList.PriceList == 2) { /////////////////////////////////////////////////
                         //if (items.PriceList.PriceList == value.priceList) { ///////////////////////////////////////////
                         if (value.rows[i].uom == -2) {
                             order.Lines.UnitPrice = items.PriceList.Price;
@@ -999,15 +958,13 @@ namespace SAP_API.Controllers
 
         // PUT: api/Order/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> Put(int id, [FromBody] UpdateOrder value)
-        {
+        public async Task<IActionResult> Put(int id, [FromBody] UpdateOrder value) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-            if (!context.oCompany.Connected)
-            {
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -1017,9 +974,7 @@ namespace SAP_API.Controllers
             SAPbobsCOM.Items items = (SAPbobsCOM.Items)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             
-
-            if (order.GetByKey(id))
-            {
+            if (order.GetByKey(id)) {
                 oRecSet.DoQuery(@"
                     Select
                         warehouse.""WhsName"",
@@ -1031,24 +986,19 @@ namespace SAP_API.Controllers
                 oRecSet.MoveFirst();
                 string warehouse  = context.XMLTOJSON(oRecSet.GetAsXML())["OWHS"][0]["WhsCode"].ToString();
                 order.Lines.Add();
-                for (int i = 0; i < value.newProducts.Count; i++)
-                {
+                for (int i = 0; i < value.newProducts.Count; i++) {
                     order.Lines.ItemCode = value.newProducts[i].code;
                     order.Lines.WarehouseCode = warehouse;
 
                     items.GetByKey(value.newProducts[i].code);
 
-                    for (int j = 0; j < items.PriceList.Count; j++)
-                    {
+                    for (int j = 0; j < items.PriceList.Count; j++) {
                         items.PriceList.SetCurrentLine(j);
-                        if (items.PriceList.PriceList == 2)
-                        {
-                            if (value.newProducts[i].uom == -2)
-                            {
+                        if (items.PriceList.PriceList == 2) {
+                            if (value.newProducts[i].uom == -2) {
                                 order.Lines.UnitPrice = items.PriceList.Price;
                             }
-                            else
-                            {
+                            else {
                                 order.Lines.UnitPrice = items.PriceList.Price * value.newProducts[i].equivalentePV;
                             }
                             order.Lines.Currency = items.PriceList.Currency;
@@ -1056,14 +1006,12 @@ namespace SAP_API.Controllers
                         }
                     }
 
-                    if (value.newProducts[i].uom == -2)
-                    {
+                    if (value.newProducts[i].uom == -2) {
                         order.Lines.UoMEntry = 6;
                         order.Lines.UserFields.Fields.Item("U_CjsPsVr").Value = value.newProducts[i].quantity;
                         order.Lines.Quantity = value.newProducts[i].quantity * value.newProducts[i].equivalentePV;
                     }
-                    else
-                    {
+                    else {
                         order.Lines.Quantity = value.newProducts[i].quantity;
                         order.Lines.UoMEntry = value.newProducts[i].uom;
                     }
@@ -1072,23 +1020,18 @@ namespace SAP_API.Controllers
                 }
                 
 
-                for (int i = 0; i < value.ProductsChanged.Count; i++)
-                {
+                for (int i = 0; i < value.ProductsChanged.Count; i++) {
                     order.Lines.SetCurrentLine(value.ProductsChanged[i].LineNum);
-                    if (order.Lines.Quantity != value.ProductsChanged[i].quantity)
-                    {
+                    if (order.Lines.Quantity != value.ProductsChanged[i].quantity) {
                         order.Lines.Quantity = value.ProductsChanged[i].quantity;
                     }
 
-                    if (order.Lines.UoMEntry != value.ProductsChanged[i].uom)
-                    {
+                    if (order.Lines.UoMEntry != value.ProductsChanged[i].uom) {
                         order.Lines.UoMEntry = value.ProductsChanged[i].uom;
                         items.GetByKey(order.Lines.ItemCode);
-                        for (int j = 0; j < items.PriceList.Count; j++)
-                        {
+                        for (int j = 0; j < items.PriceList.Count; j++) {
                             items.PriceList.SetCurrentLine(j);
-                            if (items.PriceList.PriceList == 2)
-                            {
+                            if (items.PriceList.PriceList == 2) {
                                 order.Lines.UnitPrice = items.PriceList.Price * value.ProductsChanged[i].equivalentePV;
                                 order.Lines.Currency = items.PriceList.Currency;
                                 break;
@@ -1098,12 +1041,10 @@ namespace SAP_API.Controllers
                 }
                 
                 int result = order.Update();
-                if (result == 0)
-                {
+                if (result == 0) {
                     return Ok();
                 }
-                else
-                {
+                else {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }

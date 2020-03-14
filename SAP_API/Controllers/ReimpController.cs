@@ -4,9 +4,7 @@ using System.Text;
 
 namespace SAP_API.Controllers
 {
-
-    public class PrintS
-    {
+    public class PrintS {
         public string gti { set; get; }
         public string peso { set; get; }
         public string lote { set; get; }
@@ -18,18 +16,15 @@ namespace SAP_API.Controllers
 
     [Route("api/[controller]")]
     [ApiController]
-    public class ReimpController : ControllerBase
-    {
+    public class ReimpController : ControllerBase {
 
         // POST: api/Reimp
         [HttpPost]
-        public void Post([FromBody] PrintS value)
-        {
+        public void Post([FromBody] PrintS value) {
             etiquetaFixIndividual(value.gti, value.lote, value.peso, value.ItemCode, value.ItemName, value.Fecha);
         }
 
-        public void etiquetaFixIndividual(string GTIN, string Lote, string Peso, string ItemCode, string ItemName, string Fecha)
-        {
+        public void etiquetaFixIndividual(string GTIN, string Lote, string Peso, string ItemCode, string ItemName, string Fecha) {
             //string sUrlRequest = "http://api.ccfn.com.mx/json/productos/" + txtproducto.Text;
             //var json = new WebClient().DownloadString(sUrlRequest);
 
