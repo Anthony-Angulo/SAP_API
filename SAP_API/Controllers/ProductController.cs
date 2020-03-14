@@ -425,8 +425,8 @@ namespace SAP_API.Controllers
             return NotFound("No Existe Producto");
         }
 
-        // GET: api/Products/UomDetail
-        [HttpGet("UomDetail/{id}")]
+        // GET: api/Products/UomDetailWithLastSellPrice
+        [HttpGet("UomDetailWithLastSellPrice/{id}")]
         public async Task<IActionResult> GetUomDetail(string id) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
@@ -439,7 +439,20 @@ namespace SAP_API.Controllers
             }
 
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery("Select \"ItemCode\", \"ItemName\", \"NumInSale\", \"SUoMEntry\", \"IUoMEntry\", \"U_IL_PesProm\" From OITM Where \"ItemCode\" = '" + id + "'");
+            oRecSet.DoQuery(@"
+                Select
+                    product.""ItemCode"",
+                    product.""ItemName"",
+                    product.""NumInSale"",
+                    product.""SUoMEntry"",
+                    product.""IUoMEntry"",
+                    product.""U_IL_PesProm"",
+                    RTRIM(RTRIM(priceList.""Price"", '0'), '.') AS ""Price"",
+                    priceList.""Currency""
+                From OITM product
+                JOIN ITM1 priceList ON priceList.""ItemCode"" = product.""ItemCode""
+                Where product.""ItemCode"" = '" + id + @"'
+                AND priceList.""PriceList"" = 11");
             oRecSet.MoveFirst();
             JToken product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
             GC.Collect();

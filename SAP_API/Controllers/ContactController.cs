@@ -10,34 +10,27 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ContactController : ControllerBase
-    {
-        public class ClientSearchDetail : SearchDetail
-        {
+    public class ContactController : ControllerBase {
+        public class ClientSearchDetail : SearchDetail {
             public string CardCode { get; set; }
             public string CardFName { get; set; }
             public string CardName { get; set; }
         }
 
-        public class ClientSearchResponse : SearchResponse<ClientSearchDetail>
-        {
-        }
+        public class ClientSearchResponse : SearchResponse<ClientSearchDetail> {}
 
-        public class ProviderSearchDetail : SearchDetail
-        {
+        public class ProviderSearchDetail : SearchDetail {
             public string CardCode { get; set; }
             public string CardFName { get; set; }
             public string CardName { get; set; }
             public string Currency { get; set; }
         }
 
-        public class ProviderSearchResponse : SearchResponse<ProviderSearchDetail>
-        {
-        }
+        public class ProviderSearchResponse : SearchResponse<ProviderSearchDetail> { }
 
         [HttpPost("clients/search")]
-        public async Task<IActionResult> Get([FromBody] SearchRequest request)
-        {
+        public async Task<IActionResult> Get([FromBody] SearchRequest request) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -114,8 +107,8 @@ namespace SAP_API.Controllers
         }
 
         [HttpPost("providers/search")]
-        public async Task<IActionResult> GetProviders([FromBody] SearchRequest request)
-        {
+        public async Task<IActionResult> GetProviders([FromBody] SearchRequest request) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -197,8 +190,8 @@ namespace SAP_API.Controllers
         }
 
         [HttpGet("CRMClientToSell/{id}")]
-        public async Task<IActionResult> GetCRMClientToSell(string id)
-        {
+        public async Task<IActionResult> GetCRMClientToSell(string id) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
@@ -271,15 +264,12 @@ namespace SAP_API.Controllers
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         [HttpGet("CRM/{id}")]
-        public async Task<IActionResult> GetCRMID(string id)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetCRMID(string id) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -292,18 +282,16 @@ namespace SAP_API.Controllers
 
             JToken pagos = context.XMLTOJSON(sboTable.GetAsXML())["OCRD"];
 
-            if (items.GetByKey(id))
-            {
+            if (items.GetByKey(id)) {
+
                 JToken temp = context.XMLTOJSON(items.GetAsXML());
                 temp["OCRD"] = temp["OCRD"][0];
 
-                if (seller.GetByKey(temp["OCRD"]["SlpCode"].ToObject<int>()))
-                {
+                if (seller.GetByKey(temp["OCRD"]["SlpCode"].ToObject<int>())) {
                     JToken temp2 = context.XMLTOJSON(seller.GetAsXML());
                     temp["OSLP"] = temp2["OSLP"][0];
                 }
-                if (payment.GetByKey(temp["OCRD"]["GroupNum"].ToObject<int>()))
-                {
+                if (payment.GetByKey(temp["OCRD"]["GroupNum"].ToObject<int>())) {
                     JToken temp3 = context.XMLTOJSON(payment.GetAsXML());
                     temp["OCTG"] = temp3["OCTG"][0];
                 }
@@ -316,15 +304,12 @@ namespace SAP_API.Controllers
 
         // GET: api/Contact/CRMList
         [HttpGet("CRMList")]
-        public async Task<IActionResult> GetCRMList()
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetCRMList() {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -342,15 +327,12 @@ namespace SAP_API.Controllers
 
         // GET: api/Contact/CRMListProveedor
         [HttpGet("CRMListProveedor")]
-        public async Task<IActionResult> GetCRMListProveedor()
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetCRMListProveedor() {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -367,15 +349,12 @@ namespace SAP_API.Controllers
 
         // GET: api/Contact/APPCRM/200
         [HttpGet("APPCRM/{id}")]
-        public async Task<IActionResult> GetAPPCRM(int id)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetAPPCRM(int id) {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -404,15 +383,12 @@ namespace SAP_API.Controllers
 
         // GET: api/Contact/APPCRM
         [HttpGet("APPCRM")]
-        public async Task<IActionResult> GetAPPCRMs()
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> GetAPPCRMs() {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }

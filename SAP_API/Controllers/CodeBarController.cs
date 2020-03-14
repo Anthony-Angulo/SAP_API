@@ -20,10 +20,9 @@ namespace SAP_API.Controllers
         /// </returns>
         // GET: api/CodeBar/5
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(string id)
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Get(string id) {
 
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
                 if (code != 0) {
@@ -104,8 +103,8 @@ namespace SAP_API.Controllers
         /// </returns>
         // POST: api/CodeBar
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] Codebar value)
-        {
+        public async Task<IActionResult> Post([FromBody] Codebar value) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();

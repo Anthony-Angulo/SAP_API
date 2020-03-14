@@ -9,19 +9,15 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CurrencyRateController : ControllerBase
-    {
+    public class CurrencyRateController : ControllerBase {
         // GET: api/CurrencyRate
         [HttpGet]
-        public async Task<IActionResult> Get()
-        {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        public async Task<IActionResult> Get() {
 
-            if (!context.oCompany.Connected)
-            {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -38,8 +34,6 @@ namespace SAP_API.Controllers
             } catch(Exception ex) {
                 return NotFound(ex.Message);
             }
-            
         }
-
     }
 }

@@ -220,7 +220,8 @@ namespace SAP_API.Controllers
                     ""DocNum"",
                     ""DocStatus"",
                     ""CardName"",
-                    ""CardCode""
+                    ""CardCode"",
+                    ""U_IL_Pedimento""
                 From OPOR WHERE ""DocNum"" = " + id);
 
             if (oRecSet.RecordCount == 0) {

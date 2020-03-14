@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
@@ -43,15 +44,13 @@ namespace SAP_API.Controllers
 
         // GET: api/Batch/(Sucursal:S01)/(Codigo:A0305869)
         [HttpGet("{sucursal}/{cod}")]
-        public async Task<IActionResult> Get(string sucursal, string cod)
-        {
+        public async Task<IActionResult> Get(string sucursal, string cod) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-            if (!context.oCompany.Connected)
-            {
+            if (!context.oCompany.Connected) {
                 int code = context.oCompany.Connect();
-                if (code != 0)
-                {
+                if (code != 0) {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
@@ -59,15 +58,13 @@ namespace SAP_API.Controllers
 
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             oRecSet.DoQuery(@"
-                Select
-                    ""ManBtchNum""
+                Select ""ManBtchNum""
                 From OITM
                 Where ""ItemCode"" = '" + cod + "'");
             oRecSet.MoveFirst();
             string ManBtnNum = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["ManBtchNum"].ToString();
 
-            if (ManBtnNum == "N")
-            {
+            if (ManBtnNum == "N") {
                 oRecSet.DoQuery(@"
                     Select ""OnHand""
                     From OITW
@@ -89,6 +86,8 @@ namespace SAP_API.Controllers
                 Where ""Quantity"" != 0 AND ""ItemCode"" = '" + cod + @"' AND ""WhsCode"" = '" + sucursal +"'");
             oRecSet.MoveFirst();
             JToken batchList = context.XMLTOJSON(oRecSet.GetAsXML())["OIBT"];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
             return Ok(batchList);
         }
 
