@@ -24,6 +24,19 @@ namespace SAP_API.Controllers
             public double OnHand { get; set; }
         }
 
+        // GET: api/Products/5
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(string id) {
+            
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.IItems items = (SAPbobsCOM.IItems)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
+            if (items.GetByKey(id)) {
+                JToken temp = context.XMLTOJSON(items.GetAsXML());
+                return Ok(temp);
+            }
+            return NotFound("No Existe Producto");
+        }
+
         public class ProductWithStockSearchResponse : SearchResponse<ProductWithStockSearchDetail> { }
 
         [HttpPost("Search/ToSell")]
@@ -347,21 +360,56 @@ namespace SAP_API.Controllers
             return Ok(product);
         }
 
+        // GET: api/Products/WMSToInventory/A0101001/S01
+        [HttpGet("WMSToInventory/{id}/{warehouse}")]
+        public async Task<IActionResult> Get(string id, string warehouse) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                Select
+                    product.""ItemCode"",
+                    product.""ItemName"",
+                    product.""QryGroup7"",
+                    product.""QryGroup41"",
+                    product.""ManBtchNum"",
+                    product.""U_IL_PesMax"",
+                    product.""U_IL_PesMin"",
+                    product.""U_IL_PesProm"",
+                    product.""U_IL_TipPes"",
+                    product.""NumInSale"",
+                    product.""NumInBuy"",
+                    RTRIM(RTRIM(stock.""OnHand"", '0'), '.') AS ""OnHand""
+                From OITM product Where ""ItemCode"" = '" + id + @"'
+                AND stock.""WhsCode"" = '" + warehouse + @"'");
+            oRecSet.MoveFirst();
+            JToken Detail = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+
+            oRecSet.DoQuery(@"
+                Select 
+                    header.""UgpCode"",
+                    header.""BaseUom"",
+                    baseUOM.""UomCode"" as baseUOM,
+                    detail.""UomEntry"",
+                    UOM.""UomCode"",
+                    detail.""BaseQty""
+                From OUGP header
+                JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                Where header.""UgpCode"" = '" + id + "'");
+            oRecSet.MoveFirst();
+            JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(new { Detail, uom });
+        }
+
+
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        // GET: api/Products/5
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Get(string id) {
-
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;            
-            SAPbobsCOM.IItems items = (SAPbobsCOM.IItems)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
-            if (items.GetByKey(id)) {
-                JToken temp = context.XMLTOJSON(items.GetAsXML());
-                return Ok(temp);
-            }
-            return NotFound("No Existe Producto");
-        }
+        
 
         // GET: api/Products/UomDetailWithLastSellPrice
         [HttpGet("UomDetailWithLastSellPrice/{id}")]
@@ -1045,5 +1093,40 @@ namespace SAP_API.Controllers
             return Ok(new { Detail, uom });
         }
 
+
+        // GET: api/Products/InventoryCompleteProducts
+        [HttpGet("InventoryCompleteProducts/{warehouse}")]
+        public async Task<IActionResult> GetInventoryCompleteProducts(string warehouse) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery(@"
+                Select 
+                    product.""ItemName"",
+                    product.""ItemCode"",
+                    RTRIM(RTRIM(stock.""OnHand"", '0'), '.') AS ""OnHand"",
+                    product.""ManBtchNum"",
+                    product.""U_IL_TipPes""
+                From OITM product
+                JOIN OITW stock ON stock.""ItemCode"" = product.""ItemCode""
+                Where product.""Canceled"" = 'N'
+                AND product.""validFor"" = 'Y'
+                AND stock.""WhsCode"" = '" + warehouse + @"'
+                AND product.""ItemCode"" in (
+                    SELECT ""ItemCode"" FROM PDN1 WHERE ""DocDate"" > ADD_MONTHS (CURRENT_DATE, -3) AND ""WhsCode"" = '" + warehouse + @"' AND ""DocEntry"" in (SELECT ""DocEntry"" FROM OPDN WHERE ""DocDate"" > ADD_MONTHS (CURRENT_DATE, -3)  AND ""CANCELED"" = 'N')
+                    Union
+                    SELECT ""ItemCode"" FROM IGN1 WHERE ""DocDate"" > ADD_MONTHS(CURRENT_DATE, -3) AND ""WhsCode"" = '" + warehouse + @"' AND ""DocEntry"" in (SELECT ""DocEntry"" FROM OIGN WHERE ""DocDate"" > ADD_MONTHS(CURRENT_DATE, -3) AND ""CANCELED"" = 'N')
+                    Union
+                    SELECT ""ItemCode"" FROM WTR1 WHERE ""DocDate"" > ADD_MONTHS(CURRENT_DATE, -3) AND ""WhsCode"" = '" + warehouse + @"' AND ""DocEntry"" in (SELECT ""DocEntry"" FROM OWTR WHERE ""DocDate"" > ADD_MONTHS(CURRENT_DATE, -3) AND ""CANCELED"" = 'N')
+                    Union
+                    Select ""ItemCode"" FROM OITW WHERE ""WhsCode"" = '" + warehouse + @"' AND ""OnHand"" > 0) ");
+
+            oRecSet.MoveFirst();
+            JToken Products= context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(Products);
+        }
     }
 }
