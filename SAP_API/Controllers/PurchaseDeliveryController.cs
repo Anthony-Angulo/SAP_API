@@ -47,14 +47,6 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> GetList(string date) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            if (!context.oCompany.Connected) {
-                int code = context.oCompany.Connect();
-                if (code != 0) {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-
             SAPbobsCOM.Documents items = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseDeliveryNotes);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             List<Object> list = new List<Object>();
@@ -85,14 +77,6 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> Post([FromBody] PurchaseOrderDelivery value) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            if (!context.oCompany.Connected) {
-                int code = context.oCompany.Connect();
-                if (code != 0) {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-
             SAPbobsCOM.Documents purchaseOrder = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
             SAPbobsCOM.Documents purchaseOrderdelivery = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseDeliveryNotes);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);

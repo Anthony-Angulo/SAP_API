@@ -16,13 +16,6 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> Get() {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            if (!context.oCompany.Connected) {
-                int code = context.oCompany.Connect();
-                if (code != 0) {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
             SAPbobsCOM.PaymentTermsTypes payment = (SAPbobsCOM.PaymentTermsTypes)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPaymentTermsTypes);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
@@ -46,14 +39,6 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> GetCRMList() {
             
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            if (!context.oCompany.Connected) {
-                int code = context.oCompany.Connect();
-                if (code != 0) {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             oRecSet.DoQuery("Select \"GroupNum\", \"PymntGroup\" From OCTG");
             oRecSet.MoveFirst();

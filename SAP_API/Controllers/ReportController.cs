@@ -22,16 +22,8 @@ namespace SAP_API.Controllers
         // GET: api/Report/5
         [HttpGet("WarehouseGroupDate/{warehouseCode}/{group}/{fromDate}/{toDate}")]
         public async Task<IActionResult> GetByWarehouseGroupDate(string warehouseCode, int group, string fromDate, string toDate) {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            if (!context.oCompany.Connected) {
-                int code = context.oCompany.Connect();
-                if (code != 0) {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
             oRecSet.DoQuery(@"

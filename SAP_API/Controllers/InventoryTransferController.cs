@@ -43,16 +43,8 @@ namespace SAP_API.Controllers
         // GET: api/InventoryTransfer/list
         [HttpGet("list/{date}")]
         public async Task<IActionResult> GetList(string date) {
+            
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            if (!context.oCompany.Connected) {
-                int code = context.oCompany.Connect();
-                if (code != 0) {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
             oRecSet.DoQuery(@"
@@ -77,16 +69,8 @@ namespace SAP_API.Controllers
         // GET: api/InventoryTransfer/5
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(int id) {
+            
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            if (!context.oCompany.Connected) {
-                int code = context.oCompany.Connect();
-                if (code != 0) {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-
             SAPbobsCOM.StockTransfer transfer = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oStockTransfer);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
@@ -111,16 +95,8 @@ namespace SAP_API.Controllers
         // POST: api/InventoryTransfer
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] Transfer value) {
+            
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            if (!context.oCompany.Connected) {
-                int code = context.oCompany.Connect();
-                if (code != 0) {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-
             SAPbobsCOM.StockTransfer request = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
             SAPbobsCOM.StockTransfer transfer = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oStockTransfer);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);

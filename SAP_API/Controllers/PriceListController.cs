@@ -16,17 +16,8 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> Get() {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            if (!context.oCompany.Connected) {
-                int code = context.oCompany.Connect();
-                if (code != 0) {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-
             SAPbobsCOM.PriceLists items = (SAPbobsCOM.PriceLists)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPriceLists);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
             List<Object> list = new List<Object>();
 
             oRecSet.DoQuery("Select * From OPLN");
@@ -38,7 +29,6 @@ namespace SAP_API.Controllers
                 list.Add(temp["OPLN"][0]);
                 items.Browser.MoveNext();
             }
-
             return Ok(list);
         }
 
@@ -47,14 +37,6 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> GetCRMList() {
             
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            if (!context.oCompany.Connected) {
-                int code = context.oCompany.Connect();
-                if (code != 0) {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             oRecSet.DoQuery("Select \"ListName\", \"ListNum\" From OPLN");
             oRecSet.MoveFirst();

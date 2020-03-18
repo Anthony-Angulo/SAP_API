@@ -22,14 +22,6 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> Get(string id) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            if (!context.oCompany.Connected) {
-                int code = context.oCompany.Connect();
-                if (code != 0) {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
             oRecSet.DoQuery(@"
@@ -105,14 +97,6 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> Post([FromBody] Codebar value) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            if (!context.oCompany.Connected) {
-                int code = context.oCompany.Connect();
-                if (code != 0) {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-
             SAPbobsCOM.CompanyService services = context.oCompany.GetCompanyService();
             SAPbobsCOM.BarCodesService barCodesService = (SAPbobsCOM.BarCodesService)services.GetBusinessService(SAPbobsCOM.ServiceTypes.BarCodesService);
             SAPbobsCOM.BarCode barCode = (SAPbobsCOM.BarCode)barCodesService.GetDataInterface(SAPbobsCOM.BarCodesServiceDataInterfaces.bsBarCode);

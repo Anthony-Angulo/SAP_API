@@ -15,15 +15,8 @@ namespace SAP_API.Controllers
         // GET: api/Users
         [HttpGet]
         public IEnumerable<Object> Get() {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            if (!context.oCompany.Connected) {
-                int code = context.oCompany.Connect();
-                if (code != 0) {
-                    //return [context.oCompany.GetLastErrorDescription()];
-                }
-            }
-
             
             SAPbobsCOM.CompanyService services = context.oCompany.GetCompanyService();
 

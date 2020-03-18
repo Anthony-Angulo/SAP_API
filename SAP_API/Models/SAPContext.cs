@@ -15,8 +15,8 @@ namespace SAP_API.Models
             oCompany = new SAPbobsCOM.Company();
             oCompany.Server = "192.168.0.92:30015";
             oCompany.DbServerType = SAPbobsCOM.BoDataServerTypes.dst_HANADB;
-            //oCompany.CompanyDB = "CCFN_PRODUCCCION";
-            oCompany.CompanyDB = "CCFN_PROD";
+            oCompany.CompanyDB = "CCFN_PRODUCCCION";
+            //oCompany.CompanyDB = "CCFN_PROD";
             oCompany.UserName = "SISTEMAS04";
             oCompany.Password = "SAP1234";
             oCompany.DbUserName = "SYSTEM";
