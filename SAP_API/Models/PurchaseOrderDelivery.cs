@@ -12,6 +12,7 @@ namespace SAP_API.Models
         public string ItemCode { set; get; }
         public double Count { set; get; }
         public int Line { set; get; }
+        public int Group { set; get; }
         public int UoMEntry { set; get; }
         public string WarehouseCode { set; get; }
         public string ItemType { set; get; }

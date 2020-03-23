@@ -10,40 +10,10 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class BatchController : ControllerBase {
-        //// GET: api/Batch
-        //[HttpGet]
-        //public async Task<IActionResult> Get()
-        //{
-        //    SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-        //    if (!context.oCompany.Connected)
-        //    {
-        //        int code = context.oCompany.Connect();
-        //        if (code != 0)
-        //        {
-        //            string error = context.oCompany.GetLastErrorDescription();
-        //            return BadRequest(new { error });
-        //        }
-        //    }
-
-        //    SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-        //    oRecSet.DoQuery(@"
-        //        Select
-        //            ""ItemCode"",
-        //            ""BatchNum"",
-        //            ""IntrSerial"",
-        //            ""Quantity"",
-        //            ""U_IL_CodBar""
-        //        From OIBT
-        //        Where ""ItemCode"" = 'A0305869' AND ""WhsCode"" = 'S01'");
-        //    oRecSet.MoveFirst();
-        //    JToken batchListDDD = context.XMLTOJSON(oRecSet.GetAsXML());//["OWHS"];
-        //    return Ok(batchListDDD);
-        //}
-
-        // GET: api/Batch/(Sucursal:S01)/(Codigo:A0305869)
-        [HttpGet("{sucursal}/{cod}")]
-        public async Task<IActionResult> Get(string sucursal, string cod) {
+        // GET: api/Batch/(warehouse:S01)/(itemcode:A0305869)
+        [HttpGet("{warehouse}/{itemcode}")]
+        public async Task<IActionResult> Get(string warehouse, string itemcode) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -51,7 +21,7 @@ namespace SAP_API.Controllers
             oRecSet.DoQuery(@"
                 Select ""ManBtchNum""
                 From OITM
-                Where ""ItemCode"" = '" + cod + "'");
+                Where ""ItemCode"" = '" + itemcode + "'");
             oRecSet.MoveFirst();
             string ManBtnNum = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["ManBtchNum"].ToString();
 
@@ -59,8 +29,8 @@ namespace SAP_API.Controllers
                 oRecSet.DoQuery(@"
                     Select ""OnHand""
                     From OITW
-                    Where ""WhsCode"" = '" + sucursal + @"'
-                    AND ""ItemCode"" = '" + cod + "'");
+                    Where ""WhsCode"" = '" + warehouse + @"'
+                    AND ""ItemCode"" = '" + itemcode + "'");
                 oRecSet.MoveFirst();
                 double stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"][0]["OnHand"].ToObject<double>();
                 return Ok(new { value = "No Maneja Lote" , stock });
@@ -74,13 +44,12 @@ namespace SAP_API.Controllers
                     ""U_IL_CodBar"",
                     ""CreateDate""
                 From OIBT
-                Where ""Quantity"" != 0 AND ""ItemCode"" = '" + cod + @"' AND ""WhsCode"" = '" + sucursal +"'");
+                Where ""Quantity"" != 0 AND ""ItemCode"" = '" + itemcode + @"' AND ""WhsCode"" = '" + warehouse +"'");
             oRecSet.MoveFirst();
             JToken batchList = context.XMLTOJSON(oRecSet.GetAsXML())["OIBT"];
             GC.Collect();
             GC.WaitForPendingFinalizers();
             return Ok(batchList);
         }
-
     }
 }

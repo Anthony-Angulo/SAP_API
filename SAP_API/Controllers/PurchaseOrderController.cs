@@ -187,14 +187,23 @@ namespace SAP_API.Controllers
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //oRecSet.DoQuery(@"
+            //    Select
+            //        ""DocEntry"",
+            //        ""DocNum"",
+            //        ""DocStatus"",
+            //        ""CardName"",
+            //        ""CardCode"",
+            //        ""U_IL_Pedimento""
+            //    From OPOR WHERE ""DocNum"" = " + id);
+
             oRecSet.DoQuery(@"
                 Select
                     ""DocEntry"",
                     ""DocNum"",
                     ""DocStatus"",
                     ""CardName"",
-                    ""CardCode"",
-                    ""U_IL_Pedimento""
+                    ""CardCode""
                 From OPOR WHERE ""DocNum"" = " + id);
 
             if (oRecSet.RecordCount == 0) {

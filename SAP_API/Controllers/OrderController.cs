@@ -34,23 +34,32 @@ namespace SAP_API.Controllers
                 where.Add($"LOWER(warehouse.\"WhsName\") Like LOWER('%{request.columns[4].search.value}%')");
             }
             if (request.columns[5].search.value != String.Empty) {
+                where.Add($"ord.\"DocTotal\" = {request.columns[5].search.value}");
+            }
+            if (request.columns[6].search.value != String.Empty) {
+                where.Add($"LOWER(ord.\"DocCur\") Like LOWER('%{request.columns[6].search.value}%')");
+            }
+            if (request.columns[7].search.value != String.Empty) {
+                where.Add($"LOWER(payment.\"PymntGroup\") Like LOWER('%{request.columns[7].search.value}%')");
+            }
+            if (request.columns[8].search.value != String.Empty) {
 
                 List<string> whereOR = new List<string>();
-                if ("Abierto".Contains(request.columns[5].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Abierto".Contains(request.columns[8].search.value, StringComparison.CurrentCultureIgnoreCase)) {
                     whereOR.Add(@"ord.""DocStatus"" = 'O' ");
                 }
-                if ("Cerrado".Contains(request.columns[5].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Cerrado".Contains(request.columns[8].search.value, StringComparison.CurrentCultureIgnoreCase)) {
                     whereOR.Add(@"ord.""DocStatus"" = 'C' ");
                 }
-                if ("Cancelado".Contains(request.columns[5].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Cancelado".Contains(request.columns[8].search.value, StringComparison.CurrentCultureIgnoreCase)) {
                     whereOR.Add(@"ord.""CANCELED"" = 'Y' ");
                 }
 
                 string whereORClause = "(" + String.Join(" OR ", whereOR) + ")";
                 where.Add(whereORClause);
             }
-            if (request.columns[6].search.value != String.Empty) {
-                where.Add($"to_char(to_date(SUBSTRING(ord.\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[6].search.value}%'");
+            if (request.columns[9].search.value != String.Empty) {
+                where.Add($"to_char(to_date(SUBSTRING(ord.\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[9].search.value}%'");
             }
 
             string orderby = "";
@@ -65,12 +74,18 @@ namespace SAP_API.Controllers
             } else if (request.order[0].column == 4) {
                 orderby = $" ORDER BY warehouse.\"WhsName\" {request.order[0].dir}";
             } else if (request.order[0].column == 5) {
-                orderby = $" ORDER BY ord.\"DocStatus\" {request.order[0].dir}";
+                orderby = $" ORDER BY ord.\"DocTotal\" {request.order[0].dir}";
             } else if (request.order[0].column == 6) {
+                orderby = $" ORDER BY ord.\"DocCur\" {request.order[0].dir}";
+            } else if (request.order[0].column == 7) {
+                orderby = $" ORDER BY payment.\"PymntGroup\" {request.order[0].dir}";
+            } else if (request.order[0].column == 8) {
+                orderby = $" ORDER BY ord.\"DocStatus\" {request.order[0].dir}";
+            } else if (request.order[0].column == 9) {
                 orderby = $" ORDER BY ord.\"DocDate\" {request.order[0].dir}";
             } else {
                 orderby = $" ORDER BY ord.\"DocNum\" DESC";
-            } 
+            }
 
             string whereClause = String.Join(" AND ", where);
 
@@ -86,13 +101,19 @@ namespace SAP_API.Controllers
                     when ord.""DocStatus"" = 'C' then 'Cerrado'
                     else ord.""DocStatus"" end)  AS  ""DocStatus"",
 
+                    (case when ord.""DocCur"" = 'USD' then ord.""DocTotalFC""
+                    else ord.""DocTotal"" end)  AS  ""DocTotal"",
+
                     ord.""CardName"",
+                    ord.""DocCur"",
+                    payment.""PymntGroup"",
                     contact.""CardFName"",
                     employee.""SlpName"",
                     warehouse.""WhsName""
                 From ORDR ord
                 LEFT JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
                 LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OCTG payment ON payment.""GroupNum"" = ord.""GroupNum""
                 LEFT JOIN OSLP employee ON ord.""SlpCode"" = employee.""SlpCode""
                 LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode"" ";
 
@@ -101,8 +122,10 @@ namespace SAP_API.Controllers
             }
 
             query += orderby;
-            
-            query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+
+            if (request.length != -1) {
+                query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+            }
 
             oRecSet.DoQuery(query);
             oRecSet.MoveFirst();
@@ -114,6 +137,7 @@ namespace SAP_API.Controllers
                 From ORDR ord
                 LEFT JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
                 LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OCTG payment ON payment.""GroupNum"" = ord.""GroupNum""
                 LEFT JOIN OSLP employee ON ord.""SlpCode"" = employee.""SlpCode""
                 LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode"" ";
 
@@ -156,23 +180,32 @@ namespace SAP_API.Controllers
                 where.Add($"LOWER(contact.\"CardName\") Like LOWER('%{request.columns[3].search.value}%')");
             }
             if (request.columns[5].search.value != String.Empty) {
+                where.Add($"ord.\"DocTotal\" = {request.columns[5].search.value}");
+            }
+            if (request.columns[6].search.value != String.Empty) {
+                where.Add($"LOWER(ord.\"DocCur\") Like LOWER('%{request.columns[6].search.value}%')");
+            }
+            if (request.columns[7].search.value != String.Empty) {
+                where.Add($"LOWER(payment.\"PymntGroup\") Like LOWER('%{request.columns[7].search.value}%')");
+            }
+            if (request.columns[8].search.value != String.Empty) {
 
                 List<string> whereOR = new List<string>();
-                if ("Abierto".Contains(request.columns[5].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Abierto".Contains(request.columns[8].search.value, StringComparison.CurrentCultureIgnoreCase)) {
                     whereOR.Add(@"ord.""DocStatus"" = 'O' ");
                 }
-                if ("Cerrado".Contains(request.columns[5].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Cerrado".Contains(request.columns[8].search.value, StringComparison.CurrentCultureIgnoreCase)) {
                     whereOR.Add(@"ord.""DocStatus"" = 'C' ");
                 }
-                if ("Cancelado".Contains(request.columns[5].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Cancelado".Contains(request.columns[8].search.value, StringComparison.CurrentCultureIgnoreCase)) {
                     whereOR.Add(@"ord.""CANCELED"" = 'Y' ");
                 }
 
                 string whereORClause = "(" + String.Join(" OR ", whereOR) + ")";
                 where.Add(whereORClause);
             }
-            if (request.columns[6].search.value != String.Empty) {
-                where.Add($"to_char(to_date(SUBSTRING(ord.\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[6].search.value}%'");
+            if (request.columns[9].search.value != String.Empty) {
+                where.Add($"to_char(to_date(SUBSTRING(ord.\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[9].search.value}%'");
             }
 
             string orderby = "";
@@ -185,8 +218,14 @@ namespace SAP_API.Controllers
             } else if (request.order[0].column == 3) {
                 orderby = $" ORDER BY contact.\"CardName\" {request.order[0].dir}";
             } else if (request.order[0].column == 5) {
-                orderby = $" ORDER BY ord.\"DocStatus\" {request.order[0].dir}";
+                orderby = $" ORDER BY ord.\"DocTotal\" {request.order[0].dir}";
             } else if (request.order[0].column == 6) {
+                orderby = $" ORDER BY ord.\"DocCur\" {request.order[0].dir}";
+            } else if (request.order[0].column == 7) {
+                orderby = $" ORDER BY payment.\"PymntGroup\" {request.order[0].dir}";
+            } else if (request.order[0].column == 8) {
+                orderby = $" ORDER BY ord.\"DocStatus\" {request.order[0].dir}";
+            } else if (request.order[0].column == 9) {
                 orderby = $" ORDER BY ord.\"DocDate\" {request.order[0].dir}";
             } else {
                 orderby = $" ORDER BY ord.\"DocNum\" DESC";
@@ -205,14 +244,20 @@ namespace SAP_API.Controllers
                     when ord.""DocStatus"" = 'O' then 'Abierto'
                     when ord.""DocStatus"" = 'C' then 'Cerrado'
                     else ord.""DocStatus"" end)  AS  ""DocStatus"",
+                    
+                    (case when ord.""DocCur"" = 'USD' then ord.""DocTotalFC""
+                    else ord.""DocTotal"" end)  AS  ""DocTotal"",
 
                     ord.""CardName"",
+                    ord.""DocCur"",
+                    payment.""PymntGroup"",
                     contact.""CardFName"",
                     employee.""SlpName"",
                     warehouse.""WhsName""
                 From ORDR ord
                 LEFT JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
                 LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OCTG payment ON payment.""GroupNum"" = ord.""GroupNum""
                 LEFT JOIN OSLP employee ON ord.""SlpCode"" = employee.""SlpCode""
                 LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode"" ";
 
@@ -222,7 +267,9 @@ namespace SAP_API.Controllers
 
             query += orderby;
 
-            query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+            if (request.length != -1) {
+                query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+            }
 
             oRecSet.DoQuery(query);
             oRecSet.MoveFirst();
@@ -234,6 +281,7 @@ namespace SAP_API.Controllers
                 From ORDR ord
                 LEFT JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
                 LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OCTG payment ON payment.""GroupNum"" = ord.""GroupNum""
                 LEFT JOIN OSLP employee ON ord.""SlpCode"" = employee.""SlpCode""
                 LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode"" ";
 
@@ -326,7 +374,7 @@ namespace SAP_API.Controllers
             return Ok(temp);
         }
 
-        /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // GET: api/Order/CRMList
         // Todas las Ordernes - Encabezado para lista CRM

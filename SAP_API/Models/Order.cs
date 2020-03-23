@@ -43,6 +43,9 @@ namespace SAP_API.Models
         public string CardFName { get; set; }
         public string SlpName { get; set; }
         public string WhsName { get; set; }
+        public double DocTotal { get; set; }
+        public string DocCur { get; set; }
+        public string PymntGroup { get; set; }
     }
 
     public abstract class SearchResponse<T> where T : SearchDetail {

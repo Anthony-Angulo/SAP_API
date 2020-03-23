@@ -11,6 +11,180 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class PurchaseDeliveryController : ControllerBase {
+
+        [HttpPost("search")]
+        public async Task<IActionResult> GetSearch([FromBody] SearchRequest request) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            List<string> where = new List<string>();
+
+            if (request.columns[0].search.value != String.Empty) {
+                where.Add($"LOWER(ord.\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
+            }
+            if (request.columns[1].search.value != String.Empty) {
+                where.Add($"LOWER(contact.\"CardFName\") Like LOWER('%{request.columns[1].search.value}%')");
+            }
+            if (request.columns[2].search.value != String.Empty) {
+                where.Add($"LOWER(contact.\"CardName\") Like LOWER('%{request.columns[2].search.value}%')");
+            }
+            if (request.columns[3].search.value != String.Empty) {
+                where.Add($"LOWER(warehouse.\"WhsName\") Like LOWER('%{request.columns[3].search.value}%')");
+            }
+            if (request.columns[4].search.value != String.Empty) {
+                List<string> whereOR = new List<string>();
+                if ("Abierto".Contains(request.columns[4].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                    whereOR.Add(@"ord.""DocStatus"" = 'O' ");
+                }
+                if ("Cerrado".Contains(request.columns[4].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                    whereOR.Add(@"ord.""DocStatus"" = 'C' ");
+                }
+                if ("Cancelado".Contains(request.columns[4].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                    whereOR.Add(@"ord.""CANCELED"" = 'Y' ");
+                }
+
+                string whereORClause = "(" + String.Join(" OR ", whereOR) + ")";
+                where.Add(whereORClause);
+            }
+            if (request.columns[5].search.value != String.Empty) {
+                where.Add($"to_char(to_date(SUBSTRING(ord.\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[5].search.value}%'");
+            }
+
+            string orderby = "";
+            if (request.order[0].column == 0) {
+                orderby = $" ORDER BY ord.\"DocNum\" {request.order[0].dir}";
+            } else if (request.order[0].column == 1) {
+                orderby = $" ORDER BY contact.\"CardFName\" {request.order[0].dir}";
+            } else if (request.order[0].column == 2) {
+                orderby = $" ORDER BY contact.\"CardName\" {request.order[0].dir}";
+            } else if (request.order[0].column == 3) {
+                orderby = $" ORDER BY warehouse.\"WhsName\" {request.order[0].dir}";
+            } else if (request.order[0].column == 4) {
+                orderby = $" ORDER BY ord.\"DocStatus\" {request.order[0].dir}";
+            } else if (request.order[0].column == 5) {
+                orderby = $" ORDER BY ord.\"DocDate\" {request.order[0].dir}";
+            } else {
+                orderby = $" ORDER BY ord.\"DocNum\" DESC";
+            }
+
+            string whereClause = String.Join(" AND ", where);
+
+            string query = @"
+                Select
+                    ord.""DocEntry"",
+                    ord.""DocNum"",
+
+                    to_char(to_date(SUBSTRING(ord.""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDate"",
+
+                    (case when ord.""CANCELED"" = 'Y' then 'Cancelado'
+                    when ord.""DocStatus"" = 'O' then 'Abierto'
+                    when ord.""DocStatus"" = 'C' then 'Cerrado'
+                    else ord.""DocStatus"" end)  AS  ""DocStatus"",
+
+                    ord.""CardName"",
+                    contact.""CardFName"",
+                    warehouse.""WhsName""
+                From OPDN ord
+                LEFT JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
+                LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode"" ";
+
+            if (where.Count != 0) {
+                query += "Where " + whereClause;
+            }
+
+            query += orderby;
+
+            query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+
+            oRecSet.DoQuery(query);
+            oRecSet.MoveFirst();
+            var orders = context.XMLTOJSON(oRecSet.GetAsXML())["OPDN"].ToObject<List<OrderSearchDetail>>();
+
+            string queryCount = @"
+                Select
+                    Count (*) as COUNT
+                From OPDN ord
+                LEFT JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
+                LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode"" ";
+
+            if (where.Count != 0) {
+                queryCount += "Where " + whereClause;
+            }
+            oRecSet.DoQuery(queryCount);
+            oRecSet.MoveFirst();
+            int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OPDN"][0]["COUNT"].ToObject<int>();
+
+            var respose = new OrderSearchResponse {
+                Data = orders,
+                Draw = request.Draw,
+                RecordsFiltered = COUNT,
+                RecordsTotal = COUNT,
+            };
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(respose);
+        }
+
+
+        // GET: api/PurchaseOrder/
+        [HttpGet("Detail/{id}")]
+        public async Task<IActionResult> GetDetail(int id) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                Select
+                    ord.""DocEntry"",
+                    ord.""DocNum"",
+                    ord.""DocCur"",
+                    
+                    ord.""DocTotal"",
+                    ord.""DocTotalFC"",
+                    to_char(to_date(SUBSTRING(ord.""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDate"",
+                    to_char(to_date(SUBSTRING(ord.""DocDueDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDueDate"",
+                    to_char(to_date(SUBSTRING(ord.""CancelDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""CancelDate"",
+
+                    (case when ord.""CANCELED"" = 'Y' then 'Cancelado'
+                    when ord.""DocStatus"" = 'O' then 'Abierto'
+                    when ord.""DocStatus"" = 'C' then 'Cerrado'
+                    else ord.""DocStatus"" end)  AS  ""DocStatus"",
+
+                    ord.""Comments"",
+                    contact.""CardCode"",
+                    contact.""CardName"",
+                    contact.""CardFName"",
+                    warehouse.""WhsName""
+                From OPDN ord
+                LEFT JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
+                LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode""
+                WHERE ord.""DocEntry"" = '" + id + "'");
+            oRecSet.MoveFirst();
+            JToken purchaseOrder = context.XMLTOJSON(oRecSet.GetAsXML())["OPDN"][0];
+
+            oRecSet.DoQuery(@"
+                Select
+                    ""ItemCode"",
+                    ""Dscription"",
+                    ""Price"",
+                    ""Currency"",
+                    ""Quantity"",
+                    ""UomCode"",
+                    ""InvQty"",
+                    ""UomCode2"",
+                    ""LineTotal"",
+                    ""TotalFrgn""
+                From PDN1
+                WHERE ""DocEntry"" = '" + id + "'");
+            oRecSet.MoveFirst();
+            purchaseOrder["rows"] = context.XMLTOJSON(oRecSet.GetAsXML())["PDN1"];
+            return Ok(purchaseOrder);
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
         // // GET: api/PurchaseDelivery
         // [HttpGet]
         // public async Task<IActionResult> Get()
@@ -134,9 +308,23 @@ namespace SAP_API.Controllers
                     purchaseOrderdelivery.Lines.BaseType = 22;
 
                     if (value.products[i].UoMEntry == 7) {
+
+                        
                         purchaseOrder.Lines.SetCurrentLine(value.products[i].Line);
-                        purchaseOrderdelivery.Lines.UoMEntry = 6;
-                        purchaseOrderdelivery.Lines.UnitPrice = purchaseOrder.Lines.UnitPrice * 2.20462;
+                        if (value.products[i].Group == 43) {
+                            purchaseOrderdelivery.Lines.UoMEntry = 25;
+                            oRecSet.DoQuery(@"
+                                Select
+                                    ""NumInBuy""
+                                From OITM Where ""ItemCode"" = '" + value.products[i].ItemCode + "'");
+                            oRecSet.MoveFirst();
+                            double price = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["NumInBuy"].ToObject<double>();
+                            purchaseOrderdelivery.Lines.UnitPrice = purchaseOrder.Lines.UnitPrice / price;
+                        } else {
+                            purchaseOrderdelivery.Lines.UoMEntry = 6;
+                            purchaseOrderdelivery.Lines.UnitPrice = purchaseOrder.Lines.UnitPrice * 2.20462;
+                        }
+                            
                         //Console.WriteLine(value.products[i].ItemType);
                         //if (value.products[i].ItemType == "F")
                         //{
@@ -156,6 +344,7 @@ namespace SAP_API.Controllers
                         //    //purchaseOrderdelivery.Lines.RowTotalFC = purchaseOrder.Lines.RowTotalFC;
                         //    //Console.WriteLine(purchaseOrderdelivery.Lines.LineTotal);
                         //}
+                         
                     }
 
                     purchaseOrderdelivery.Lines.Quantity = value.products[i].Count;
