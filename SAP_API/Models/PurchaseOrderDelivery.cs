@@ -5,6 +5,7 @@ namespace SAP_API.Models
 {
     public class PurchaseOrderDelivery {
         public int order { set; get; }
+        //public string pedimento { set; get; }
         public List<PurchaseOrderDeliveryRow> products { set; get; }
 
     }

@@ -430,7 +430,7 @@ namespace SAP_API.Controllers
                 From OITM product
                 JOIN ITM1 priceList ON priceList.""ItemCode"" = product.""ItemCode""
                 Where product.""ItemCode"" = '" + id + @"'
-                AND priceList.""PriceList"" = 11");
+                AND priceList.""PriceList"" = 23");
             oRecSet.MoveFirst();
             JToken product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
             GC.Collect();

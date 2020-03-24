@@ -128,7 +128,7 @@ namespace SAP_API.Controllers
         }
 
 
-        // GET: api/PurchaseOrder/
+        // GET: api/PurchaseOrder/Detail/(DocEntry)
         [HttpGet("Detail/{id}")]
         public async Task<IActionResult> GetDetail(int id) {
 
@@ -256,6 +256,11 @@ namespace SAP_API.Controllers
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
             if (purchaseOrder.GetByKey(value.order)) {
+
+                //if ((String)purchaseOrder.UserFields.Fields.Item("U_IL_Pedimento").Value == String.Empty) {
+                //    purchaseOrder.UserFields.Fields.Item("U_IL_Pedimento").Value = value.pedimento;
+                //    purchaseOrder.Update();
+                //}
                 
                 purchaseOrderdelivery.CardCode = purchaseOrder.CardCode;
                 purchaseOrderdelivery.DocDate = DateTime.Now;
@@ -319,7 +324,7 @@ namespace SAP_API.Controllers
                                 From OITM Where ""ItemCode"" = '" + value.products[i].ItemCode + "'");
                             oRecSet.MoveFirst();
                             double price = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["NumInBuy"].ToObject<double>();
-                            purchaseOrderdelivery.Lines.UnitPrice = purchaseOrder.Lines.UnitPrice / price;
+                            purchaseOrderdelivery.Lines.UnitPrice = purchaseOrder.Lines.UnitPrice * price;
                         } else {
                             purchaseOrderdelivery.Lines.UoMEntry = 6;
                             purchaseOrderdelivery.Lines.UnitPrice = purchaseOrder.Lines.UnitPrice * 2.20462;

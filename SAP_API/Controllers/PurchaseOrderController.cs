@@ -187,25 +187,17 @@ namespace SAP_API.Controllers
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //oRecSet.DoQuery(@"
-            //    Select
-            //        ""DocEntry"",
-            //        ""DocNum"",
-            //        ""DocStatus"",
-            //        ""CardName"",
-            //        ""CardCode"",
-            //        ""U_IL_Pedimento""
-            //    From OPOR WHERE ""DocNum"" = " + id);
-
+            
             oRecSet.DoQuery(@"
                 Select
                     ""DocEntry"",
                     ""DocNum"",
                     ""DocStatus"",
                     ""CardName"",
-                    ""CardCode""
+                    ""CardCode"",
+                    ""U_IL_Pedimento""
                 From OPOR WHERE ""DocNum"" = " + id);
-
+            
             if (oRecSet.RecordCount == 0) {
                 return NotFound();
             }
@@ -267,6 +259,56 @@ namespace SAP_API.Controllers
             }
             return Ok(POrder);
         }
+
+        [HttpGet("Receptions/{id}")]
+        public async Task<IActionResult> GetDetail(int id) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery(@"
+                SELECT
+                    ""DocEntry"",
+                    ""DocNum"",
+                    ""CardName"",
+                    ""CardCode"",
+                    ""U_IL_Pedimento"",
+                    ""CANCELED"",
+                    ""DocStatus"",
+                    ""DocDate"",
+                    ""Filler"",
+                    ""ToWhsCode""
+                From OPOR WHERE ""DocNum"" = " + id);
+
+            if (oRecSet.RecordCount == 0) {
+                return NotFound("No Existe Documento");
+            }
+
+            JToken purchaseOrder = context.XMLTOJSON(oRecSet.GetAsXML())["OPOR"][0];
+            int docentry = purchaseOrder["DocEntry"].ToObject<int>();
+          
+            oRecSet.DoQuery(@"
+                SELECT
+                    ""DocEntry"",
+                    ""DocNum"",
+                    ""DocDate"",
+                    ""DocDueDate"",
+                    ""ToWhsCode"",
+                    ""Filler""
+                FROM OPDN 
+                WHERE ""DocEntry"" in (SELECT ""DocEntry"" FROM PDN1 WHERE ""BaseEntry"" = " + docentry + ")");
+
+            if (oRecSet.RecordCount != 0) {
+                purchaseOrder["PurchaseDelivery"] = context.XMLTOJSON(oRecSet.GetAsXML())["OPDN"];
+            } else {
+                purchaseOrder["PurchaseDelivery"] = new JArray();
+            }
+
+            return Ok(purchaseOrder);
+        }
+
+
+
 
         // POST: api/PurchaseOrder
         [HttpPost]
