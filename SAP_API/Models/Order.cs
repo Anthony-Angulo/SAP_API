@@ -49,13 +49,13 @@ namespace SAP_API.Models
     }
 
     public abstract class SearchResponse<T> where T : SearchDetail {
-        public int Draw { get; set; }
+        public int draw { get; set; }
 
-        public int RecordsTotal { get; set; }
+        public int recordsTotal { get; set; }
 
-        public int RecordsFiltered { get; set; }
+        public int recordsFiltered { get; set; }
 
-        public IList<T> Data { get; set; }
+        public IList<T> data { get; set; }
     }
 
     public class OrderSearchResponse : SearchResponse<OrderSearchDetail> {

@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
@@ -9,13 +11,111 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class InventoryTransferRequestController : ControllerBase {
-        //// GET: api/InventoryTransferRequest
-        //[HttpGet]
-        //public IEnumerable<string> Get()
-        //{
-        //    return new string[] { "value1", "value2" };
-        //}
 
+        // POST: api/InventoryTransferRequest/Search
+        [HttpPost("search")]
+        public async Task<IActionResult> GetSearch([FromBody] SearchRequest request) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            List<string> where = new List<string>();
+            if (request.columns[0].search.value != String.Empty) {
+                where.Add($"LOWER(\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
+            }
+            if (request.columns[1].search.value != String.Empty) {
+                where.Add($"LOWER(\"Filler\") Like LOWER('%{request.columns[1].search.value}%')");
+            }
+            if (request.columns[2].search.value != String.Empty) {
+                where.Add($"LOWER(\"ToWhsCode\") Like LOWER('%{request.columns[2].search.value}%')");
+            }
+            if (request.columns[3].search.value != String.Empty) {
+                List<string> whereOR = new List<string>();
+                if ("Abierto".Contains(request.columns[3].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                    whereOR.Add(@"""DocStatus"" = 'O' ");
+                }
+                if ("Cerrado".Contains(request.columns[3].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                    whereOR.Add(@"""DocStatus"" = 'C' ");
+                }
+                if ("Cancelado".Contains(request.columns[3].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                    whereOR.Add(@"""CANCELED"" = 'Y' ");
+                }
+
+                string whereORClause = "(" + String.Join(" OR ", whereOR) + ")";
+                where.Add(whereORClause);
+            }
+            if (request.columns[4].search.value != String.Empty) {
+                where.Add($"to_char(to_date(SUBSTRING(\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[4].search.value}%'");
+            }
+
+            string orderby = "";
+            if (request.order[0].column == 0) {
+                orderby = $" ORDER BY \"DocNum\" {request.order[0].dir}";
+            } else if (request.order[0].column == 1) {
+                orderby = $" ORDER BY \"Filler\" {request.order[0].dir}";
+            } else if (request.order[0].column == 2) {
+                orderby = $" ORDER BY \"ToWhsCode\" {request.order[0].dir}";
+            } else if (request.order[0].column == 3) {
+                orderby = $" ORDER BY \"DocStatus\" {request.order[0].dir}";
+            } else if (request.order[0].column == 4) {
+                orderby = $" ORDER BY \"DocDate\" {request.order[0].dir}";
+            } else {
+                orderby = $" ORDER BY \"DocNum\" DESC";
+            }
+
+            string whereClause = String.Join(" AND ", where);
+
+            string query = @"
+                Select
+                    ""DocEntry"",
+                    ""DocNum"",
+
+                    to_char(to_date(SUBSTRING(""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDate"",
+
+                    (case when ""CANCELED"" = 'Y' then 'Cancelado'
+                    when ""DocStatus"" = 'O' then 'Abierto'
+                    when ""DocStatus"" = 'C' then 'Cerrado'
+                    else ""DocStatus"" end)  AS  ""DocStatus"",
+
+                    ""ToWhsCode"",
+                    ""Filler""
+                From OWTQ ";
+
+            if (where.Count != 0) {
+                query += "Where " + whereClause;
+            }
+
+            query += orderby;
+
+            query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+
+            oRecSet.DoQuery(query);
+            oRecSet.MoveFirst();
+            var orders = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"].ToObject<List<TransferRequestSearchDetail>>();
+
+            string queryCount = @"Select Count (*) as COUNT From OWTQ ";
+
+            if (where.Count != 0) {
+                queryCount += "Where " + whereClause;
+            }
+            oRecSet.DoQuery(queryCount);
+            oRecSet.MoveFirst();
+            int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"][0]["COUNT"].ToObject<int>();
+
+            var respose = new TransferRequestSearchResponse {
+                data = orders,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
+            };
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(respose);
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        
+            
+            
         // GET: api/InventoryTransferRequest/list
         [HttpGet("list/{date}")]
         public async Task<IActionResult> GetList(string date) {
@@ -55,7 +155,6 @@ namespace SAP_API.Controllers
                 temp["OWTQ"] = temp["OWTQ"][0];
                 temp["AdmInfo"]?.Parent.Remove();
                 temp["WTQ12"]?.Parent.Remove();
-
                 return Ok(temp);
             }
             return NotFound("No Existe Documento");

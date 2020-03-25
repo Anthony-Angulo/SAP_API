@@ -149,10 +149,10 @@ namespace SAP_API.Controllers
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"][0]["COUNT"].ToObject<int>();
 
             var respose = new OrderSearchResponse {
-                Data = orders,
-                Draw = request.Draw,
-                RecordsFiltered = COUNT,
-                RecordsTotal = COUNT,
+                data = orders,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
             };
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -293,10 +293,10 @@ namespace SAP_API.Controllers
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"][0]["COUNT"].ToObject<int>();
 
             var respose = new OrderSearchResponse {
-                Data = orders,
-                Draw = request.Draw,
-                RecordsFiltered = COUNT,
-                RecordsTotal = COUNT,
+                data = orders,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
             };
             GC.Collect();
             GC.WaitForPendingFinalizers();

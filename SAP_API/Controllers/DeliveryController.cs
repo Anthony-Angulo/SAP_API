@@ -117,41 +117,114 @@ namespace SAP_API.Controllers
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["ODLN"][0]["COUNT"].ToObject<int>();
 
             var respose = new OrderSearchResponse {
-                Data = orders,
-                Draw = request.Draw,
-                RecordsFiltered = COUNT,
-                RecordsTotal = COUNT,
+                data = orders,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
             };
             GC.Collect();
             GC.WaitForPendingFinalizers();
             return Ok(respose);
         }
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        // GET: api/Delivery
-        [HttpGet]
-        public async Task<IActionResult> Get() {
+        // GET: api/Order/5
+        // Orden Detalle
+        [HttpGet("Detail/{DocEntry}")]
+        public async Task<IActionResult> GetDetail(int DocEntry) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Documents items = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oDeliveryNotes);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                SELECT
+                    ord.""DocEntry"",
+                    ord.""DocNum"",
+                    to_char(to_date(SUBSTRING(ord.""DocDueDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDueDate"",
+                    to_char(to_date(SUBSTRING(ord.""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDate"",
+                    to_char(to_date(SUBSTRING(ord.""CancelDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""CancelDate"",
 
-            List<Object> list = new List<Object>();
+                    (case when ord.""CANCELED"" = 'Y' then 'Cancelado'
+                    when ord.""DocStatus"" = 'O' then 'Abierto'
+                    when ord.""DocStatus"" = 'C' then 'Cerrado'
+                    else ord.""DocStatus"" end)  AS  ""DocStatus"",
 
-            oRecSet.DoQuery("Select * From ODLN");
-            items.Browser.Recordset = oRecSet;
-            items.Browser.MoveFirst();
+                    ord.""DocTime"",
+                    ord.""Address"",
+                    ord.""Address2"",
+                    ord.""DocCur"",
+                    ord.""Comments"",
+                    ord.""DocTotal"",
+                    ord.""DocTotalFC"",
+                    ord.""DocRate"",
+                    payment.""PymntGroup"",
+                    contact.""CardName"",
+                    contact.""CardCode"",
+                    contact.""CardFName"",
+                    contact.""ListNum"",
+                    employee.""SlpCode"",
+                    employee.""SlpName"",
+                    warehouse.""WhsCode"",
+                    warehouse.""WhsName""
+                FROM ODLN ord
+                LEFT JOIN NNM1 series ON series.""Series"" = ord.""Series""
+                LEFT JOIN OWHS warehouse ON warehouse.""WhsCode"" = series.""SeriesName""
+                LEFT JOIN OSLP employee ON employee.""SlpCode"" = ord.""SlpCode""
+                LEFT JOIN OCTG payment ON payment.""GroupNum"" = ord.""GroupNum""
+                LEFT JOIN OCRD contact ON contact.""CardCode"" = ord.""CardCode""
+                WHERE ord.""DocEntry"" = '" + DocEntry + "' ");
 
-            while (items.Browser.EoF == false) {
-                JToken temp = context.XMLTOJSON(items.GetAsXML());
-                //temp["ODLN"] = temp["ODLN"][0];
-                list.Add(temp);
-                items.Browser.MoveNext();
-            }
+            JToken temp = context.XMLTOJSON(oRecSet.GetAsXML())["ODLN"][0];
 
-            return Ok(list);
+            oRecSet.DoQuery(@"
+                Select
+                    ""LineNum"",
+                    ""ItemCode"",
+                    ""Dscription"",
+                    ""Price"",
+                    ""Currency"",
+                    ""Quantity"",
+                    ""UomCode"",
+                    ""InvQty"",
+                    ""OpenQty"",
+                    ""UomEntry"",
+                    ""UomCode2"",
+                    ""LineTotal"",
+                    ""U_CjsPsVr"",
+                    ""TotalFrgn"",
+                    ""Rate""
+                From DLN1 Where ""DocEntry"" = '" + DocEntry + "'");
+            oRecSet.MoveFirst();
+            temp["DLN1"] = context.XMLTOJSON(oRecSet.GetAsXML())["DLN1"];
+
+            return Ok(temp);
         }
+
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        //// GET: api/Delivery
+        //[HttpGet]
+        //public async Task<IActionResult> Get() {
+
+        //    SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        //    SAPbobsCOM.Documents items = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oDeliveryNotes);
+        //    SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+        //    List<Object> list = new List<Object>();
+
+        //    oRecSet.DoQuery("Select * From ODLN");
+        //    items.Browser.Recordset = oRecSet;
+        //    items.Browser.MoveFirst();
+
+        //    while (items.Browser.EoF == false) {
+        //        JToken temp = context.XMLTOJSON(items.GetAsXML());
+        //        //temp["ODLN"] = temp["ODLN"][0];
+        //        list.Add(temp);
+        //        items.Browser.MoveNext();
+        //    }
+
+        //    return Ok(list);
+        //}
 
         // GET: api/Delivery/list/20191022
         [HttpGet("list/{date}")]

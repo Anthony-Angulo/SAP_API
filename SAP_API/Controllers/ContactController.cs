@@ -88,10 +88,10 @@ namespace SAP_API.Controllers
 
             var respose = new ClientSearchResponse
             {
-                Data = orders,
-                Draw = request.Draw,
-                RecordsFiltered = COUNT,
-                RecordsTotal = COUNT,
+                data = orders,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
             };
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -163,10 +163,10 @@ namespace SAP_API.Controllers
 
             var respose = new ProviderSearchResponse
             {
-                Data = orders,
-                Draw = request.Draw,
-                RecordsFiltered = COUNT,
-                RecordsTotal = COUNT,
+                data = orders,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
             };
             GC.Collect();
             GC.WaitForPendingFinalizers();

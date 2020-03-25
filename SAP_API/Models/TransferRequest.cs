@@ -2,6 +2,20 @@
 
 namespace SAP_API.Models
 {
+    public class TransferRequestSearchDetail : SearchDetail
+    {
+        public int DocEntry { get; set; }
+        public int DocNum { get; set; }
+        public string DocDate { get; set; }
+        public string DocStatus { get; set; }
+        public string Filler { get; set; }
+        public string ToWhsCode { get; set; }
+    }
+
+    public class TransferRequestSearchResponse : SearchResponse<TransferRequestSearchDetail>
+    {
+    }
+
     public class TransferRequest {
         public string comments { set; get; }
         public TransferRequestWarehouse fromwhs { set; get; }

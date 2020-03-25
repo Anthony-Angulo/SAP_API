@@ -97,10 +97,10 @@ namespace SAP_API.Controllers
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["COUNT"].ToObject<int>();
 
             var respose = new ProductSearchResponse {
-                Data = orders,
-                Draw = request.Draw,
-                RecordsFiltered = COUNT,
-                RecordsTotal = COUNT,
+                data = orders,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
             };
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -175,10 +175,10 @@ namespace SAP_API.Controllers
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["COUNT"].ToObject<int>();
 
             var respose = new ProductWithStockSearchResponse {
-                Data = orders,
-                Draw = request.Draw,
-                RecordsFiltered = COUNT,
-                RecordsTotal = COUNT,
+                data = orders,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
             };
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -244,10 +244,10 @@ namespace SAP_API.Controllers
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["COUNT"].ToObject<int>();
 
             var respose = new ProductSearchResponse {
-                Data = orders,
-                Draw = request.Draw,
-                RecordsFiltered = COUNT,
-                RecordsTotal = COUNT,
+                data = orders,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
             };
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -405,11 +405,29 @@ namespace SAP_API.Controllers
             return Ok(new { Detail, uom });
         }
 
-
-
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        
+        // GET: api/Products/UpdateStock
+        [HttpGet("UpdateStock")]
+        public async Task<IActionResult> GetUpdateStock([FromQuery(Name = "warehouse")]string warehouse, [FromQuery(Name = "itemcodes")]string itemcodes) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            itemcodes = itemcodes.Replace(",", "','");
+            oRecSet.DoQuery(@"
+                Select 
+                    product.""ItemCode"",
+                    RTRIM(RTRIM(stock.""OnHand"", '0'), '.') AS ""OnHand""
+                From OITM product
+                JOIN OITW stock ON stock.""ItemCode"" = product.""ItemCode""
+                Where product.""ItemCode"" in ('" + itemcodes + @"') 
+                AND stock.""WhsCode"" = '" + warehouse + @"'");
+            oRecSet.MoveFirst();
+            JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(products);
+        }
 
         // GET: api/Products/UomDetailWithLastSellPrice
         [HttpGet("UomDetailWithLastSellPrice/{id}")]
