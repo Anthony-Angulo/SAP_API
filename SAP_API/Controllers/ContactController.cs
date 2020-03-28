@@ -173,8 +173,8 @@ namespace SAP_API.Controllers
             return Ok(respose);
         }
 
-        [HttpGet("CRMClientToSell/{id}")]
-        public async Task<IActionResult> GetCRMClientToSell(string id) {
+        [HttpGet("CRMClientToSell/{CardCode}")]
+        public async Task<IActionResult> GetCRMClientToSell(string CardCode) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -185,21 +185,31 @@ namespace SAP_API.Controllers
                     ""CardName"",
                     ""CardFName"",
                     contact.""ListNum"",
-                    payment.""GroupNum"",
-                    payment.""PymntGroup"",
+                    paymentTerm.""GroupNum"",
+                    paymentTerm.""PymntGroup"",
+                    paymentMethod.""PayMethCod"",
+                    paymentMethod.""Descript"",
                     ""SlpName"",
                     ""ListName""
                 From OCRD contact
                 JOIN OSLP seller ON contact.""SlpCode"" = seller.""SlpCode""
-                JOIN OCTG payment ON payment.""GroupNum"" = contact.""GroupNum""
-                JOIN OPLN priceList ON priceList.""ListNum"" = contact.""ListNum"" 
-                Where ""CardCode"" = '" + id + "'");
+                JOIN OCTG paymentTerm ON paymentTerm.""GroupNum"" = contact.""GroupNum""
+                JOIN OPLN priceList ON priceList.""ListNum"" = contact.""ListNum""
+                LEFT JOIN OPYM paymentMethod ON paymentMethod.""PayMethCod"" = contact.""PymCode""
+                Where ""CardCode"" = '" + CardCode + "'");
             oRecSet.MoveFirst();
             if (oRecSet.RecordCount == 0) {
                 return NotFound("No Existe Contacto");
             }
-
             JToken contact = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0];
+            oRecSet.DoQuery(@"
+                Select
+                    paymentMethodCardCode.""PymCode"",
+                    paymentMethod.""Descript""
+                From CRD2 paymentMethodCardCode
+                JOIN OPYM paymentMethod ON paymentMethod.""PayMethCod"" = paymentMethodCardCode.""PymCode""
+                Where ""CardCode"" = '" + CardCode  + "'");
+            contact["PaymentMethods"] = context.XMLTOJSON(oRecSet.GetAsXML())["CRD2"];
             GC.Collect();
             GC.WaitForPendingFinalizers();
             return Ok(contact);
@@ -344,6 +354,19 @@ namespace SAP_API.Controllers
             GC.WaitForPendingFinalizers();
             //return Ok(await context.comp(contacts, 3));
             return Ok(contacts);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(string id) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.BusinessPartners items = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
+
+            if (items.GetByKey(id)) {
+                JToken contact = context.XMLTOJSON(items.GetAsXML());
+                return Ok(contact);
+            }
+            return NotFound("No Existe Contacto");
         }
 
     }

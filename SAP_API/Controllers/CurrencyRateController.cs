@@ -10,6 +10,11 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class CurrencyRateController : ControllerBase {
+
+        public class CurrencyRateDetail {
+            public double CurrencyRate { get; set; }
+        }
+
         // GET: api/CurrencyRate
         [HttpGet]
         public async Task<IActionResult> Get() {
@@ -18,13 +23,13 @@ namespace SAP_API.Controllers
             SAPbobsCOM.SBObob SBO = (SAPbobsCOM.SBObob)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoBridge);
             try {
                 SAPbobsCOM.Recordset oRecSet = SBO.GetCurrencyRate("USD", DateTime.Today);
-                oRecSet.MoveFirst();
-                JToken set = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
+                JToken currency = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
+                CurrencyRateDetail currencyRateDetail = currency.ToObject<CurrencyRateDetail>();
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
-                return Ok(set);
+                return Ok(currencyRateDetail);
             } catch(Exception ex) {
-                return NotFound(ex.Message);
+                return Conflict(ex.Message);
             }
         }
     }

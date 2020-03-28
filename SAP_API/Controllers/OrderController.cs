@@ -303,6 +303,89 @@ namespace SAP_API.Controllers
             return Ok(respose);
         }
 
+        // GET: api/Order/WMSDetail/5
+        [HttpGet("WMSDetail/{DocEntry}")]
+        public async Task<IActionResult> GetWMSDetail(int DocEntry) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            OrderDetail orderDetail;
+            JToken order;
+            string DocCur;
+            oRecSet.DoQuery(@"
+                SELECT
+                    ord.""DocEntry"",
+                    ord.""DocNum"",
+                    to_char(to_date(SUBSTRING(ord.""DocDueDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDueDate"",
+                    to_char(to_date(SUBSTRING(ord.""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDate"",
+                    to_char(to_date(SUBSTRING(ord.""CancelDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""CancelDate"",
+
+                    (case when ord.""CANCELED"" = 'Y' then 'Cancelado'
+                    when ord.""DocStatus"" = 'O' then 'Abierto'
+                    when ord.""DocStatus"" = 'C' then 'Cerrado'
+                    else ord.""DocStatus"" end)  AS  ""DocStatus"",
+
+                    (case when ord.""DocCur"" = 'USD' then ord.""DocTotalFC""
+                    else ord.""DocTotal"" end)  AS  ""Total"",
+
+                    ord.""Address"",
+                    ord.""Address2"",
+                    ord.""DocCur"",
+                    ord.""Comments"",
+                    ord.""DocRate"",
+                    payment.""PymntGroup"",
+                    contact.""CardName"",
+                    contact.""CardCode"",
+                    contact.""CardFName"",
+                    contact.""ListNum"",
+                    employee.""SlpCode"",
+                    employee.""SlpName"",
+                    warehouse.""WhsCode"",
+                    warehouse.""WhsName""
+                FROM ORDR ord
+                LEFT JOIN NNM1 series ON series.""Series"" = ord.""Series""
+                LEFT JOIN OWHS warehouse ON warehouse.""WhsCode"" = series.""SeriesName""
+                LEFT JOIN OSLP employee ON employee.""SlpCode"" = ord.""SlpCode""
+                LEFT JOIN OCTG payment ON payment.""GroupNum"" = ord.""GroupNum""
+                LEFT JOIN OCRD contact ON contact.""CardCode"" = ord.""CardCode""
+                WHERE ord.""DocEntry"" = '" + DocEntry + "' ");
+            if (oRecSet.RecordCount == 0) {
+                return NotFound("No Existe Documento");
+            }
+            order = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"][0];
+            DocCur = order["DocCur"].ToString();
+            oRecSet.DoQuery(@"
+                Select
+                    ""ItemCode"",
+                    ""Dscription"",
+                    ""Price"",
+                    ""Currency"",
+
+                    (case when ""U_CjsPsVr"" != '0' then ""U_CjsPsVr""
+                    else ""Quantity"" end)  AS  ""Quantity"",
+                    
+                    (case when ""U_CjsPsVr"" != '0' then 'CAJA'
+                    else ""UomCode"" end)  AS  ""UomCode"",
+                    
+                    ""InvQty"",
+                    ""UomCode2"",
+
+                    (case when '" + DocCur + @"' = 'USD' then ""TotalFrgn""
+                    else ""LineTotal"" end)  AS  ""Total""
+
+                From RDR1 Where ""DocEntry"" = '" + DocEntry + "'");
+            oRecSet.MoveFirst();
+            order["OrderRows"] = context.XMLTOJSON(oRecSet.GetAsXML())["RDR1"];
+
+            orderDetail = order.ToObject<OrderDetail>();
+
+            order = null;
+            oRecSet = null;
+            DocCur = null;
+
+            return Ok(orderDetail);
+        }
+
         // GET: api/Order/5
         // Orden Detalle
         [HttpGet("CRMDetail/{id}")]
@@ -854,6 +937,7 @@ namespace SAP_API.Controllers
             order.DocDueDate = DateTime.Now.AddDays(1); //////////////////////////////////////////
             //order.DocDueDate = value.date; /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             order.PaymentGroupCode = value.payment;
+            order.PaymentMethod = "";
 
             if (contact.GetByKey(value.cardcode)) {
                 String temp = (String)contact.UserFields.Fields.Item("U_B1SYS_MainUsage").Value;

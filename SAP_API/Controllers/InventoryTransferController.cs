@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,130 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class InventoryTransferController : ControllerBase {
+
+        // POST: api/InventoryTransfer/Search
+        [HttpPost("search")]
+        public async Task<IActionResult> GetSearch([FromBody] SearchRequest request) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            List<string> where = new List<string>();
+            if (request.columns[0].search.value != String.Empty) {
+                where.Add($"LOWER(\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
+            }
+            if (request.columns[1].search.value != String.Empty) {
+                where.Add($"LOWER(\"Filler\") Like LOWER('%{request.columns[1].search.value}%')");
+            }
+            if (request.columns[2].search.value != String.Empty) {
+                where.Add($"LOWER(\"ToWhsCode\") Like LOWER('%{request.columns[2].search.value}%')");
+            }
+            if (request.columns[3].search.value != String.Empty) {
+                where.Add($"to_char(to_date(SUBSTRING(\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[3].search.value}%'");
+            }
+
+            string orderby = "";
+            if (request.order[0].column == 0) {
+                orderby = $" ORDER BY \"DocNum\" {request.order[0].dir}";
+            } else if (request.order[0].column == 1) {
+                orderby = $" ORDER BY \"Filler\" {request.order[0].dir}";
+            } else if (request.order[0].column == 2) {
+                orderby = $" ORDER BY \"ToWhsCode\" {request.order[0].dir}";
+            } else if (request.order[0].column == 3) {
+                orderby = $" ORDER BY \"DocDate\" {request.order[0].dir}";
+            } else {
+                orderby = $" ORDER BY \"DocNum\" DESC";
+            }
+
+            string whereClause = String.Join(" AND ", where);
+
+            string query = @"
+                Select
+                    ""DocEntry"",
+                    ""DocNum"",
+                    to_char(to_date(SUBSTRING(""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDate"",
+                    ""ToWhsCode"",
+                    ""Filler""
+                From OWTR ";
+
+            if (where.Count != 0) {
+                query += "Where " + whereClause;
+            }
+
+            query += orderby;
+
+            query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+
+            oRecSet.DoQuery(query);
+            oRecSet.MoveFirst();
+            List<TransferSearchDetail> orders = context.XMLTOJSON(oRecSet.GetAsXML())["OWTR"].ToObject<List<TransferSearchDetail>>();
+
+            string queryCount = @"Select Count (*) as COUNT From OWTR ";
+
+            if (where.Count != 0) {
+                queryCount += "Where " + whereClause;
+            }
+            oRecSet.DoQuery(queryCount);
+            oRecSet.MoveFirst();
+            int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OWTR"][0]["COUNT"].ToObject<int>();
+
+            TransferSearchResponse respose = new TransferSearchResponse {
+                data = orders,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
+            };
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(respose);
+        }
+
+        // GET: api/InventoryTransfer/WMSDetail/(DocEntry)
+        [HttpGet("WMSDetail/{DocEntry}")]
+        public async Task<IActionResult> GetWMSDetail(int DocEntry) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            TransferDetail transferDetail;
+            JToken tranfer;
+
+            oRecSet.DoQuery(@"
+                Select
+                    ""DocEntry"",
+                    ""DocNum"",
+                    to_char(to_date(SUBSTRING(""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDate"",
+                    to_char(to_date(SUBSTRING(""DocDueDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDueDate"",
+                    to_char(to_date(SUBSTRING(""CancelDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""CancelDate"",
+                    ""Comments"",
+                    ""ToWhsCode"",
+                    ""Filler""
+                From OWTR
+                WHERE ""DocEntry"" = '" + DocEntry + "'");
+            if (oRecSet.RecordCount == 0) {
+                return NotFound("No Existe Documento");
+            }
+            tranfer = context.XMLTOJSON(oRecSet.GetAsXML())["OWTR"][0];
+            oRecSet.DoQuery(@"
+                Select
+                    ""ItemCode"",
+                    ""Dscription"",
+                    ""Quantity"",
+                    ""UomCode"",
+                    ""InvQty"",
+                    ""UomCode2""
+                From WTR1
+                WHERE ""DocEntry"" = '" + DocEntry + "'");
+            oRecSet.MoveFirst();
+            tranfer["TransferRows"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTR1"];
+
+            transferDetail = tranfer.ToObject<TransferDetail>();
+
+            tranfer = null;
+            oRecSet = null;
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(transferDetail);
+        }
+
         //// GET: api/InventoryTransfer
         //[HttpGet]
         //public async Task<IActionResult> Get()
@@ -39,6 +164,8 @@ namespace SAP_API.Controllers
         //    }
         //    return Ok(list);
         //}
+
+        ///////////////////////////////////////////////////////////////////////////////
 
         // GET: api/InventoryTransfer/list
         [HttpGet("list/{date}")]

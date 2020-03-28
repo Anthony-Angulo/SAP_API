@@ -90,7 +90,7 @@ namespace SAP_API.Controllers
 
             oRecSet.DoQuery(query);
             oRecSet.MoveFirst();
-            var orders = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"].ToObject<List<TransferRequestSearchDetail>>();
+            List<TransferRequestSearchDetail> orders = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"].ToObject<List<TransferRequestSearchDetail>>();
 
             string queryCount = @"Select Count (*) as COUNT From OWTQ ";
 
@@ -101,7 +101,7 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"][0]["COUNT"].ToObject<int>();
 
-            var respose = new TransferRequestSearchResponse {
+            TransferRequestSearchResponse respose = new TransferRequestSearchResponse {
                 data = orders,
                 draw = request.Draw,
                 recordsFiltered = COUNT,

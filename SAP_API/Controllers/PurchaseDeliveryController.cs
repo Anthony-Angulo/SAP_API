@@ -192,6 +192,8 @@ namespace SAP_API.Controllers
             purchaseDelivery = null;
             oRecSet = null;
             DocCur = null;
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
             return Ok(purchaseDeliveryDetail);
         }
 

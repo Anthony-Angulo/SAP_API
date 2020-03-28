@@ -11,6 +11,12 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class PaymentTermsController : ControllerBase {
+
+        public class PaymentTermDetail {
+            public string PymntGroup { get; set; }
+            public int GroupNum { get; set; }
+        }
+
         // GET: api/PaymentTerms
         [HttpGet]
         public async Task<IActionResult> Get() {
@@ -18,21 +24,38 @@ namespace SAP_API.Controllers
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.PaymentTermsTypes payment = (SAPbobsCOM.PaymentTermsTypes)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPaymentTermsTypes);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
             List<Object> list = new List<Object>();
-
+            JToken temp;
             oRecSet.DoQuery("Select * From OCTG");
             payment.Browser.Recordset = oRecSet;
             payment.Browser.MoveFirst();
 
             while (payment.Browser.EoF == false) {
-                JToken temp = context.XMLTOJSON(payment.GetAsXML());
+                temp = context.XMLTOJSON(payment.GetAsXML());
                 temp = temp["OCTG"][0];
                 list.Add(temp);
                 payment.Browser.MoveNext();
             }
             return Ok(list);
         }
+
+        // GET: api/PaymentTerms/CRMList
+        [HttpGet("List")]
+        public async Task<IActionResult> GetList() {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery("Select \"GroupNum\", \"PymntGroup\" From OCTG");
+            JToken paymentTermsList = context.XMLTOJSON(oRecSet.GetAsXML())["OCTG"];
+            List<PaymentTermDetail> paymentTermDetails = paymentTermsList.ToObject<List<PaymentTermDetail>>();
+            oRecSet = null;
+            paymentTermsList = null;
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(paymentTermDetails);
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////
 
         // GET: api/PaymentTerms/CRMList
         [HttpGet("CRMList")]

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,8 +11,9 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PeyMethodController : ControllerBase {
-        // GET: api/PeyMethod
+    public class PaymentMethodsController : ControllerBase
+    {
+        // GET: api/PaymentMethods
         [HttpGet]
         public async Task<IActionResult> Get() {
 
@@ -26,27 +28,30 @@ namespace SAP_API.Controllers
 
             while (payment.Browser.EoF == false) {
                 JToken temp = context.XMLTOJSON(payment.GetAsXML());
-                //temp["ORDR"] = temp["ORDR"][0];
                 list.Add(temp);
                 payment.Browser.MoveNext();
             }
             return Ok(list);
         }
 
-        //// GET: api/PeyMethod/5
+        //// GET: api/PaymentMethods/5
         //[HttpGet("{id}")]
-        //public string Get(int id)
-        //{
-        //    return "value";
+        //public async Task<IActionResult> Get(int id) {
+
+        //    SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        //    SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+        //    oRecSet.DoQuery("Select TOP 10 * From CRD2");
+        //    JToken temp = context.XMLTOJSON(oRecSet.GetAsXML());
+        //    return Ok(temp);
         //}
 
-        //// POST: api/PeyMethod
+        //// POST: api/PaymentMethods
         //[HttpPost]
         //public void Post([FromBody] string value)
         //{
         //}
 
-        //// PUT: api/PeyMethod/5
+        //// PUT: api/PaymentMethods/5
         //[HttpPut("{id}")]
         //public void Put(int id, [FromBody] string value)
         //{

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,14 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class WarehouseController : ControllerBase {
+
+        public class WarehouseWithSerie {
+            public string WhsName { get; set; }
+            public string WhsCode { get; set; }
+            public int Series { get; set; }
+        }
+
+        // Lista de Todas Las Sucursales
         // GET: api/Warehouse
         [HttpGet]
         public async Task<IActionResult> Get() {
@@ -25,6 +34,32 @@ namespace SAP_API.Controllers
             JToken warehouseList = context.XMLTOJSON(oRecSet.GetAsXML())["OWHS"];
             return Ok(warehouseList);
         }
+
+        // Lista de Sucursales con la serie para generar una orden de venta
+        // GET: api/Warehouse/orderlist
+        [HttpGet("ListToSell")]
+        public async Task<IActionResult> GetListToSell() {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                Select
+                    warehouse.""WhsCode"",
+                    warehouse.""WhsName"",
+                    serie.""Series""
+                From OWHS warehouse
+                LEFT JOIN NNM1 serie ON serie.""SeriesName"" = warehouse.""WhsCode""
+                Where serie.""ObjectCode"" = 17 AND warehouse.""WhsCode""  in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55') ");
+            JToken warehouseList = context.XMLTOJSON(oRecSet.GetAsXML())["OWHS"];
+            List<WarehouseWithSerie> warehouseWithSeries = warehouseList.ToObject<List<WarehouseWithSerie>>();
+            oRecSet = null;
+            warehouseList = null;
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(warehouseWithSeries);
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // Sucursales y serie del documento orden de venta
         // GET: api/Warehouse/orderlist
@@ -107,6 +142,15 @@ namespace SAP_API.Controllers
             
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            // Release WMS
+            //oRecSet.DoQuery(@"
+            //    Select
+            //        warehouse.""WhsCode"" as ""WhsCodeTSR"",
+            //        warehouse2.""WhsCode"" as ""WhsCode"",
+            //        warehouse.""WhsName""
+            //    From OWHS warehouse
+            //    JOIN OWHS warehouse2 ON warehouse.""WhsName"" = warehouse2.""WhsName"" AND warehouse.""WhsCode"" != warehouse2.""WhsCode""
+            //    Where warehouse.""WhsCode"" LIKE 'TSR%'");
 
             oRecSet.DoQuery(@"
                 Select

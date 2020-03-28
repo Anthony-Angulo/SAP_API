@@ -4,8 +4,7 @@ using System.Collections.Generic;
 namespace SAP_API.Models
 {
 
-    public class PurchaseDeliveryDetail
-    {
+    public class PurchaseDeliveryDetail {
 
         public int DocEntry { get; set; }
         public int DocNum { get; set; }
@@ -24,8 +23,7 @@ namespace SAP_API.Models
 
     }
 
-    public class PurchaseDeliveryDetailRow
-    {
+    public class PurchaseDeliveryDetailRow {
         public string ItemCode { get; set; }
         public string Dscription { get; set; }
         public double Price { get; set; }

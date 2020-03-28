@@ -2,8 +2,7 @@
 
 namespace SAP_API.Models
 {
-    public class TransferRequestSearchDetail : SearchDetail
-    {
+    public class TransferRequestSearchDetail : SearchDetail {
         public int DocEntry { get; set; }
         public int DocNum { get; set; }
         public string DocDate { get; set; }
@@ -12,9 +11,7 @@ namespace SAP_API.Models
         public string ToWhsCode { get; set; }
     }
 
-    public class TransferRequestSearchResponse : SearchResponse<TransferRequestSearchDetail>
-    {
-    }
+    public class TransferRequestSearchResponse : SearchResponse<TransferRequestSearchDetail> { }
 
     public class TransferRequest {
         public string comments { set; get; }

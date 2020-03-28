@@ -34,8 +34,7 @@ namespace SAP_API.Models
                 if (token != null) {
                     node = ArrayFormatRow(node);
                     node = WalkNode(node);
-                }
-                else {
+                } else {
 
                     token = node["@nil"];
                     if (token != null) {
@@ -50,8 +49,7 @@ namespace SAP_API.Models
                     }
                 }
 
-            }
-            else if (node.Type == JTokenType.Array) {
+            } else if (node.Type == JTokenType.Array) {
                 JArray temp = new JArray();
                 foreach (JToken child in node.Children()) {
                     temp.Add(WalkNode(child));
@@ -60,7 +58,6 @@ namespace SAP_API.Models
             }
 
             return node;
-
         }
 
         public JToken XMLTOJSON(string XML) {
@@ -87,8 +84,7 @@ namespace SAP_API.Models
         static JToken ArrayFormatRow(JToken temp) {
             if (temp["row"] is JArray) {
                 return temp["row"];
-            }
-            else {
+            } else {
                 List<Object> rowList = new List<Object>();
                 rowList.Add(temp["row"]);
                 return JToken.FromObject(rowList);
