@@ -178,6 +178,7 @@ namespace SAP_API.Controllers
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            JToken contact;
 
             oRecSet.DoQuery(@"
                 Select
@@ -201,7 +202,7 @@ namespace SAP_API.Controllers
             if (oRecSet.RecordCount == 0) {
                 return NotFound("No Existe Contacto");
             }
-            JToken contact = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0];
+            contact = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0];
             oRecSet.DoQuery(@"
                 Select
                     paymentMethodCardCode.""PymCode"",
@@ -210,9 +211,12 @@ namespace SAP_API.Controllers
                 JOIN OPYM paymentMethod ON paymentMethod.""PayMethCod"" = paymentMethodCardCode.""PymCode""
                 Where ""CardCode"" = '" + CardCode  + "'");
             contact["PaymentMethods"] = context.XMLTOJSON(oRecSet.GetAsXML())["CRD2"];
+            ContactToSell contactToSell = contact.ToObject<ContactToSell>();
+            oRecSet = null;
+            contact = null;
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            return Ok(contact);
+            return Ok(contactToSell);
         }
 
         [HttpGet("CRMProviderToBuy/{id}")]
@@ -321,8 +325,12 @@ namespace SAP_API.Controllers
                     ""Block"",
                     ""GroupNum"",
                     ""ListNum""
-                From OCRD Where ""CardType"" = 'C' AND ""SlpCode"" = " + id + @" AND ""CardCode"" LIKE '%-P'");
-            oRecSet.MoveFirst();
+                From OCRD employeeSales
+                JOIN OHEM employee ON ""SlpCode"" = ""salesPrson""
+                Where ""CardType"" = 'C' AND ""empID"" = " + id + @" AND ""CardCode"" LIKE '%-P'");
+            if (oRecSet.RecordCount == 0) {
+                return Ok(new List<string>());
+            }
             JToken contacts = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"];
             GC.Collect();
             GC.WaitForPendingFinalizers();

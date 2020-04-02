@@ -338,27 +338,28 @@ namespace SAP_API.Controllers
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            JToken product;
+            ProductDetail productDetail;
             oRecSet.DoQuery(@"
                 Select 
                     product.""ItemName"", 
                     product.""ItemCode"", 
-                    RTRIM(RTRIM(product.""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm"",
+                    product.""U_IL_PesProm"" AS ""PesProm"",
                     product.""SUoMEntry"",
                     priceList.""PriceList"",
                     priceList.""Currency"",
-                    RTRIM(RTRIM(priceList.""Price"", '0'), '.') AS ""Price"",
+                    priceList.""Price"",
                     priceList.""UomEntry"",
                     priceList.""PriceType"",
                     stock.""WhsCode"",
-                    RTRIM(RTRIM(stock.""OnHand"", '0'), '.') AS ""OnHand""
+                    stock.""OnHand""
                 From OITM product
                 JOIN ITM1 priceList ON priceList.""ItemCode"" = product.""ItemCode""
                 JOIN OITW stock ON stock.""ItemCode"" = product.""ItemCode""
                 Where product.""ItemCode"" = '" + id + @"'
                 AND stock.""WhsCode"" = '" + warehouse + @"'
                 AND priceList.""PriceList"" = " + priceList);
-            oRecSet.MoveFirst();
-            JToken product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+            product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
             oRecSet.DoQuery(@"
                 Select 
                     header.""UgpCode"",
@@ -366,7 +367,7 @@ namespace SAP_API.Controllers
                     baseUOM.""UomCode"" as ""BaseCode"",
                     detail.""UomEntry"",
                     UOM.""UomCode"",
-                    RTRIM(RTRIM(detail.""BaseQty"", '0'), '.') AS ""BaseQty""
+                    detail.""BaseQty""
                 From OUGP header
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
@@ -374,10 +375,13 @@ namespace SAP_API.Controllers
                 Where header.""UgpCode"" = '" + id + @"'");
                 //AND detail.""UomEntry"" in (Select ""UomEntry"" FROM ITM4 Where ""UomType"" = 'S' AND ""ItemCode"" = '" + id + "')");
             oRecSet.MoveFirst();
-            product["uom"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            product["UOMList"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            productDetail = product.ToObject<ProductDetail>();
+            oRecSet = null;
+            product = null;
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            return Ok(product);
+            return Ok(productDetail);
         }
 
 
@@ -767,7 +771,7 @@ namespace SAP_API.Controllers
                     RTRIM(RTRIM(""Price"", '0'), '.') AS ""Price"",
                     ""UomEntry""
                 From ITM1
-                Where ""PriceList"" = '2'
+                Where ""PriceList"" in (19, 13, 14, 15, 16)
                 AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.MoveFirst();
             JToken priceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"];
@@ -777,7 +781,8 @@ namespace SAP_API.Controllers
                     ""WhsCode"",
                     RTRIM(RTRIM(""OnHand"", '0'), '.') AS ""OnHand""
                 From OITW
-                Where ""Freezed"" = 'N'
+                Where ""OnHand"" != 0 
+                    AND ""Freezed"" = 'N'
                     AND ""Locked"" = 'N'
                     AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55')
                     AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
@@ -798,9 +803,10 @@ namespace SAP_API.Controllers
                 Where header.""UgpCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.MoveFirst();
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            var returnValue = new { products, priceList, stock, uom };
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            return Ok(new { products, priceList, stock, uom });
+            return Ok(returnValue);
         }
 
         // CON NUEVA VERSION APP NO PUBLICADA
@@ -822,6 +828,16 @@ namespace SAP_API.Controllers
                 AND ""validFor"" = 'Y'");
             oRecSet.MoveFirst();
             JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
+            //oRecSet.DoQuery(@"
+            //    Select 
+            //        ""PriceList"",
+            //        ""ItemCode"",
+            //        ""Currency"",
+            //        RTRIM(RTRIM(""Price"", '0'), '.') AS ""Price"",
+            //        ""UomEntry""
+            //    From ITM1
+            //    Where ""PriceList"" = '2'
+            //    AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.DoQuery(@"
                 Select 
                     ""PriceList"",
@@ -833,22 +849,26 @@ namespace SAP_API.Controllers
                 Where ""Currency"" is not NULL
                 AND ""Price"" != 0
                 AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')
-                AND ""PriceList"" in (SELECT Distinct ""ListNum"" From OCRD Where ""CardType"" = 'C' AND ""SlpCode"" = " + id + @" AND ""CardCode"" LIKE '%-P');");
+                AND ""PriceList"" in (
+                    SELECT Distinct ""ListNum""
+                    From OCRD employeeSales
+                    JOIN OHEM employee ON ""SlpCode"" = ""salesPrson""
+                    Where ""CardType"" = 'C' AND ""empID"" = " + id + @" AND ""CardCode"" LIKE '%-P');");
             oRecSet.MoveFirst();
             JToken priceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"];
 
-            oRecSet.DoQuery($"Select \"Fax\" From OSLP Where \"SlpCode\" = {id}");
-            oRecSet.MoveFirst();
-            string warehouses = context.XMLTOJSON(oRecSet.GetAsXML())["OSLP"][0]["Fax"].ToString();
-            warehouses = warehouses.Trim();
-            if (warehouses.Equals("")) {
-                warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55'";
-            }
-            else {
-                warehouses = warehouses.ToUpper();
-                warehouses = "'" + warehouses + "'";
-                warehouses = warehouses.Replace(",", "','");
-            }
+            //oRecSet.DoQuery($"Select \"Fax\" From OSLP Where \"SlpCode\" = {id}");
+            //oRecSet.MoveFirst();
+            //string warehouses = context.XMLTOJSON(oRecSet.GetAsXML())["OSLP"][0]["Fax"].ToString();
+            //warehouses = warehouses.Trim();
+            //if (warehouses.Equals("")) { 
+                string warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55'";
+            //}
+            //else {
+            //    warehouses = warehouses.ToUpper();
+            //    warehouses = "'" + warehouses + "'";
+            //    warehouses = warehouses.Replace(",", "','");
+            //}
 
             oRecSet.DoQuery(@"
                 Select 

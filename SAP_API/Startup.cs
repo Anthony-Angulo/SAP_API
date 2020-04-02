@@ -39,10 +39,9 @@ namespace SAP_API
                                         .AllowAnyMethod();
                 });
             });
-            services.AddMvc().AddJsonOptions(options =>
-            {
-                options.SerializerSettings.ContractResolver = new DefaultContractResolver();
-            }).SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.AddMvc()
+                .AddJsonOptions(options => {options.SerializerSettings.ContractResolver = new DefaultContractResolver();})
+                .SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
             services.Add(new ServiceDescriptor(typeof(SAPContext), new SAPContext()));
 
         }

@@ -100,6 +100,19 @@ namespace SAP_API.Controllers
             SAPbobsCOM.CompanyService services = context.oCompany.GetCompanyService();
             SAPbobsCOM.BarCodesService barCodesService = (SAPbobsCOM.BarCodesService)services.GetBusinessService(SAPbobsCOM.ServiceTypes.BarCodesService);
             SAPbobsCOM.BarCode barCode = (SAPbobsCOM.BarCode)barCodesService.GetDataInterface(SAPbobsCOM.BarCodesServiceDataInterfaces.bsBarCode);
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                Select
+                    ""BcdEntry"",
+                    ""BcdCode"",
+                    ""BcdName"",
+                    ""ItemCode"",
+                    ""UomEntry""
+                From OBCD Where ""BcdCode"" = '" + value.Barcode + "'");
+            if (oRecSet.RecordCount != 0){
+                string itemcode = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"][0]["ItemCode"].ToString();
+                return BadRequest("Ya Existe Codigo de Barra Registrado. Producto: " + itemcode);
+            }
 
             barCode.ItemNo = value.ItemCode;
             barCode.BarCode = value.Barcode;

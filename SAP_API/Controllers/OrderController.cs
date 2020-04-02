@@ -758,6 +758,9 @@ namespace SAP_API.Controllers
                         ""QryGroup7"",
                         ""QryGroup41"",
                         ""QryGroup42"",
+                        ""QryGroup43"",
+                        ""QryGroup44"",
+                        ""QryGroup45"",
                         ""ManBtchNum"",
                         ""U_IL_PesMax"",
                         ""U_IL_PesMin"",
@@ -937,7 +940,7 @@ namespace SAP_API.Controllers
             order.DocDueDate = DateTime.Now.AddDays(1); //////////////////////////////////////////
             //order.DocDueDate = value.date; /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             order.PaymentGroupCode = value.payment;
-            order.PaymentMethod = "";
+            //order.PaymentMethod = "";
 
             if (contact.GetByKey(value.cardcode)) {
                 String temp = (String)contact.UserFields.Fields.Item("U_B1SYS_MainUsage").Value;
@@ -967,7 +970,7 @@ namespace SAP_API.Controllers
                 for (int j = 0; j < items.PriceList.Count; j++) {
                     items.PriceList.SetCurrentLine(j);
                     if (items.PriceList.PriceList == 2) { /////////////////////////////////////////////////
-                        //if (items.PriceList.PriceList == value.priceList) { ///////////////////////////////////////////
+                        //if (items.PriceList.PriceList == value.priceList) {
                         if (value.rows[i].uom == -2) {
                             order.Lines.UnitPrice = items.PriceList.Price;
                         } else {
