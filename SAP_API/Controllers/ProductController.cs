@@ -771,9 +771,9 @@ namespace SAP_API.Controllers
                     RTRIM(RTRIM(""Price"", '0'), '.') AS ""Price"",
                     ""UomEntry""
                 From ITM1
-                Where ""PriceList"" in (19, 13, 14, 15, 16)
+                Where ""PriceList"" = 2
                 AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
-            oRecSet.MoveFirst();
+            oRecSet.MoveFirst();// in (19, 13, 14, 15, 16)
             JToken priceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"];
             oRecSet.DoQuery(@"
                 Select 
@@ -828,16 +828,6 @@ namespace SAP_API.Controllers
                 AND ""validFor"" = 'Y'");
             oRecSet.MoveFirst();
             JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
-            //oRecSet.DoQuery(@"
-            //    Select 
-            //        ""PriceList"",
-            //        ""ItemCode"",
-            //        ""Currency"",
-            //        RTRIM(RTRIM(""Price"", '0'), '.') AS ""Price"",
-            //        ""UomEntry""
-            //    From ITM1
-            //    Where ""PriceList"" = '2'
-            //    AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.DoQuery(@"
                 Select 
                     ""PriceList"",
@@ -846,14 +836,24 @@ namespace SAP_API.Controllers
                     RTRIM(RTRIM(""Price"", '0'), '.') AS ""Price"",
                     ""UomEntry""
                 From ITM1
-                Where ""Currency"" is not NULL
-                AND ""Price"" != 0
-                AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')
-                AND ""PriceList"" in (
-                    SELECT Distinct ""ListNum""
-                    From OCRD employeeSales
-                    JOIN OHEM employee ON ""SlpCode"" = ""salesPrson""
-                    Where ""CardType"" = 'C' AND ""empID"" = " + id + @" AND ""CardCode"" LIKE '%-P');");
+                Where ""PriceList"" = '2'
+                AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
+            //oRecSet.DoQuery(@"
+            //    Select 
+            //        ""PriceList"",
+            //        ""ItemCode"",
+            //        ""Currency"",
+            //        RTRIM(RTRIM(""Price"", '0'), '.') AS ""Price"",
+            //        ""UomEntry""
+            //    From ITM1
+            //    Where ""Currency"" is not NULL
+            //    AND ""Price"" != 0
+            //    AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')
+            //    AND ""PriceList"" in (
+            //        SELECT Distinct ""ListNum""
+            //        From OCRD employeeSales
+            //        JOIN OHEM employee ON ""SlpCode"" = ""salesPrson""
+            //        Where ""CardType"" = 'C' AND ""empID"" = " + id + @" AND ""CardCode"" LIKE '%-P');");
             oRecSet.MoveFirst();
             JToken priceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"];
 
@@ -1244,6 +1244,7 @@ namespace SAP_API.Controllers
                     ""ItemName"",
                     ""QryGroup7"",
                     ""QryGroup41"",
+                    ""QryGroup45"",
                     ""ManBtchNum"",
                     ""U_IL_PesMax"",
                     ""U_IL_PesMin"",

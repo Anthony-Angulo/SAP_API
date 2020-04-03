@@ -72,7 +72,7 @@ namespace SAP_API.Controllers
 
             var bytes = Encoding.ASCII.GetBytes(s);
             // Send a printer-specific to the printer.
-            RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.247\\" + IDPrinter, bytes, bytes.Length);
+            RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\" + IDPrinter, bytes, bytes.Length);
         }
 
         // PUT: api/Impresion/5
