@@ -20,6 +20,14 @@ namespace SAP_API.Models
         public List<UOMDetail> UOMList { get; set; }
     }
 
+    public class ProductToTransferDetail {
+        public string ItemName { get; set; }
+        public string ItemCode { get; set; }
+        public double PesProm { get; set; }
+        public double OnHand { get; set; }
+        public List<UOMDetail> UOMList { get; set; }
+    }
+
     public class UOMDetail {
         public int BaseUom { get; set; }
         public string BaseCode { get; set; }

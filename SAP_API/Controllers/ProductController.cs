@@ -384,7 +384,6 @@ namespace SAP_API.Controllers
             return Ok(productDetail);
         }
 
-
         // GET: api/Products/CRMToSellEdit/5
         [HttpGet("CRMToSellEdit/{id}")]
         public async Task<IActionResult> GetCRMToSellEdit(string id) {
@@ -422,12 +421,15 @@ namespace SAP_API.Controllers
             return Ok(product);
         }
 
-        // GET: api/Products/CRM/5
+        // GET: api/Products/ToTransfer/5/S01
         [HttpGet("ToTransfer/{itemcode}/{warehouse}")]
         public async Task<IActionResult> GetToTransfer(string itemcode, string warehouse) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            JToken product;
+            ProductToTransferDetail productDetail;
+
             oRecSet.DoQuery(@"
                 Select
                     product.""ItemName"",
@@ -438,8 +440,31 @@ namespace SAP_API.Controllers
                 LEFT JOIN OITW warehouse ON warehouse.""ItemCode"" = product.""ItemCode"" 
                 Where product.""ItemCode"" = '" + itemcode + @"'
                 AND warehouse.""WhsCode"" = '" + warehouse + "'");
+            //oRecSet.DoQuery(@"
+            //    Select
+            //        product.""ItemName"",
+            //        product.""ItemCode"",
+            //        product.""U_IL_PesProm"" as ""PesProm"",
+            //        warehouse.""OnHand""
+            //    From OITM product
+            //    LEFT JOIN OITW warehouse ON warehouse.""ItemCode"" = product.""ItemCode"" 
+            //    Where product.""ItemCode"" = '" + itemcode + @"'
+            //    AND warehouse.""WhsCode"" = '" + warehouse + "'");
             oRecSet.MoveFirst();
-            JToken product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+            product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+            //oRecSet.DoQuery(@"
+            //    Select 
+            //        header.""UgpCode"",
+            //        header.""BaseUom"",
+            //        baseUOM.""UomCode"" as ""BaseCode"",
+            //        detail.""UomEntry"",
+            //        UOM.""UomCode"",
+            //        RTRIM(RTRIM(detail.""BaseQty"", '0'), '.') AS ""BaseQty""
+            //    From OUGP header
+            //    JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+            //    JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+            //    JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+            //    Where header.""UgpCode"" = '" + itemcode + "'");
             oRecSet.DoQuery(@"
                 Select 
                     header.""UgpCode"",
@@ -453,11 +478,15 @@ namespace SAP_API.Controllers
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
                 Where header.""UgpCode"" = '" + itemcode + "'");
-            oRecSet.MoveFirst();
             product["uom"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            //product["UOMList"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            //productDetail = product.ToObject<ProductToTransferDetail>();
+            oRecSet = null;
+            //product = null;
             GC.Collect();
             GC.WaitForPendingFinalizers();
             return Ok(product);
+            //return Ok(productDetail);
         }
 
         ////////////////////////////////////////////////////////////////
@@ -566,7 +595,12 @@ namespace SAP_API.Controllers
                     product.""IUoMEntry"",
                     product.""U_IL_PesProm"",
                     RTRIM(RTRIM(priceList.""Price"", '0'), '.') AS ""Price"",
-                    priceList.""Currency""
+                    priceList.""Currency"",
+                    product.""QryGroup5"",
+                    product.""QryGroup6"",
+                    product.""QryGroup7"",
+                    product.""QryGroup8"",
+                    product.""QryGroup39""
                 From OITM product
                 JOIN ITM1 priceList ON priceList.""ItemCode"" = product.""ItemCode""
                 Where product.""ItemCode"" in ('" + itemcodesFormat + @"')
