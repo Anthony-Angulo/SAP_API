@@ -184,6 +184,87 @@ namespace SAP_API.Controllers
             return Ok(respose);
         }
 
+        [HttpPost("Search/ToSellWithStockRetail/{warehouse}")]
+        public async Task<IActionResult> GetSearchToSellWithStockRetail(string warehouse, [FromBody] SearchRequest request) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            List<string> where = new List<string>();
+            if (request.columns[0].search.value != String.Empty) {
+                where.Add($"LOWER(item.\"ItemCode\") Like LOWER('%{request.columns[0].search.value}%')");
+            }
+            if (request.columns[1].search.value != String.Empty) {
+                where.Add($"LOWER(item.\"ItemName\") Like LOWER('%{request.columns[1].search.value}%')");
+            }
+            if (request.columns[2].search.value != String.Empty) {
+                where.Add($"LOWER(stock.\"OnHand\") Like LOWER('%{request.columns[2].search.value}%')");
+            }
+
+            string orderby = "";
+            if (request.order[0].column == 0) {
+                orderby = $" ORDER BY item.\"ItemCode\" {request.order[0].dir}";
+            }
+            else if (request.order[0].column == 1) {
+                orderby = $" ORDER BY item.\"ItemName\" {request.order[0].dir}";
+            }
+            else if (request.order[0].column == 2) {
+                orderby = $" ORDER BY stock.\"OnHand\" {request.order[0].dir}";
+            }
+            else {
+                orderby = $" ORDER BY item.\"ItemCode\" DESC";
+            }
+
+            string whereClause = String.Join(" AND ", where);
+
+            string query = @"
+                Select
+                    item.""ItemName"",
+                    item.""ItemCode"",
+                    stock.""OnHand""
+                From OITM item
+                JOIN OITW stock ON item.""ItemCode"" = stock.""ItemCode""
+                Where ""WhsCode"" = '" + warehouse + @"'
+                AND ""SellItem"" = 'Y' AND ""QryGroup4"" = 'Y' AND ""Canceled"" = 'N' AND ""validFor"" = 'Y'";
+
+            if (where.Count != 0) {
+                query += " AND " + whereClause;
+            }
+
+            query += orderby;
+
+            query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+
+            oRecSet.DoQuery(query);
+            oRecSet.MoveFirst();
+            var orders = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"].ToObject<List<ProductWithStockSearchDetail>>();
+
+            string queryCount = @"
+                Select
+                    Count (*) as COUNT
+                From OITM item
+                JOIN OITW stock ON item.""ItemCode"" = stock.""ItemCode""
+                Where ""WhsCode"" = '" + warehouse + @"'
+                AND ""SellItem"" = 'Y' AND ""QryGroup4"" = 'Y' AND ""Canceled"" = 'N' AND ""validFor"" = 'Y' ";
+
+            if (where.Count != 0) {
+                queryCount += " AND " + whereClause;
+            }
+            oRecSet.DoQuery(queryCount);
+            oRecSet.MoveFirst();
+            int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["COUNT"].ToObject<int>();
+
+            var respose = new ProductWithStockSearchResponse {
+                data = orders,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
+            };
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(respose);
+        }
+
         // GET: api/Products/ProvidersProducts
         [HttpPost("Search/ToBuy")]
         public async Task<IActionResult> GetSearchToBuy([FromBody] SearchRequest request) {
@@ -331,6 +412,117 @@ namespace SAP_API.Controllers
             return Ok(respose);
         }
 
+        [HttpPost("search/PriceList/{priceList}")]
+        public async Task<IActionResult> GetSearchPriceList(string priceList, [FromBody] SearchRequest request) {
+        
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            List<string> where = new List<string>();
+            if (request.columns[0].search.value != String.Empty) {
+                where.Add($"LOWER(product.\"ItemCode\") Like LOWER('%{request.columns[0].search.value}%')");
+            }
+            if (request.columns[1].search.value != String.Empty) {
+                where.Add($"LOWER(product.\"ItemName\") Like LOWER('%{request.columns[1].search.value}%')");
+            }
+            if (request.columns[2].search.value != String.Empty) {
+                where.Add($"LOWER(priceList.\"Price\") Like LOWER('%{request.columns[2].search.value}%')");
+            }
+            if (request.columns[3].search.value != String.Empty) {
+                where.Add($"LOWER(iuom.\"UomCode\") Like LOWER('%{request.columns[3].search.value}%')");
+            }
+            if (request.columns[4].search.value != String.Empty) {
+                where.Add($"(((product.\"IUoMEntry\"  = '6' AND product.\"SUoMEntry\"  = '6' AND product.\"U_IL_PesProm\" != 0) AND LOWER((product.\"U_IL_PesProm\" * priceList.\"Price\")) Like LOWER('%{request.columns[4].search.value}%')) OR ((product.\"SUoMEntry\" != '6' AND product.\"U_IL_PesProm\" = 0) AND LOWER((product.\"NumInSale\" *priceList.\"Price\")) Like LOWER('%{request.columns[4].search.value}%'))) ");
+            }
+            if (request.columns[5].search.value != String.Empty) {
+                where.Add($"(((product.\"IUoMEntry\"  = '6' AND product.\"SUoMEntry\"  = '6' AND product.\"U_IL_PesProm\" != 0) AND LOWER('Caja') Like LOWER('%{request.columns[5].search.value}%')) OR ((product.\"SUoMEntry\" != '6' AND product.\"U_IL_PesProm\" = 0) AND LOWER(suom.\"UomCode\") Like LOWER('%{request.columns[5].search.value}%'))) ");
+            }
+            if (request.columns[6].search.value != String.Empty) {
+                where.Add($"LOWER(priceList.\"Currency\") Like LOWER('%{request.columns[6].search.value}%')");
+            }
+
+            string orderby = "";
+            if (request.order[0].column == 0) {
+                orderby = $" ORDER BY product.\"ItemCode\" {request.order[0].dir}";
+            } else if (request.order[0].column == 1) {
+                orderby = $" ORDER BY product.\"ItemName\" {request.order[0].dir}";
+            } else if (request.order[0].column == 2) {
+                orderby = $" ORDER BY priceList.\"Price\" {request.order[0].dir}";
+            } else if (request.order[0].column == 3) {
+                orderby = $" ORDER BY iuom.\"UomCode\" {request.order[0].dir}";
+            } else if (request.order[0].column == 4) {
+                orderby = $" ORDER BY \"Price2\" {request.order[0].dir}";
+            } else if (request.order[0].column == 5) {
+                orderby = $" ORDER BY \"UomCode2\" {request.order[0].dir}";
+            } else if (request.order[0].column == 6) {
+                orderby = $" ORDER BY priceList.\"Currency\" {request.order[0].dir}";
+            } else {
+                orderby = $" ORDER BY product.\"ItemCode\" DESC";
+            }
+
+            string whereClause = String.Join(" AND ", where);
+
+            string query = @"
+                Select
+                    product.""ItemCode"",
+                    product.""ItemName"",
+                    priceList.""Price"",
+                    iuom.""UomCode"",
+
+                    (case when (product.""IUoMEntry""  = '6' AND product.""SUoMEntry""  = '6' AND product.""U_IL_PesProm"" != 0) then (product.""U_IL_PesProm"" * priceList.""Price"")
+                    else (product.""NumInSale"" *priceList.""Price"") end) AS ""Price2"",
+
+                    (case when (product.""IUoMEntry""  = '6' AND product.""SUoMEntry""  = '6' AND product.""U_IL_PesProm"" != 0) then 'Caja'
+                    else suom.""UomCode"" end) AS ""UomCode2"",
+
+
+                    priceList.""Currency""
+                From OITM product
+                JOIN ITM1 priceList ON product.""ItemCode"" = priceList.""ItemCode""
+                JOIN OUOM iuom ON product.""IUoMEntry"" = iuom.""UomEntry""
+                JOIN OUOM suom ON product.""SUoMEntry"" = suom.""UomEntry""
+                Where (product.""QryGroup5"" = 'Y' OR  product.""QryGroup6"" = 'Y' OR  product.""QryGroup7"" = 'Y' OR product.""QryGroup8"" = 'Y')
+                AND priceList.""PriceList"" = " + priceList;
+
+            if (where.Count != 0) {
+                query += " AND " + whereClause;
+            }
+
+            query += orderby; 
+
+            if (request.length != -1) {
+                query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+            }
+
+            oRecSet.DoQuery(query);
+            List<ProductPriceListDetail> products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"].ToObject<List<ProductPriceListDetail>>();
+
+            string queryCount = @"
+                Select
+                    Count (*) as COUNT
+                From OITM product
+                JOIN ITM1 priceList ON product.""ItemCode"" = priceList.""ItemCode""
+                JOIN OUOM iuom ON product.""IUoMEntry"" = iuom.""UomEntry""
+                JOIN OUOM suom ON product.""SUoMEntry"" = suom.""UomEntry""
+                Where (product.""QryGroup5"" = 'Y' OR  product.""QryGroup6"" = 'Y' OR  product.""QryGroup7"" = 'Y' OR product.""QryGroup8"" = 'Y')
+                AND priceList.""PriceList"" = " + priceList;
+
+            if (where.Count != 0) {
+                queryCount += " AND " + whereClause;
+            }
+            oRecSet.DoQuery(queryCount);
+            int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["COUNT"].ToObject<int>();
+
+            ProductPriceListSearchResponse respose = new ProductPriceListSearchResponse {
+                data = products,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
+            };
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(respose);
+        }
 
         // GET: api/Products/CRMToSell/5
         [HttpGet("CRMToSell/{id}/{priceList}/{warehouse}")]

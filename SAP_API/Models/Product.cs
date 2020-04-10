@@ -20,6 +20,18 @@ namespace SAP_API.Models
         public List<UOMDetail> UOMList { get; set; }
     }
 
+    public class ProductPriceListDetail : SearchDetail{
+        public string ItemName { get; set; }
+        public string ItemCode { get; set; }
+        public double Price { get; set; }
+        public string UomCode { get; set; }
+        public double Price2 { get; set; }
+        public string UomCode2 { get; set; }
+        public string Currency { get; set; }
+    }
+
+    public class ProductPriceListSearchResponse : SearchResponse<ProductPriceListDetail> { }
+
     public class ProductToTransferDetail {
         public string ItemName { get; set; }
         public string ItemCode { get; set; }

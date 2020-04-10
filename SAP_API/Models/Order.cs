@@ -58,9 +58,7 @@ namespace SAP_API.Models
         public IList<T> data { get; set; }
     }
 
-    public class OrderSearchResponse : SearchResponse<OrderSearchDetail> {
-    }
-
+    public class OrderSearchResponse : SearchResponse<OrderSearchDetail> {}
 
     public class OrderDetail {
         public int DocEntry { get; set; }
@@ -106,6 +104,16 @@ namespace SAP_API.Models
         //public int priceList { set; get; }
         public int auth { set; get; }
         //public DateTime date { set; get; }
+        public List<OrderRow> rows { set; get; }
+    }
+
+    public class CreateOrderRetail {
+        public string cardcode { set; get; }
+        public string currency { set; get; }
+        public string address { set; get; }
+        public string comments { set; get; }
+        public int series { set; get; }
+        public DateTime date { set; get; }
         public List<OrderRow> rows { set; get; }
     }
 

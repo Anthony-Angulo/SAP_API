@@ -430,17 +430,17 @@ namespace SAP_API.Controllers
                     purchaseOrderdelivery.Lines.BaseType = 22;
 
                     if (value.products[i].UoMEntry == 7) {
-
                         
                         purchaseOrder.Lines.SetCurrentLine(value.products[i].Line);
                         if (value.products[i].Group == 43) {
-                            purchaseOrderdelivery.Lines.UoMEntry = 25;
                             oRecSet.DoQuery(@"
                                 Select
-                                    ""NumInBuy""
+                                    ""NumInBuy"",
+                                    ""IUoMEntry""
                                 From OITM Where ""ItemCode"" = '" + value.products[i].ItemCode + "'");
                             oRecSet.MoveFirst();
                             double price = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["NumInBuy"].ToObject<double>();
+                            purchaseOrderdelivery.Lines.UoMEntry = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["IUoMEntry"].ToObject<int>();
                             purchaseOrderdelivery.Lines.UnitPrice = purchaseOrder.Lines.UnitPrice / price;
                         } else {
                             purchaseOrderdelivery.Lines.UoMEntry = 6;

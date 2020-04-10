@@ -1007,6 +1007,115 @@ namespace SAP_API.Controllers
             }
         }
 
+
+        // POST: api/Order
+        // Creacion de Orden
+        [HttpPost("Retail")]
+        public async Task<IActionResult> PostRetail([FromBody] CreateOrderRetail value)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+
+            SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            SAPbobsCOM.Items items = (SAPbobsCOM.Items)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
+            SAPbobsCOM.BusinessPartners contact = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
+
+            oRecSet.DoQuery(@"
+                Select
+                    warehouse.""WhsCode"",
+                    warehouse.""WhsName"",
+                    serie.""Series""
+                From OWHS warehouse
+                LEFT JOIN NNM1 serie ON serie.""SeriesName"" = warehouse.""WhsCode""
+                Where serie.""ObjectCode"" = 17 AND serie.""Series"" = " + value.series);
+            oRecSet.MoveFirst();
+            string warehouse = context.XMLTOJSON(oRecSet.GetAsXML())["OWHS"][0]["WhsCode"].ToString();
+
+            order.CardCode = value.cardcode;
+            order.Series = value.series;
+            order.DocCurrency = value.currency;
+            order.DocDueDate = value.date;
+            order.Address = value.address;
+            order.Address2 = "";
+
+            //if (contact.GetByKey(value.cardcode))
+            //{
+            //    String temp = (String)contact.UserFields.Fields.Item("U_B1SYS_MainUsage").Value;
+            //    if (temp != String.Empty)
+            //    {
+            //        order.UserFields.Fields.Item("U_SO1_02USOCFDI").Value = temp;
+            //    }
+            //    temp = (String)contact.UserFields.Fields.Item("U_IL_MetPago").Value;
+            //    if (temp != String.Empty)
+            //    {
+            //        order.UserFields.Fields.Item("U_SO1_02METODOPAGO").Value = temp;
+            //    }
+            //    temp = (String)contact.UserFields.Fields.Item("U_IL_ForPago").Value;
+            //    if (temp != String.Empty)
+            //    {
+            //        order.UserFields.Fields.Item("U_SO1_02FORMAPAGO").Value = temp;
+            //    }
+            //}
+            //else
+            //{
+            //    string error = context.oCompany.GetLastErrorDescription();
+            //    return BadRequest(new { error });
+            //}
+
+            for (int i = 0; i < value.rows.Count; i++)
+            {
+                order.Lines.ItemCode = value.rows[i].code;
+                order.Lines.WarehouseCode = warehouse;
+
+                items.GetByKey(value.rows[i].code);
+
+                for (int j = 0; j < items.PriceList.Count; j++)
+                {
+                    items.PriceList.SetCurrentLine(j);
+                    if (items.PriceList.PriceList == 18)
+                    {
+                        if (value.rows[i].uom == -2)
+                        {
+                            order.Lines.UnitPrice = items.PriceList.Price;
+                        }
+                        else
+                        {
+                            order.Lines.UnitPrice = items.PriceList.Price * value.rows[i].equivalentePV;
+                        }
+                        order.Lines.Currency = items.PriceList.Currency;
+                        break;
+                    }
+                }
+
+                if (value.rows[i].uom == -2)
+                {
+                    order.Lines.UoMEntry = 6;
+                    order.Lines.UserFields.Fields.Item("U_CjsPsVr").Value = value.rows[i].quantity;
+                    order.Lines.Quantity = value.rows[i].quantity * value.rows[i].equivalentePV;
+                }
+                else
+                {
+                    order.Lines.Quantity = value.rows[i].quantity;
+                    order.Lines.UoMEntry = value.rows[i].uom;
+                }
+
+                order.Lines.Add();
+            }
+
+            order.Comments = value.comments;
+            int result = order.Add();
+            if (result == 0)
+            {
+                return Ok(new { value = context.oCompany.GetNewObjectKey() });
+            }
+            else
+            {
+                string error = context.oCompany.GetLastErrorDescription();
+                return BadRequest(new { error });
+            }
+        }
+
         // PUT: api/Order/5
         [HttpPut("{id}")]
         public async Task<IActionResult> Put(int id, [FromBody] UpdateOrder value) {
