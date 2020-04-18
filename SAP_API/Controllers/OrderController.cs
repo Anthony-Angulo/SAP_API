@@ -328,6 +328,8 @@ namespace SAP_API.Controllers
                     (case when ord.""DocCur"" = 'USD' then ord.""DocTotalFC""
                     else ord.""DocTotal"" end)  AS  ""Total"",
 
+                    SUBSTRING(ord.""DocTime"" , 0, LENGTH(ord.""DocTime"")-2) || ':' || RIGHT(ord.""DocTime"",2) as ""DocTime"",
+                    
                     ord.""Address"",
                     ord.""Address2"",
                     ord.""DocCur"",
@@ -382,7 +384,8 @@ namespace SAP_API.Controllers
             order = null;
             oRecSet = null;
             DocCur = null;
-
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
             return Ok(orderDetail);
         }
 
@@ -456,6 +459,23 @@ namespace SAP_API.Controllers
 
             return Ok(temp);
         }
+
+        // GET: api/Order/CRMOrderDaily
+        [HttpGet("CRMOrderDaily")]
+        public async Task<IActionResult> GetCRMOrderDaily() {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"Select Count(*) as COUNT From ORDR");
+            int CountAll = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"][0]["COUNT"].ToObject<int>();
+            oRecSet.DoQuery(@"Select Count(*) as COUNT From ORDR Where ""DocDate"" = NOW()");
+            int CountToday = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"][0]["COUNT"].ToObject<int>();
+            oRecSet = null;
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(new { CountAll, CountToday});
+        }
+
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -937,8 +957,8 @@ namespace SAP_API.Controllers
             //    order.UserFields.Fields.Item("SysRate").Value = value.currencyRate;
             //    //order.DocRate = value.currencyRate;
             //}
-            order.DocDueDate = DateTime.Now.AddDays(1); //////////////////////////////////////////
-            //order.DocDueDate = value.date; /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //order.DocDueDate = DateTime.Now.AddDays(1); //////////////////////////////////////////
+            order.DocDueDate = value.date; /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             order.PaymentGroupCode = value.payment;
             //order.PaymentMethod = "";
 
@@ -969,8 +989,8 @@ namespace SAP_API.Controllers
 
                 for (int j = 0; j < items.PriceList.Count; j++) {
                     items.PriceList.SetCurrentLine(j);
-                    if (items.PriceList.PriceList == 2) { /////////////////////////////////////////////////
-                        //if (items.PriceList.PriceList == value.priceList) {
+                    //if (items.PriceList.PriceList == 2) { /////////////////////////////////////////////////
+                    if (items.PriceList.PriceList == value.priceList) {
                         if (value.rows[i].uom == -2) {
                             order.Lines.UnitPrice = items.PriceList.Price;
                         } else {

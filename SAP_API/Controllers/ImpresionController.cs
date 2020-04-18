@@ -50,7 +50,7 @@ namespace SAP_API.Controllers
             s += "^FO50,30^FDSucursal: " + WHS + "^FS\n";
             s += "^CFA,40\n";
             s += "^FO550,150^FDTarima ^FS\n";
-            s += "^FO590,220^FD" + NumeroTarima + " ^FS\n";
+            s += "^FO570,220^FD" + NumeroTarima + " ^FS\n";
             s += "^CFA,35\n";
             s += "^FO40,100^FDSolicitud de Traslado^FS\n";
             s += "^BY3,2,70\n";

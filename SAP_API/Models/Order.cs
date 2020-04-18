@@ -70,6 +70,7 @@ namespace SAP_API.Models
         public string CancelDate { get; set; }
         public string DocStatus { get; set; }
         public string Comments { get; set; }
+        public string DocTime { get; set; }
         public string CardCode { get; set; }
         public string CardName { get; set; }
         public string CardFName { get; set; }
@@ -101,9 +102,9 @@ namespace SAP_API.Models
         public int series { set; get; }
         public int payment { set; get; }
         //public double currencyRate { set; get; }
-        //public int priceList { set; get; }
+        public int priceList { set; get; }
         public int auth { set; get; }
-        //public DateTime date { set; get; }
+        public DateTime date { set; get; }
         public List<OrderRow> rows { set; get; }
     }
 
