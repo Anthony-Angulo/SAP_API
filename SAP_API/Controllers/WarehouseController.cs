@@ -35,8 +35,8 @@ namespace SAP_API.Controllers
             return Ok(warehouseList);
         }
 
-        // Lista de Sucursales con la serie para generar una orden de venta
-        // GET: api/Warehouse/orderlist
+        // Lista de Sucursales con la serie para generar una orden de venta Mayoreo
+        // GET: api/Warehouse/ListToSell
         [HttpGet("ListToSell")]
         public async Task<IActionResult> GetListToSell() {
 
@@ -59,8 +59,8 @@ namespace SAP_API.Controllers
             return Ok(warehouseWithSeries);
         }
 
-        // Lista de Sucursales con la serie para generar una orden de venta
-        // GET: api/Warehouse/orderlist
+        // Lista de Sucursales con la serie para generar una orden de venta Menudeo
+        // GET: api/Warehouse/ListToSellRetail
         [HttpGet("ListToSellRetail")]
         public async Task<IActionResult> GetListToSellRetail() {
 
@@ -81,6 +81,25 @@ namespace SAP_API.Controllers
             GC.Collect();
             GC.WaitForPendingFinalizers();
             return Ok(warehouseWithSeries);
+        }
+
+        // Lista de Todas Las Sucursales para Toma de Inventario
+        // GET: api/Warehouse/ToInventory
+        [HttpGet("ToInventory")]
+        public async Task<IActionResult> GetWarehouseToInventory() {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                Select
+                    ""WhsCode"",
+                    ""WhsName"" 
+                From OWHS
+                Where ""WhsCode"" LIKE 'S%'
+                AND LENGTH(""WhsCode"") = 3 ");
+            oRecSet.MoveFirst();
+            JToken warehouseList = context.XMLTOJSON(oRecSet.GetAsXML())["OWHS"];
+            return Ok(warehouseList);
         }
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -145,7 +164,20 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> GetPList() {
             
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //Remove 2nd DB
+            if (!context.oCompany2.Connected) {
+                int code = context.oCompany2.Connect();
+                if (code != 0) {
+                    string error = context.oCompany2.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~Remove 2nd DB
+
+            //1 DB Config
+            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~1 DB Config
 
             oRecSet.DoQuery(@"
                 Select

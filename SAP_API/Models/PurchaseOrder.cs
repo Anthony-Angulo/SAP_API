@@ -63,4 +63,10 @@ namespace SAP_API.Models
         public double price { set; get; }
     }
 
+    public class PurchaseOrderCopy {
+        public int DocNumBase { set; get; }
+
+    }
+
+
 }

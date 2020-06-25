@@ -58,7 +58,7 @@ namespace SAP_API
             app.UseHttpsRedirection();
 
             SAPContext SAPContext = app.ApplicationServices.GetService(typeof(SAPContext)) as SAPContext;
-            app.UseWhen(context => !context.Request.Path.Value.Contains("value"), action => {
+            app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action => {
                 action.Use(async (context, next) => {
                     if (!SAPContext.oCompany.Connected) {
                         int code = SAPContext.oCompany.Connect();

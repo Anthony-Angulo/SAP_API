@@ -11,19 +11,6 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class ProductsController : ControllerBase {
-        public class ProductSearchDetail : SearchDetail {
-            public string ItemName { get; set; }
-            public string ItemCode { get; set; }
-        }
-
-        public class ProductSearchResponse : SearchResponse<ProductSearchDetail> { }
-
-        public class ProductWithStockSearchDetail : SearchDetail {
-            public string ItemName { get; set; }
-            public string ItemCode { get; set; }
-            public double OnHand { get; set; }
-        }
-        public class ProductWithStockSearchResponse : SearchResponse<ProductWithStockSearchDetail> { }
 
         // GET: api/Products/5
         [HttpGet("{id}")]
@@ -270,7 +257,20 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> GetSearchToBuy([FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //Remove 2nd DB
+            if (!context.oCompany2.Connected) {
+                int code = context.oCompany2.Connect();
+                if (code != 0) {
+                    string error = context.oCompany2.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~Remove 2nd DB
+
+            //1 DB Config
+            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~1 DB Config
 
             List<string> where = new List<string>();
             if (request.columns[0].search.value != String.Empty) {
@@ -296,7 +296,7 @@ namespace SAP_API.Controllers
                     ""ItemName"",
                     ""ItemCode""
                 From OITM
-                Where ""PrchseItem"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y' AND ""ItemCode"" LIKE 'G%' ";
+                Where ""PrchseItem"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y' AND (""ItemCode"" LIKE 'G%' OR ""ItemCode"" LIKE 'ACT%') ";
 
             if (where.Count != 0) {
                 query += " AND " + whereClause;
@@ -314,7 +314,7 @@ namespace SAP_API.Controllers
                 Select
                     Count (*) as COUNT
                 From OITM
-                Where ""PrchseItem"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y' AND ""ItemCode"" LIKE 'G%' ";
+                Where ""PrchseItem"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y' AND (""ItemCode"" LIKE 'G%' OR ""ItemCode"" LIKE 'ACT%')  ";
 
             if (where.Count != 0) {
                 queryCount += " AND " + whereClause;
@@ -528,35 +528,179 @@ namespace SAP_API.Controllers
             return Ok(respose);
         }
 
+        [HttpPost("Search/{warehouse}/{property}")]
+        public async Task<IActionResult> GetSearchWithStockAndProperty(string warehouse, int property, [FromBody] SearchRequest request) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            List<string> where = new List<string>();
+            if (request.columns[0].search.value != String.Empty) {
+                where.Add($"LOWER(item.\"ItemCode\") Like LOWER('%{request.columns[0].search.value}%')");
+            }
+            if (request.columns[1].search.value != String.Empty) {
+                where.Add($"LOWER(item.\"ItemName\") Like LOWER('%{request.columns[1].search.value}%')");
+            }
+            if (request.columns[2].search.value != String.Empty) {
+                where.Add($"LOWER(stock.\"OnHand\") Like LOWER('%{request.columns[2].search.value}%')");
+            }
+
+            if (property != -1) {
+                where.Add($"\"QryGroup" + property + "\" = 'Y' ");
+            }
+
+            string orderby = "";
+            if (request.order[0].column == 0) {
+                orderby = $" ORDER BY item.\"ItemCode\" {request.order[0].dir}";
+            } else if (request.order[0].column == 1) {
+                orderby = $" ORDER BY item.\"ItemName\" {request.order[0].dir}";
+            } else if (request.order[0].column == 2) {
+                orderby = $" ORDER BY stock.\"OnHand\" {request.order[0].dir}";
+            } else {
+                orderby = $" ORDER BY item.\"ItemCode\" DESC";
+            }
+
+            string whereClause = String.Join(" AND ", where);
+
+            string query = @"
+                Select
+                    item.""ItemName"",
+                    item.""ItemCode"",
+                    stock.""OnHand""
+                From OITM item
+                JOIN OITW stock ON item.""ItemCode"" = stock.""ItemCode""
+                Where ""WhsCode"" = '" + warehouse + @"'
+                AND ""InvntItem"" = 'Y' AND ""Canceled"" = 'N' AND ""validFor"" = 'Y'";
+
+            if (where.Count != 0) {
+                query += " AND " + whereClause;
+            }
+
+            query += orderby;
+
+            if (request.length != -1) {
+                query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+            }
+
+            oRecSet.DoQuery(query);
+            oRecSet.MoveFirst();
+            var orders = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"].ToObject<List<ProductWithStockSearchDetail>>();
+
+            string queryCount = @"
+                Select
+                    Count (*) as COUNT
+                From OITM item
+                JOIN OITW stock ON item.""ItemCode"" = stock.""ItemCode""
+                Where ""WhsCode"" = '" + warehouse + @"'
+                AND ""InvntItem"" = 'Y' AND ""Canceled"" = 'N' AND ""validFor"" = 'Y' ";
+
+            if (where.Count != 0) {
+                queryCount += " AND " + whereClause;
+            }
+            oRecSet.DoQuery(queryCount);
+            oRecSet.MoveFirst();
+            int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["COUNT"].ToObject<int>();
+
+            var respose = new ProductWithStockSearchResponse {
+                data = orders,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
+            };
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(respose);
+        }
+
+
         // GET: api/Products/CRMToSell/5
         [HttpGet("CRMToSell/{id}/{priceList}/{warehouse}")]
         public async Task<IActionResult> GetCRMToSell(string id, int priceList, string warehouse) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            JToken product;
-            ProductDetail productDetail;
-            oRecSet.DoQuery(@"
+            try {
+                //Remove 2nd DB
+                if (!context.oCompany2.Connected)
+                {
+                    int code = context.oCompany2.Connect();
+                    if (code != 0)
+                    {
+                        string error = context.oCompany2.GetLastErrorDescription();
+                        return BadRequest(new { error });
+                    }
+                }
+                //~Remove 2nd DB
+
+                SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+                //Remove 2nd DB
+                SAPbobsCOM.Recordset oRecSet2 = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+                //~Remove 2nd DB
+
+                JToken product;
+                ProductDetail productDetail;
+
+                //1 DB Config
+
+                //oRecSet.DoQuery(@"
+                //    Select 
+                //        product.""ItemName"", 
+                //        product.""ItemCode"", 
+                //        product.""U_IL_PesProm"" AS ""PesProm"",
+                //        product.""SUoMEntry"",
+                //        priceList.""PriceList"",
+                //        priceList.""Currency"",
+                //        priceList.""Price"",
+                //        priceList.""UomEntry"",
+                //        priceList.""PriceType"",
+                //        stock.""WhsCode"",
+                //        stock.""OnHand""
+                //    From OITM product
+                //    JOIN ITM1 priceList ON priceList.""ItemCode"" = product.""ItemCode""
+                //    JOIN OITW stock ON stock.""ItemCode"" = product.""ItemCode""
+                //    Where product.""ItemCode"" = '" + id + @"'
+                //    AND stock.""WhsCode"" = '" + warehouse + @"'
+                //    AND priceList.""PriceList"" = " + priceList);
+                //product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+                //~1 DB Config
+
+                //Remove 2nd DB
+
+                oRecSet.DoQuery(@"
                 Select 
                     product.""ItemName"", 
                     product.""ItemCode"", 
                     product.""U_IL_PesProm"" AS ""PesProm"",
                     product.""SUoMEntry"",
-                    priceList.""PriceList"",
-                    priceList.""Currency"",
-                    priceList.""Price"",
-                    priceList.""UomEntry"",
-                    priceList.""PriceType"",
                     stock.""WhsCode"",
                     stock.""OnHand""
                 From OITM product
-                JOIN ITM1 priceList ON priceList.""ItemCode"" = product.""ItemCode""
                 JOIN OITW stock ON stock.""ItemCode"" = product.""ItemCode""
                 Where product.""ItemCode"" = '" + id + @"'
-                AND stock.""WhsCode"" = '" + warehouse + @"'
-                AND priceList.""PriceList"" = " + priceList);
-            product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
-            oRecSet.DoQuery(@"
+                AND stock.""WhsCode"" = '" + warehouse + @"'");
+
+                product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+
+                oRecSet2.DoQuery(@"
+                Select 
+                    ""PriceList"",
+                    ""Currency"",
+                    ""Price"",
+                    ""UomEntry"",
+                    ""PriceType""
+                From ITM1
+                Where ""ItemCode"" = '" + id + @"' AND ""PriceList"" = " + priceList);
+                JToken priceListJson = context.XMLTOJSON(oRecSet2.GetAsXML())["ITM1"][0];
+
+                product["PriceList"] = priceListJson["PriceList"];
+                product["Currency"] = priceListJson["Currency"];
+                product["Price"] = priceListJson["Price"];
+                product["UomEntry"] = priceListJson["UomEntry"];
+                product["PriceType"] = priceListJson["PriceType"];
+
+                //~Remove 2nd DB
+
+                oRecSet2.DoQuery(@"
                 Select 
                     header.""UgpCode"",
                     header.""BaseUom"",
@@ -570,15 +714,36 @@ namespace SAP_API.Controllers
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
                 Where header.""UgpCode"" = '" + id + @"'");
                 //AND detail.""UomEntry"" in (Select ""UomEntry"" FROM ITM4 Where ""UomType"" = 'S' AND ""ItemCode"" = '" + id + "')");
-            oRecSet.MoveFirst();
-            product["UOMList"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
-            productDetail = product.ToObject<ProductDetail>();
-            oRecSet = null;
-            product = null;
+                oRecSet2.MoveFirst();
+                product["UOMList"] = context.XMLTOJSON(oRecSet2.GetAsXML())["OUGP"];
+                productDetail = product.ToObject<ProductDetail>();
+                oRecSet = null;
+                product = null;
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                return Ok(productDetail);
+            } catch(Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        // GET: api/Products/Properties
+        [HttpGet("Properties")]
+        public async Task<IActionResult> GetProperties() {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            List<Property> propertyList;
+            oRecSet.DoQuery(@"Select ""ItmsGrpNam"", ""ItmsTypCod"" From OITG");
+            JToken properties = context.XMLTOJSON(oRecSet.GetAsXML())["OITG"];
+            propertyList = properties.ToObject<List<Property>>();
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            return Ok(productDetail);
+            return Ok(propertyList);
         }
+
+        /// //////////////////////////////////////////
 
         // GET: api/Products/CRMToSellEdit/5
         [HttpGet("CRMToSellEdit/{id}")]
@@ -685,14 +850,119 @@ namespace SAP_API.Controllers
             //return Ok(productDetail);
         }
 
-        ////////////////////////////////////////////////////////////////
-            
+        //[HttpPost("/UpdatePesProm")]
+        //public async Task<IActionResult> GetUpdatePesProm([FromBody] string value) {
+
+        //    SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        //    SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+        //    List<string> where = new List<string>();
+        //    if (request.columns[0].search.value != String.Empty)
+        //    {
+        //        where.Add($"LOWER(item.\"ItemCode\") Like LOWER('%{request.columns[0].search.value}%')");
+        //    }
+        //    if (request.columns[1].search.value != String.Empty)
+        //    {
+        //        where.Add($"LOWER(item.\"ItemName\") Like LOWER('%{request.columns[1].search.value}%')");
+        //    }
+        //    if (request.columns[2].search.value != String.Empty)
+        //    {
+        //        where.Add($"LOWER(stock.\"OnHand\") Like LOWER('%{request.columns[2].search.value}%')");
+        //    }
+
+        //    string orderby = "";
+        //    if (request.order[0].column == 0)
+        //    {
+        //        orderby = $" ORDER BY item.\"ItemCode\" {request.order[0].dir}";
+        //    }
+        //    else if (request.order[0].column == 1)
+        //    {
+        //        orderby = $" ORDER BY item.\"ItemName\" {request.order[0].dir}";
+        //    }
+        //    else if (request.order[0].column == 2)
+        //    {
+        //        orderby = $" ORDER BY stock.\"OnHand\" {request.order[0].dir}";
+        //    }
+        //    else
+        //    {
+        //        orderby = $" ORDER BY item.\"ItemCode\" DESC";
+        //    }
+
+        //    string whereClause = String.Join(" AND ", where);
+
+        //    string query = @"
+        //        Select
+        //            item.""ItemName"",
+        //            item.""ItemCode"",
+        //            stock.""OnHand""
+        //        From OITM item
+        //        JOIN OITW stock ON item.""ItemCode"" = stock.""ItemCode""
+        //        Where ""WhsCode"" = '" + warehouse + @"'
+        //        AND ""SellItem"" = 'Y' AND ""QryGroup4"" = 'Y' AND ""Canceled"" = 'N' AND ""validFor"" = 'Y'";
+
+        //    if (where.Count != 0)
+        //    {
+        //        query += " AND " + whereClause;
+        //    }
+
+        //    query += orderby;
+
+        //    query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+
+        //    oRecSet.DoQuery(query);
+        //    oRecSet.MoveFirst();
+        //    var orders = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"].ToObject<List<ProductWithStockSearchDetail>>();
+
+        //    string queryCount = @"
+        //        Select
+        //            Count (*) as COUNT
+        //        From OITM item
+        //        JOIN OITW stock ON item.""ItemCode"" = stock.""ItemCode""
+        //        Where ""WhsCode"" = '" + warehouse + @"'
+        //        AND ""SellItem"" = 'Y' AND ""QryGroup4"" = 'Y' AND ""Canceled"" = 'N' AND ""validFor"" = 'Y' ";
+
+        //    if (where.Count != 0)
+        //    {
+        //        queryCount += " AND " + whereClause;
+        //    }
+        //    oRecSet.DoQuery(queryCount);
+        //    oRecSet.MoveFirst();
+        //    int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["COUNT"].ToObject<int>();
+
+        //    var respose = new ProductWithStockSearchResponse
+        //    {
+        //        data = orders,
+        //        draw = request.Draw,
+        //        recordsFiltered = COUNT,
+        //        recordsTotal = COUNT,
+        //    };
+        //    GC.Collect();
+        //    GC.WaitForPendingFinalizers();
+        //    return Ok(respose);
+        //}
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
         // GET: api/Products/CRMToBuy/5
         [HttpGet("CRMToBuy/{id}")]
         public async Task<IActionResult> GetCRMToBuy(string id) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //Remove 2nd DB
+            if (!context.oCompany2.Connected) {
+                int code = context.oCompany2.Connect();
+                if (code != 0) {
+                    string error = context.oCompany2.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~Remove 2nd DB
+
+            //1 DB Config
+            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~1 DB Config
+
             oRecSet.DoQuery(@"
                 Select 
                     ""ItemName"", 
@@ -775,6 +1045,7 @@ namespace SAP_API.Controllers
             return Ok(products);
         }
 
+        // TODO: Warehouse filter New WMS
         // GET: api/Products/UomDetailWithLastSellPrice
         [HttpPost("UomDetailWithLastSellPrice")]
         public async Task<IActionResult> GetUomDetails([FromBody] string[] itemcodes) {
@@ -790,22 +1061,23 @@ namespace SAP_API.Controllers
                     product.""SUoMEntry"",
                     product.""IUoMEntry"",
                     product.""U_IL_PesProm"",
-                    RTRIM(RTRIM(priceList.""Price"", '0'), '.') AS ""Price"",
-                    priceList.""Currency"",
+                    warehouse.""AvgPrice"" AS ""Price"",
+                    'MXN' as ""Currency"",
                     product.""QryGroup5"",
                     product.""QryGroup6"",
                     product.""QryGroup7"",
                     product.""QryGroup8"",
                     product.""QryGroup39""
                 From OITM product
-                Left JOIN ITM1 priceList ON priceList.""ItemCode"" = product.""ItemCode""
+                JOIN OITW warehouse ON product.""ItemCode"" = warehouse.""ItemCode""
                 Where product.""ItemCode"" in ('" + itemcodesFormat + @"')
-                AND priceList.""PriceList"" = 19");
+                AND warehouse.""WhsCode"" = 'S01' ");
             oRecSet.MoveFirst();
             JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
+            List<ProductLastSellPriceWMS> productLastSellPrices = products.ToObject<List<ProductLastSellPriceWMS>>();
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            return Ok(products);
+            return Ok(productLastSellPrices);
         }
 
         // GET: api/Products/UomDetailWithLastSellPrice
@@ -944,7 +1216,7 @@ namespace SAP_API.Controllers
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery("Select \"ItemCode\", \"ItemName\" From OITM Where \"Canceled\" = 'N'  AND \"validFor\" = 'Y'");
+            oRecSet.DoQuery("Select \"ItemCode\", \"ItemName\" From OITM Where \"Canceled\" = 'N' AND \"validFor\" = 'Y' AND \"SellItem\" = 'Y' AND \"InvntItem\" = 'Y' ");
             oRecSet.MoveFirst();
             JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
             GC.Collect();
@@ -981,6 +1253,17 @@ namespace SAP_API.Controllers
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //Remove 2nd DB
+            if (!context.oCompany2.Connected) {
+                int code = context.oCompany2.Connect();
+                if (code != 0) {
+                    string error = context.oCompany2.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+            SAPbobsCOM.Recordset oRecSet2 = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~Remove 2nd DB
+
             oRecSet.DoQuery(@"
                 Select 
                     ""ItemName"",
@@ -993,7 +1276,28 @@ namespace SAP_API.Controllers
                 AND ""validFor"" = 'Y'");
             oRecSet.MoveFirst();
             JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
-            oRecSet.DoQuery(@"
+
+
+            //1 DB Config
+            //oRecSet.DoQuery(@"
+            //    Select 
+            //        ""PriceList"",
+            //        ""ItemCode"",
+            //        ""Currency"",
+            //        RTRIM(RTRIM(""Price"", '0'), '.') AS ""Price"",
+            //        ""UomEntry""
+            //    From ITM1
+            //    Where ""PriceList"" in (
+            //        SELECT Distinct ""ListNum""
+            //        From OCRD
+            //        Where ""CardType"" = 'C' AND ""CardCode"" LIKE '%-P')
+            //    AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
+            //oRecSet.MoveFirst();// in (19, 13, 14, 15, 16)
+            //JToken priceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"];
+            //~1 DB Config
+
+            //Remove 2nd DB
+            oRecSet2.DoQuery(@"
                 Select 
                     ""PriceList"",
                     ""ItemCode"",
@@ -1006,8 +1310,10 @@ namespace SAP_API.Controllers
                     From OCRD
                     Where ""CardType"" = 'C' AND ""CardCode"" LIKE '%-P')
                 AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
-            oRecSet.MoveFirst();// in (19, 13, 14, 15, 16)
-            JToken priceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"];
+            oRecSet2.MoveFirst();// in (19, 13, 14, 15, 16)
+            JToken priceList = context.XMLTOJSON(oRecSet2.GetAsXML())["ITM1"];
+            //~Remove 2nd DB
+
             oRecSet.DoQuery(@"
                 Select 
                     ""ItemCode"",
@@ -1021,7 +1327,7 @@ namespace SAP_API.Controllers
                     AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
-            oRecSet.DoQuery(@"
+            oRecSet2.DoQuery(@"
                 Select 
                     header.""UgpCode"",
                     header.""BaseUom"",
@@ -1034,8 +1340,8 @@ namespace SAP_API.Controllers
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
                 Where header.""UgpCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
-            oRecSet.MoveFirst();
-            JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            oRecSet2.MoveFirst();
+            JToken uom = context.XMLTOJSON(oRecSet2.GetAsXML())["OUGP"];
             var returnValue = new { products, priceList, stock, uom };
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -1049,6 +1355,18 @@ namespace SAP_API.Controllers
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            //Remove 2nd DB
+            if (!context.oCompany2.Connected) {
+                int code = context.oCompany2.Connect();
+                if (code != 0) {
+                    string error = context.oCompany2.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+            SAPbobsCOM.Recordset oRecSet2 = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~Remove 2nd DB
+
             oRecSet.DoQuery(@"
                 Select 
                     ""ItemName"",
@@ -1061,6 +1379,8 @@ namespace SAP_API.Controllers
                 AND ""validFor"" = 'Y'");
             oRecSet.MoveFirst();
             JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
+
+            //1 DB Config
             //oRecSet.DoQuery(@"
             //    Select 
             //        ""PriceList"",
@@ -1069,9 +1389,20 @@ namespace SAP_API.Controllers
             //        RTRIM(RTRIM(""Price"", '0'), '.') AS ""Price"",
             //        ""UomEntry""
             //    From ITM1
-            //    Where ""PriceList"" = '2'
-            //    AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
-            oRecSet.DoQuery(@"
+            //    Where ""Currency"" is not NULL
+            //    AND ""Price"" != 0
+            //    AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')
+            //    AND ""PriceList"" in (
+            //        SELECT Distinct ""ListNum""
+            //        From OCRD employeeSales
+            //        JOIN OHEM employee ON ""SlpCode"" = ""salesPrson""
+            //        Where ""CardType"" = 'C' AND ""empID"" = " + id + @" AND ""CardCode"" LIKE '%-P');");
+            //oRecSet.MoveFirst();
+            //JToken priceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"];
+            //~1 DB Config
+
+            //Remove 2nd DB
+            oRecSet2.DoQuery(@"
                 Select 
                     ""PriceList"",
                     ""ItemCode"",
@@ -1087,15 +1418,18 @@ namespace SAP_API.Controllers
                     From OCRD employeeSales
                     JOIN OHEM employee ON ""SlpCode"" = ""salesPrson""
                     Where ""CardType"" = 'C' AND ""empID"" = " + id + @" AND ""CardCode"" LIKE '%-P');");
-            oRecSet.MoveFirst();
-            JToken priceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"];
+            oRecSet2.MoveFirst();// in (19, 13, 14, 15, 16)
+            JToken priceList = context.XMLTOJSON(oRecSet2.GetAsXML())["ITM1"];
+            //~Remove 2nd DB
+
+
 
             //oRecSet.DoQuery($"Select \"Fax\" From OSLP Where \"SlpCode\" = {id}");
             //oRecSet.MoveFirst();
             //string warehouses = context.XMLTOJSON(oRecSet.GetAsXML())["OSLP"][0]["Fax"].ToString();
             //warehouses = warehouses.Trim();
             //if (warehouses.Equals("")) { 
-                string warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55'";
+            string warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55'";
             //}
             //else {
             //    warehouses = warehouses.ToUpper();
@@ -1116,8 +1450,8 @@ namespace SAP_API.Controllers
                 AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
-            
-            oRecSet.DoQuery(@"
+
+            oRecSet2.DoQuery(@"
                 Select 
                     header.""UgpCode"",
                     header.""BaseUom"",
@@ -1130,8 +1464,8 @@ namespace SAP_API.Controllers
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
                 Where header.""UgpCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
-            oRecSet.MoveFirst();
-            JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            oRecSet2.MoveFirst();
+            JToken uom = context.XMLTOJSON(oRecSet2.GetAsXML())["OUGP"];
             GC.Collect();
             GC.WaitForPendingFinalizers();
             return Ok(new { products, priceList, stock, uom });
@@ -1223,6 +1557,79 @@ namespace SAP_API.Controllers
         // GET: api/Products/CRM/5
         [HttpGet("CRM/{id}")]
         public async Task<IActionResult> GetCRM(string id) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            //Remove 2nd DB
+            if (!context.oCompany2.Connected)
+            {
+                int code = context.oCompany2.Connect();
+                if (code != 0)
+                {
+                    string error = context.oCompany2.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~Remove 2nd DB
+
+            //1 DB Config
+            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~1 DB Config
+            oRecSet.DoQuery(@"
+                Select 
+                    ""ItemName"", 
+                    ""ItemCode"", 
+                    ""ItmsGrpCod"",
+                    RTRIM(RTRIM(""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm"",
+                    ""SUoMEntry""
+                From OITM where ""ItemCode"" = '" + id + "'");
+            oRecSet.MoveFirst();
+            JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+            oRecSet.DoQuery(@"
+                Select
+                    ""PriceList"",
+                    ""ItemCode"",
+                    ""Currency"",
+                    RTRIM(RTRIM(""Price"", '0'), '.') AS ""Price"",
+                    ""UomEntry"",
+                    ""PriceType""
+                From ITM1 Where ""ItemCode"" = '" + id + "'");
+            oRecSet.MoveFirst();
+            JToken priceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"];
+            oRecSet.DoQuery(@"
+                Select
+                    ""ItemCode"",
+                    ""WhsCode"",
+                    RTRIM(RTRIM(""OnHand"", '0'), '.') AS ""OnHand""
+                From OITW
+                WHERE ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55')
+                AND ""ItemCode"" = '" + id + "'");
+            oRecSet.MoveFirst();
+            JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
+            oRecSet.DoQuery(@"
+                Select 
+                    header.""UgpCode"",
+                    header.""BaseUom"",
+                    baseUOM.""UomCode"" as baseUOM,
+                    detail.""UomEntry"",
+                    UOM.""UomCode"",
+                    RTRIM(RTRIM(detail.""BaseQty"", '0'), '.') AS ""BaseQty""
+                From OUGP header
+                JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                Where header.""UgpCode"" = '" + id + "'");
+            oRecSet.MoveFirst();
+            JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(new { products, priceList, stock, uom });
+        }
+
+        // GET: api/Products/CRM/5
+        [HttpGet("CRMWMSSS/{id}")]
+        public async Task<IActionResult> GetCRMWMSSS(string id)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -1450,20 +1857,7 @@ namespace SAP_API.Controllers
             return Ok(temp);
         }
 
-        // GET: api/Products/Properties
-        [HttpGet("Properties")]
-        public async Task<IActionResult> GetProperties() {
-            
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery(@"Select * From OITG");
-            oRecSet.MoveFirst();
-            JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITG"];
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            return Ok(products);
-        }
-
+        
         // GET: api/Products/Detail/5
         [HttpGet("Detail/{id}")]
         public async Task<IActionResult> GetDetail(string id) {

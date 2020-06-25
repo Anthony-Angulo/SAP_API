@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace SAP_API.Models
 {
-
     public class SearchRequest {
         public int Draw { get; set; }
         public int start { get; set; }
@@ -64,6 +63,7 @@ namespace SAP_API.Models
         public int DocEntry { get; set; }
         public int DocNum { get; set; }
         public string DocCur { get; set; }
+        public double DocRate { get; set; }
         public double Total { get; set; }
         public string DocDate { get; set; }
         public string DocDueDate { get; set; }

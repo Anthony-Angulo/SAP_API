@@ -429,7 +429,7 @@ namespace SAP_API.Controllers
                     purchaseOrderdelivery.Lines.BaseLine = value.products[i].Line;
                     purchaseOrderdelivery.Lines.BaseType = 22;
 
-                    if (value.products[i].UoMEntry == 7) {
+                    if (value.products[i].UoMCode == "LB" || value.products[i].UoMCode == "LBR") {
                         
                         purchaseOrder.Lines.SetCurrentLine(value.products[i].Line);
                         if (value.products[i].Group == 43) {
@@ -443,7 +443,7 @@ namespace SAP_API.Controllers
                             purchaseOrderdelivery.Lines.UoMEntry = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["IUoMEntry"].ToObject<int>();
                             purchaseOrderdelivery.Lines.UnitPrice = purchaseOrder.Lines.UnitPrice / price;
                         } else {
-                            purchaseOrderdelivery.Lines.UoMEntry = 6;
+                            purchaseOrderdelivery.Lines.UoMEntry = 185;
                             purchaseOrderdelivery.Lines.UnitPrice = purchaseOrder.Lines.UnitPrice * 2.20462;
                         }
                             

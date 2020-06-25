@@ -16,7 +16,28 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> Get([FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            //Remove 2nd DB
+            if (!context.oCompany2.Connected)
+            {
+                int code = context.oCompany2.Connect();
+                if (code != 0)
+                {
+                    string error = context.oCompany2.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+            //~Remove 2nd DB
+
+            //1 DB Config
+            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~1 DB Config
+
+            //~Remove 2nd DB
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~Remove 2nd DB
+
+
             List<string> where = new List<string>();
             if (request.columns[0].search.value != String.Empty) {
                 where.Add($"LOWER(ord.\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
@@ -163,7 +184,27 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> GetWWW(string warehouse, [FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            //Remove 2nd DB
+            if (!context.oCompany2.Connected)
+            {
+                int code = context.oCompany2.Connect();
+                if (code != 0)
+                {
+                    string error = context.oCompany2.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+            //~Remove 2nd DB
+
+            //1 DB Config
+            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~1 DB Config
+
+            //~Remove 2nd DB
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~Remove 2nd DB
+
             List<string> where = new List<string>();
             where.Add($"warehouse.\"WhsCode\" = '{warehouse}'");
 
@@ -308,7 +349,24 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> GetWMSDetail(int DocEntry) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //Remove 2nd DB
+            if (!context.oCompany2.Connected) {
+                int code = context.oCompany2.Connect();
+                if (code != 0) {
+                    string error = context.oCompany2.GetLastErrorDescription();
+                    return BadRequest(new { error });
+                }
+            }
+            //~Remove 2nd DB
+
+            //1 DB Config
+            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~1 DB Config
+
+            //~Remove 2nd DB
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~Remove 2nd DB
+
             OrderDetail orderDetail;
             JToken order;
             string DocCur;
@@ -808,7 +866,14 @@ namespace SAP_API.Controllers
         public JToken limiteCredito(string CardCode, string Series, SAPContext context) {
 
             JToken result;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            //1 DB Config
+            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~1 DB Config
+
+            //~Remove 2nd DB
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~Remove 2nd DB
 
             oRecSet.DoQuery(@"CALL ""ValidaCreditoMXM"" ('" + CardCode + "','" + Series + "',0)");
             oRecSet.MoveFirst();
@@ -844,7 +909,15 @@ namespace SAP_API.Controllers
         public JToken facturasPendientes(string CardCode, string Series, SAPContext context) {
 
             JToken result;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            //1 DB Config
+            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~1 DB Config
+
+            //~Remove 2nd DB
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //~Remove 2nd DB
+
             oRecSet.DoQuery(@"
                 SELECT 'True' as Result, 'FacturasVencidasMXM' as Auth
                 FROM Dummy
@@ -919,25 +992,46 @@ namespace SAP_API.Controllers
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-            if (value.auth == 0 && value.payment != 2) {
-                List<JToken> resultAuth = new List<JToken>();
-                if (value.payment == -1) {
-                    resultAuth.Add(facturasPendientes(value.cardcode, value.series.ToString(), context));
-                    if (resultAuth[0]["RESULT"].ToString() == "True") {
-                        return Conflict(resultAuth);
-                    }
-                } else {
-                    resultAuth = auth(value.cardcode, value.series.ToString(), context);
-                    if (resultAuth[0]["RESULT"].ToString() == "True" || resultAuth[1]["RESULT"].ToString() == "True") {
-                        return Conflict(resultAuth);
-                    }
+            //Remove 2nd DB
+            if (!context.oCompany2.Connected) {
+                int code = context.oCompany2.Connect();
+                if (code != 0) {
+                    string error = context.oCompany2.GetLastErrorDescription();
+                    return BadRequest(new { error });
                 }
             }
+            //~Remove 2nd DB
 
-            SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            SAPbobsCOM.Items items = (SAPbobsCOM.Items)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
-            SAPbobsCOM.BusinessPartners contact = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
+            //TEST
+
+            //if (value.auth == 0 && value.payment != 2) {
+            //    List<JToken> resultAuth = new List<JToken>();
+            //    if (value.payment == -1) {
+            //        resultAuth.Add(facturasPendientes(value.cardcode, value.series.ToString(), context));
+            //        if (resultAuth[0]["RESULT"].ToString() == "True") {
+            //            return Conflict(resultAuth);
+            //        }
+            //    } else {
+            //        resultAuth = auth(value.cardcode, value.series.ToString(), context);
+            //        if (resultAuth[0]["RESULT"].ToString() == "True" || resultAuth[1]["RESULT"].ToString() == "True") {
+            //            return Conflict(resultAuth);
+            //        }
+            //    }
+            //}
+
+            //1 DB Config
+            //SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
+            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //SAPbobsCOM.Items items = (SAPbobsCOM.Items)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
+            //SAPbobsCOM.BusinessPartners contact = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
+            //~1 DB Config
+
+            //~Remove 2nd DB
+            SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            SAPbobsCOM.Items items = (SAPbobsCOM.Items)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
+            SAPbobsCOM.BusinessPartners contact = (SAPbobsCOM.BusinessPartners)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
+            //~Remove 2nd DB
 
             oRecSet.DoQuery(@"
                 Select
@@ -977,7 +1071,7 @@ namespace SAP_API.Controllers
                 }
             } else {
                 string error = context.oCompany.GetLastErrorDescription();
-                return BadRequest(new { error });
+                return BadRequest(new { id = 11 , error });
             }
 
             for (int i = 0; i < value.rows.Count; i++) {
@@ -1020,10 +1114,10 @@ namespace SAP_API.Controllers
                 //if (objtype == "112") {
                 //    return Ok(new { value = "Borrador" });
                 //}
-                return Ok(new { value = context.oCompany.GetNewObjectKey() });
+                return Ok(new { value = context.oCompany2.GetNewObjectKey() });
             } else {
-                string error = context.oCompany.GetLastErrorDescription();
-                return BadRequest(new { error });
+                string error = context.oCompany2.GetLastErrorDescription();
+                return BadRequest(new { id = 12, error });
             }
         }
 

@@ -47,6 +47,7 @@ namespace SAP_API.Models
         public int Line { set; get; }
         public int Group { set; get; }
         public int UoMEntry { set; get; }
+        public string UoMCode { set; get; }
         public string WarehouseCode { set; get; }
         public string ItemType { set; get; }
         public List<PurchaseOrderDeliveryRowBatch> batch { set; get; }

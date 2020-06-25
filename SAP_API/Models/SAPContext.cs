@@ -9,7 +9,8 @@ namespace SAP_API.Models
 {
     public class SAPContext {
 
-        public SAPbobsCOM.Company oCompany;
+        public SAPbobsCOM.Company oCompany; //CCFN_CORPORATIVO
+        public SAPbobsCOM.Company oCompany2; //CCFN_ADMINISTRACION
 
         public SAPContext() {
             oCompany = new SAPbobsCOM.Company();
@@ -17,8 +18,8 @@ namespace SAP_API.Models
             oCompany.DbServerType = SAPbobsCOM.BoDataServerTypes.dst_HANADB;
             //oCompany.CompanyDB = "CCFN_PRODUCCCION"; 
             //oCompany.CompanyDB = "CCFN_PROD";
-            oCompany.CompanyDB = "CCFN_CORPORATIVO";
-            //oCompany.CompanyDB = "CCFN_COMERCIAL";
+            //oCompany.CompanyDB = "CCFN_CORPORATIVO";
+            oCompany.CompanyDB = "CCFN_BASECORP";
             //oCompany.CompanyDB = "CCFN_MAYOREOSDEMO";
             oCompany.UserName = "SISTEMAS04";
             oCompany.Password = "SAP1234";
@@ -26,11 +27,24 @@ namespace SAP_API.Models
             oCompany.DbPassword = "B1AdminH2";
             oCompany.LicenseServer = "192.168.0.92:40000";
             oCompany.language = SAPbobsCOM.BoSuppLangs.ln_English;
+
+            oCompany2 = new SAPbobsCOM.Company();
+            oCompany2.Server = "192.168.0.92:30015";
+            oCompany2.DbServerType = SAPbobsCOM.BoDataServerTypes.dst_HANADB;
+            //oCompany2.CompanyDB = "CCFN_ADMINISTRACION";
+            oCompany2.CompanyDB = "CCFN_BASECORP";
+            oCompany2.UserName = "SISTEMAS04";
+            oCompany2.Password = "SAP1234";
+            oCompany2.DbUserName = "SYSTEM";
+            oCompany2.DbPassword = "B1AdminH2";
+            oCompany2.LicenseServer = "192.168.0.92:40000";
+            oCompany2.language = SAPbobsCOM.BoSuppLangs.ln_English;
         }
 
         public SAPContext GetConnection() {
             return new SAPContext();
         }
+
         static JToken WalkNode(JToken node) {
             if (node.Type == JTokenType.Object) {
                 JToken token = node["row"];
@@ -73,16 +87,6 @@ namespace SAP_API.Models
             return node;
         }
 
-
-        public JToken XMLTOJSONService(string XML) {
-            XmlDocument doc = new XmlDocument();
-            doc.LoadXml(XML);
-
-            JToken node = JObject.Parse(JsonConvert.SerializeXmlNode(doc));
-            node = WalkNode(node);
-
-            return node;
-        }
 
         static JToken ArrayFormatRow(JToken temp) {
             if (temp["row"] is JArray) {
