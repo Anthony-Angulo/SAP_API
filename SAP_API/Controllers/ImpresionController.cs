@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using System.Xml.XPath;
 using LPS;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -39,16 +38,6 @@ namespace SAP_API.Controllers
         public async Task<FileContentResult> GetOrder(string DocEntries) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            //Remove 2nd DB
-            if (!context.oCompany2.Connected) {
-                int code = context.oCompany2.Connect();
-                if (code != 0) {
-                    string error = context.oCompany2.GetLastErrorDescription();
-                    return File(new byte[] { }, "application/pdf");
-                }
-            }
-            //~Remove 2nd DB
-
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             string[] DocEntryList = DocEntries.Split(",");
             List<MemoryStream> pdfList = new List<MemoryStream>();
@@ -82,19 +71,11 @@ namespace SAP_API.Controllers
         private MemoryStream GetOrderPDFDocument(int DocEntry) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            //1 DB Config
-            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~1 DB Config
-
-            //~Remove 2nd DB
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~Remove 2nd DB
-
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             OrderDetail orderDetail;
             JToken order;
             string DocCur;
-            
+
             oRecSet.DoQuery(@"
                 SELECT
                     ord.""DocEntry"",
@@ -112,7 +93,7 @@ namespace SAP_API.Controllers
                     else ord.""DocTotal"" end)  AS  ""Total"",
 
                     SUBSTRING(ord.""DocTime"" , 0, LENGTH(ord.""DocTime"")-2) || ':' || RIGHT(ord.""DocTime"",2) as ""DocTime"",
-                    
+
                     ord.""Address"",
                     ord.""Address2"",
                     ord.""DocCur"",
@@ -152,10 +133,10 @@ namespace SAP_API.Controllers
 
                     (case when ""U_CjsPsVr"" != '0' then ""U_CjsPsVr""
                     else ""Quantity"" end)  AS  ""Quantity"",
-                    
+
                     (case when ""U_CjsPsVr"" != '0' then 'CAJA'
                     else ""UomCode"" end)  AS  ""UomCode"",
-                    
+
                     ""InvQty"",
                     ""UomCode2"",
 
@@ -167,7 +148,7 @@ namespace SAP_API.Controllers
             order["OrderRows"] = context.XMLTOJSON(oRecSet.GetAsXML())["RDR1"];
 
             orderDetail = order.ToObject<OrderDetail>();
-            
+
             MemoryStream ms = new MemoryStream();
             Section section;
             Paragraph paragraph;

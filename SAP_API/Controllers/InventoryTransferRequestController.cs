@@ -128,7 +128,7 @@ namespace SAP_API.Controllers
                 SELECT
                     document.""DocEntry"",
                     document.""DocNum"",
-                    
+
                     to_char(to_date(SUBSTRING(document.""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDate"",
 
                     (case when document.""CANCELED"" = 'Y' then 'Cancelado'
@@ -136,7 +136,7 @@ namespace SAP_API.Controllers
                     when document.""DocStatus"" = 'C' then 'Cerrado'
                     else document.""DocStatus"" end)  AS  ""DocStatus"",
 
-                    document.""Filler"",                    
+                    document.""Filler"",
 
                     whsOrigin.""WhsName"" as ""WhsNameOrigin"",
                     whsDest.""WhsName"" as ""WhsNameDest""
@@ -202,13 +202,13 @@ namespace SAP_API.Controllers
                 SELECT
                     ""DocEntry"",
                     ""DocNum"",
-                    
+
                     to_char(to_date(SUBSTRING(""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDate"",
                     to_char(to_date(SUBSTRING(""DocDueDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDueDate"",
 
                     ""ToWhsCode"",
                     ""Filler""
-                FROM OWTR 
+                FROM OWTR
                 WHERE ""DocEntry"" in (SELECT ""DocEntry"" FROM WTR1 WHERE ""BaseEntry"" = " + DocEntry + ")");
 
             if (oRecSet.RecordCount != 0) {
@@ -226,7 +226,7 @@ namespace SAP_API.Controllers
                 transfer["TransferLines"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTR1"];
 
                 List<string> DocEntryListToGetBarCodes = new List<string>();
-                
+
                 foreach (JToken transfers in transfer["TransferList"]) {
                     DocEntryListToGetBarCodes.Add(transfers["DocEntry"].ToString());
                 }

@@ -429,7 +429,7 @@ namespace SAP_API.Controllers
                     purchaseOrderdelivery.Lines.BaseLine = value.products[i].Line;
                     purchaseOrderdelivery.Lines.BaseType = 22;
 
-                    if (value.products[i].UoMCode == "LB" || value.products[i].UoMCode == "LBR") {
+                    if (value.products[i].UoMEntry == 116 || value.products[i].UoMEntry == 196) {
                         
                         purchaseOrder.Lines.SetCurrentLine(value.products[i].Line);
                         if (value.products[i].Group == 43) {

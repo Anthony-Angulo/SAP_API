@@ -164,21 +164,7 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> GetPList() {
             
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            //Remove 2nd DB
-            if (!context.oCompany2.Connected) {
-                int code = context.oCompany2.Connect();
-                if (code != 0) {
-                    string error = context.oCompany2.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~Remove 2nd DB
-
-            //1 DB Config
-            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~1 DB Config
-
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             oRecSet.DoQuery(@"
                 Select
                     warehouse.""WhsCode"",

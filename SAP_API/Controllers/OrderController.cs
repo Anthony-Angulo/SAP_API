@@ -16,28 +16,7 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> Get([FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            //Remove 2nd DB
-            if (!context.oCompany2.Connected)
-            {
-                int code = context.oCompany2.Connect();
-                if (code != 0)
-                {
-                    string error = context.oCompany2.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-            //~Remove 2nd DB
-
-            //1 DB Config
-            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~1 DB Config
-
-            //~Remove 2nd DB
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~Remove 2nd DB
-
-
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             List<string> where = new List<string>();
             if (request.columns[0].search.value != String.Empty) {
                 where.Add($"LOWER(ord.\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
@@ -184,27 +163,7 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> GetWWW(string warehouse, [FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-            //Remove 2nd DB
-            if (!context.oCompany2.Connected)
-            {
-                int code = context.oCompany2.Connect();
-                if (code != 0)
-                {
-                    string error = context.oCompany2.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-            //~Remove 2nd DB
-
-            //1 DB Config
-            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~1 DB Config
-
-            //~Remove 2nd DB
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~Remove 2nd DB
-
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             List<string> where = new List<string>();
             where.Add($"warehouse.\"WhsCode\" = '{warehouse}'");
 
@@ -349,24 +308,7 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> GetWMSDetail(int DocEntry) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            //Remove 2nd DB
-            if (!context.oCompany2.Connected) {
-                int code = context.oCompany2.Connect();
-                if (code != 0) {
-                    string error = context.oCompany2.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-            }
-            //~Remove 2nd DB
-
-            //1 DB Config
-            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~1 DB Config
-
-            //~Remove 2nd DB
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~Remove 2nd DB
-
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             OrderDetail orderDetail;
             JToken order;
             string DocCur;
@@ -866,14 +808,7 @@ namespace SAP_API.Controllers
         public JToken limiteCredito(string CardCode, string Series, SAPContext context) {
 
             JToken result;
-
-            //1 DB Config
-            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~1 DB Config
-
-            //~Remove 2nd DB
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~Remove 2nd DB
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
             oRecSet.DoQuery(@"CALL ""ValidaCreditoMXM"" ('" + CardCode + "','" + Series + "',0)");
             oRecSet.MoveFirst();
@@ -909,15 +844,7 @@ namespace SAP_API.Controllers
         public JToken facturasPendientes(string CardCode, string Series, SAPContext context) {
 
             JToken result;
-
-            //1 DB Config
-            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~1 DB Config
-
-            //~Remove 2nd DB
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //~Remove 2nd DB
-
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             oRecSet.DoQuery(@"
                 SELECT 'True' as Result, 'FacturasVencidasMXM' as Auth
                 FROM Dummy
@@ -992,46 +919,31 @@ namespace SAP_API.Controllers
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-            //Remove 2nd DB
-            if (!context.oCompany2.Connected) {
-                int code = context.oCompany2.Connect();
-                if (code != 0) {
-                    string error = context.oCompany2.GetLastErrorDescription();
-                    return BadRequest(new { error });
+            if (value.auth == 0 && value.payment != 19)
+            {
+                List<JToken> resultAuth = new List<JToken>();
+                if (value.payment == 8)
+                {
+                    resultAuth.Add(facturasPendientes(value.cardcode, value.series.ToString(), context));
+                    if (resultAuth[0]["RESULT"].ToString() == "True")
+                    {
+                        return Conflict(resultAuth);
+                    }
+                }
+                else
+                {
+                    resultAuth = auth(value.cardcode, value.series.ToString(), context);
+                    if (resultAuth[0]["RESULT"].ToString() == "True" || resultAuth[1]["RESULT"].ToString() == "True")
+                    {
+                        return Conflict(resultAuth);
+                    }
                 }
             }
-            //~Remove 2nd DB
 
-            //TEST
-
-            //if (value.auth == 0 && value.payment != 2) {
-            //    List<JToken> resultAuth = new List<JToken>();
-            //    if (value.payment == -1) {
-            //        resultAuth.Add(facturasPendientes(value.cardcode, value.series.ToString(), context));
-            //        if (resultAuth[0]["RESULT"].ToString() == "True") {
-            //            return Conflict(resultAuth);
-            //        }
-            //    } else {
-            //        resultAuth = auth(value.cardcode, value.series.ToString(), context);
-            //        if (resultAuth[0]["RESULT"].ToString() == "True" || resultAuth[1]["RESULT"].ToString() == "True") {
-            //            return Conflict(resultAuth);
-            //        }
-            //    }
-            //}
-
-            //1 DB Config
-            //SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
-            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //SAPbobsCOM.Items items = (SAPbobsCOM.Items)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
-            //SAPbobsCOM.BusinessPartners contact = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
-            //~1 DB Config
-
-            //~Remove 2nd DB
-            SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            SAPbobsCOM.Items items = (SAPbobsCOM.Items)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
-            SAPbobsCOM.BusinessPartners contact = (SAPbobsCOM.BusinessPartners)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
-            //~Remove 2nd DB
+            SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            SAPbobsCOM.Items items = (SAPbobsCOM.Items)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
+            SAPbobsCOM.BusinessPartners contact = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
 
             oRecSet.DoQuery(@"
                 Select
@@ -1114,9 +1026,9 @@ namespace SAP_API.Controllers
                 //if (objtype == "112") {
                 //    return Ok(new { value = "Borrador" });
                 //}
-                return Ok(new { value = context.oCompany2.GetNewObjectKey() });
+                return Ok(new { value = context.oCompany.GetNewObjectKey() });
             } else {
-                string error = context.oCompany2.GetLastErrorDescription();
+                string error = context.oCompany.GetLastErrorDescription();
                 return BadRequest(new { id = 12, error });
             }
         }
@@ -1125,8 +1037,7 @@ namespace SAP_API.Controllers
         // POST: api/Order
         // Creacion de Orden
         [HttpPost("Retail")]
-        public async Task<IActionResult> PostRetail([FromBody] CreateOrderRetail value)
-        {
+        public async Task<IActionResult> PostRetail([FromBody] CreateOrderRetail value) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
@@ -1177,24 +1088,18 @@ namespace SAP_API.Controllers
             //    return BadRequest(new { error });
             //}
 
-            for (int i = 0; i < value.rows.Count; i++)
-            {
+            for (int i = 0; i < value.rows.Count; i++) {
                 order.Lines.ItemCode = value.rows[i].code;
                 order.Lines.WarehouseCode = warehouse;
 
                 items.GetByKey(value.rows[i].code);
 
-                for (int j = 0; j < items.PriceList.Count; j++)
-                {
+                for (int j = 0; j < items.PriceList.Count; j++) {
                     items.PriceList.SetCurrentLine(j);
-                    if (items.PriceList.PriceList == 18)
-                    {
-                        if (value.rows[i].uom == -2)
-                        {
+                    if (items.PriceList.PriceList == 18) {
+                        if (value.rows[i].uom == -2) {
                             order.Lines.UnitPrice = items.PriceList.Price;
-                        }
-                        else
-                        {
+                        } else {
                             order.Lines.UnitPrice = items.PriceList.Price * value.rows[i].equivalentePV;
                         }
                         order.Lines.Currency = items.PriceList.Currency;
@@ -1202,14 +1107,11 @@ namespace SAP_API.Controllers
                     }
                 }
 
-                if (value.rows[i].uom == -2)
-                {
+                if (value.rows[i].uom == -2) {
                     order.Lines.UoMEntry = 6;
                     order.Lines.UserFields.Fields.Item("U_CjsPsVr").Value = value.rows[i].quantity;
                     order.Lines.Quantity = value.rows[i].quantity * value.rows[i].equivalentePV;
-                }
-                else
-                {
+                } else {
                     order.Lines.Quantity = value.rows[i].quantity;
                     order.Lines.UoMEntry = value.rows[i].uom;
                 }
@@ -1219,12 +1121,9 @@ namespace SAP_API.Controllers
 
             order.Comments = value.comments;
             int result = order.Add();
-            if (result == 0)
-            {
+            if (result == 0) {
                 return Ok(new { value = context.oCompany.GetNewObjectKey() });
-            }
-            else
-            {
+            } else {
                 string error = context.oCompany.GetLastErrorDescription();
                 return BadRequest(new { error });
             }
@@ -1262,8 +1161,7 @@ namespace SAP_API.Controllers
                         if (items.PriceList.PriceList == 2) {
                             if (value.newProducts[i].uom == -2) {
                                 order.Lines.UnitPrice = items.PriceList.Price;
-                            }
-                            else {
+                            } else {
                                 order.Lines.UnitPrice = items.PriceList.Price * value.newProducts[i].equivalentePV;
                             }
                             order.Lines.Currency = items.PriceList.Currency;
@@ -1275,8 +1173,7 @@ namespace SAP_API.Controllers
                         order.Lines.UoMEntry = 6;
                         order.Lines.UserFields.Fields.Item("U_CjsPsVr").Value = value.newProducts[i].quantity;
                         order.Lines.Quantity = value.newProducts[i].quantity * value.newProducts[i].equivalentePV;
-                    }
-                    else {
+                    } else {
                         order.Lines.Quantity = value.newProducts[i].quantity;
                         order.Lines.UoMEntry = value.newProducts[i].uom;
                     }
@@ -1308,8 +1205,7 @@ namespace SAP_API.Controllers
                 int result = order.Update();
                 if (result == 0) {
                     return Ok();
-                }
-                else {
+                } else {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
