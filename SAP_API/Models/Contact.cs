@@ -16,6 +16,7 @@ namespace SAP_API.Models
         public string Descript { set; get; }
         public string SlpName { set; get; }
         public string ListName { set; get; }
+        public double Balance { set; get; }
         public List<ContactPaymentMethod> PaymentMethods { set; get; }
     }
 
@@ -24,4 +25,17 @@ namespace SAP_API.Models
         public string Descript { set; get; }
     }
 
+    public class ClientSearchDetail : SearchDetail {
+        public string CardCode { get; set; }
+        public string CardFName { get; set; }
+        public string CardName { get; set; }
+    }
+    public class ClientSearchResponse : SearchResponse<ClientSearchDetail> { }
+    public class ProviderSearchDetail : SearchDetail {
+        public string CardCode { get; set; }
+        public string CardFName { get; set; }
+        public string CardName { get; set; }
+        public string Currency { get; set; }
+    }
+    public class ProviderSearchResponse : SearchResponse<ProviderSearchDetail> { }
 }

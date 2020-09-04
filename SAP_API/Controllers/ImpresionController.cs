@@ -533,9 +533,9 @@ namespace SAP_API.Controllers
             s += "^BY3,2,70\n";
             s += "^FO40,150^BC^FD" + SolicitudTraslado + "^FS\n";
             //'---------------- Tranferencias generadas para la Tarima 1
-            //s += "^ CFA,40\n";
-            //s += "^ FO40,350^FDTransferencia^FS\n";
-            //s += "^ FO40,380^FD" + Transferencia + "^FS\n";
+            s += "^CFA,40\n";
+            s += "^FO40,350^FDTransferencia^FS\n";
+            s += "^FO40,380^FD" + Transferencia + "^FS\n";
 
             //'-------------------
             s += "^ CFA,35\n";

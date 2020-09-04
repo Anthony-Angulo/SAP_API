@@ -568,7 +568,7 @@ namespace SAP_API.Controllers
 
 
                 if (value.rows[i].uom == -2) {
-                    newRequest.Lines.UoMEntry = 6;
+                    newRequest.Lines.UoMEntry = 185;
                     newRequest.Lines.UserFields.Fields.Item("U_CjsPsVr").Value = value.rows[i].quantity;
                     newRequest.Lines.Quantity = value.rows[i].quantity * value.rows[i].equivalentePV;
                     newRequest.Lines.UseBaseUnits = SAPbobsCOM.BoYesNoEnum.tYES;

@@ -19,7 +19,8 @@ namespace SAP_API.Models
             //oCompany.CompanyDB = "CCFN_PRODUCCCION"; 
             //oCompany.CompanyDB = "CCFN_PROD";
             //oCompany.CompanyDB = "CCFN_CORPORATIVO";
-            oCompany.CompanyDB = "CCFN_B1CORP";
+            //oCompany.CompanyDB = "CCFN_B1CORP";
+            oCompany.CompanyDB = "CCFN_BASECORP";
             //oCompany.CompanyDB = "CCFN_MAYOREOSDEMO";
             oCompany.UserName = "SISTEMAS04";
             oCompany.Password = "SAP1234";

@@ -389,6 +389,43 @@ namespace SAP_API.Controllers
             return Ok(orderDetail);
         }
 
+        //// GET: api/Order/WMSDetail/5
+        //[HttpGet("Test/{DocEntry}")]
+        //public async Task<IActionResult> GetTest(int DocEntry) {
+
+        //    SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        //    SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
+
+        //    if (order.GetByKey(DocEntry)) {
+        //        order.Lines.SetCurrentLine(2);
+        //        Console.WriteLine(order.Lines.Quantity);
+        //        Console.WriteLine(order.Lines.RemainingOpenQuantity);
+        //        Console.WriteLine(order.Lines.LineStatus);
+
+        //        order.Lines.Quantity -= order.Lines.RemainingOpenQuantity;
+
+        //        int result = order.Update();
+        //        if (result == 0)
+        //        {
+        //            order.GetByKey(DocEntry);
+        //            Console.WriteLine(order.Lines.Quantity);
+        //            Console.WriteLine(order.Lines.RemainingOpenQuantity);
+        //            Console.WriteLine(order.Lines.LineStatus);
+        //            return Ok();
+        //        }
+        //        else
+        //        {
+        //            string error = context.oCompany.GetLastErrorDescription();
+        //            return BadRequest(new { error });
+        //        }
+        //        return Ok();
+
+        //    }
+
+        //    return BadRequest(new { error = "No Existe Documento" });
+
+        //}
+
         // GET: api/Order/5
         // Orden Detalle
         [HttpGet("CRMDetail/{id}")]
@@ -1008,7 +1045,7 @@ namespace SAP_API.Controllers
                 }
 
                 if (value.rows[i].uom == -2) {
-                    order.Lines.UoMEntry = 6;
+                    order.Lines.UoMEntry = 185;
                     order.Lines.UserFields.Fields.Item("U_CjsPsVr").Value = value.rows[i].quantity;
                     order.Lines.Quantity = value.rows[i].quantity * value.rows[i].equivalentePV;
                 } else {

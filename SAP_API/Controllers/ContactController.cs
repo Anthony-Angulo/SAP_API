@@ -11,28 +11,13 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class ContactController : ControllerBase {
-        public class ClientSearchDetail : SearchDetail {
-            public string CardCode { get; set; }
-            public string CardFName { get; set; }
-            public string CardName { get; set; }
-        }
-
-        public class ClientSearchResponse : SearchResponse<ClientSearchDetail> {}
-
-        public class ProviderSearchDetail : SearchDetail {
-            public string CardCode { get; set; }
-            public string CardFName { get; set; }
-            public string CardName { get; set; }
-            public string Currency { get; set; }
-        }
-
-        public class ProviderSearchResponse : SearchResponse<ProviderSearchDetail> { }
 
         [HttpPost("clients/search")]
         public async Task<IActionResult> Get([FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
             List<string> where = new List<string>();
 
             if (request.columns[0].search.value != String.Empty) {
@@ -86,7 +71,7 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0]["COUNT"].ToObject<int>();
 
-            var respose = new ClientSearchResponse
+            ClientSearchResponse respose = new ClientSearchResponse
             {
                 data = orders,
                 draw = request.Draw,
@@ -161,7 +146,7 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0]["COUNT"].ToObject<int>();
 
-            var respose = new ProviderSearchResponse
+            ProviderSearchResponse respose = new ProviderSearchResponse
             {
                 data = orders,
                 draw = request.Draw,
@@ -191,6 +176,7 @@ namespace SAP_API.Controllers
                     paymentMethod.""PayMethCod"",
                     paymentMethod.""Descript"",
                     ""SlpName"",
+                    ""Balance"",
                     ""ListName""
                 From OCRD contact
                 JOIN OSLP seller ON contact.""SlpCode"" = seller.""SlpCode""
@@ -198,11 +184,13 @@ namespace SAP_API.Controllers
                 JOIN OPLN priceList ON priceList.""ListNum"" = contact.""ListNum""
                 LEFT JOIN OPYM paymentMethod ON paymentMethod.""PayMethCod"" = contact.""PymCode""
                 Where ""CardCode"" = '" + CardCode + "'");
-            oRecSet.MoveFirst();
+
             if (oRecSet.RecordCount == 0) {
                 return NotFound("No Existe Contacto");
             }
+
             contact = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0];
+
             oRecSet.DoQuery(@"
                 Select
                     paymentMethodCardCode.""PymCode"",
@@ -210,17 +198,22 @@ namespace SAP_API.Controllers
                 From CRD2 paymentMethodCardCode
                 JOIN OPYM paymentMethod ON paymentMethod.""PayMethCod"" = paymentMethodCardCode.""PymCode""
                 Where ""CardCode"" = '" + CardCode  + "'");
+
             contact["PaymentMethods"] = context.XMLTOJSON(oRecSet.GetAsXML())["CRD2"];
+
             ContactToSell contactToSell = contact.ToObject<ContactToSell>();
+
             oRecSet = null;
             contact = null;
+
             GC.Collect();
             GC.WaitForPendingFinalizers();
+
             return Ok(contactToSell);
         }
 
-        [HttpGet("CRMProviderToBuy/{id}")]
-        public async Task<IActionResult> CRMProviderToBuy(string id) {
+        [HttpGet("CRMProviderToBuy/{CardCode}")]
+        public async Task<IActionResult> CRMProviderToBuy(string CardCode) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -232,8 +225,8 @@ namespace SAP_API.Controllers
                     ""CardFName"",
                     ""Currency""
                 From OCRD
-                Where ""CardCode"" = '" + id + "'");
-            oRecSet.MoveFirst();
+                Where ""CardCode"" = '" + CardCode + "'");
+
             if (oRecSet.RecordCount == 0) {
                 return NotFound("No Existe Contacto");
             }
