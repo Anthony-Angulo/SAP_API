@@ -616,6 +616,7 @@ namespace SAP_API.Controllers
                         product.""ItemCode"",
                         product.""U_IL_PesProm"" AS ""PesProm"",
                         product.""SUoMEntry"",
+                        product.""QryGroup7"" as ""Meet"",
                         priceList.""PriceList"",
                         priceList.""Currency"",
                         priceList.""Price"",

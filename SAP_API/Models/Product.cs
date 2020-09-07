@@ -8,6 +8,7 @@ namespace SAP_API.Models
     public class ProductDetail {
         public string ItemName { get; set; }
         public string ItemCode { get; set; }
+        public string Meet { get; set; }
         public double PesProm { get; set; }
         public int SUoMEntry { get; set; }
         public int PriceList { get; set; }
