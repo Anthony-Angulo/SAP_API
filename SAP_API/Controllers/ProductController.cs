@@ -1085,7 +1085,7 @@ namespace SAP_API.Controllers
                 Where ""OnHand"" != 0
                 AND ""Freezed"" = 'N'
                 AND ""Locked"" = 'N'
-                AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55')
+                AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55')
                 AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
@@ -1173,6 +1173,7 @@ namespace SAP_API.Controllers
                 Select 
                     ""ItemName"",
                     ""ItemCode"",
+                    ""QryGroup7"" as ""Meet"",
                     RTRIM(RTRIM(""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm""
                 From OITM
                 Where ""SellItem"" = 'Y'
@@ -1205,7 +1206,7 @@ namespace SAP_API.Controllers
                 Where ""OnHand"" != 0 
                     AND ""Freezed"" = 'N'
                     AND ""Locked"" = 'N'
-                    AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55')
+                    AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55')
                     AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
@@ -1273,7 +1274,7 @@ namespace SAP_API.Controllers
             //string warehouses = context.XMLTOJSON(oRecSet.GetAsXML())["OSLP"][0]["Fax"].ToString();
             //warehouses = warehouses.Trim();
             //if (warehouses.Equals("")) { 
-            string warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55'";
+            string warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55'";
             //}
             //else {
             //    warehouses = warehouses.ToUpper();
@@ -1430,7 +1431,7 @@ namespace SAP_API.Controllers
                     ""WhsCode"",
                     RTRIM(RTRIM(""OnHand"", '0'), '.') AS ""OnHand""
                 From OITW
-                WHERE ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55')
+                WHERE ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55')
                 AND ""ItemCode"" = '" + id + "'");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
