@@ -12,7 +12,7 @@ namespace SAP_API.Controllers
     [ApiController]
     public class ContactController : ControllerBase {
 
-        [HttpPost("clients/search")]
+        [HttpPost("Clients/Search")]
         public async Task<IActionResult> Get([FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;

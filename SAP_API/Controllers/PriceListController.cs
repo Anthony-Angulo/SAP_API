@@ -6,11 +6,18 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
 
-namespace SAP_API.Controllers
-{
+namespace SAP_API.Controllers {
+
     [Route("api/[controller]")]
     [ApiController]
     public class PriceListController : ControllerBase {
+
+        //  Summary:
+        //    Get PriceList Information with the SDK Object
+        //
+        //  Parameters:
+        //      None.
+        //
         // GET: api/PriceList
         [HttpGet]
         public async Task<IActionResult> Get() {
@@ -32,6 +39,12 @@ namespace SAP_API.Controllers
             return Ok(list);
         }
 
+        //  Summary:
+        //    Get PriceList Name and Num.
+        //
+        //  Parameters:
+        //      None.
+        //
         // GET: api/PriceList/CRMList
         [HttpGet("CRMList")]
         public async Task<IActionResult> GetCRMList() {
@@ -44,29 +57,5 @@ namespace SAP_API.Controllers
             return Ok(priceList);
         }
 
-        //// GET: api/PriceList/5
-        //[HttpGet("{id}", Name = "Get")]
-        //public string Get(int id)
-        //{
-        //    return "value";
-        //}
-
-        //// POST: api/PriceList
-        //[HttpPost]
-        //public void Post([FromBody] string value)
-        //{
-        //}
-
-        //// PUT: api/PriceList/5
-        //[HttpPut("{id}")]
-        //public void Put(int id, [FromBody] string value)
-        //{
-        //}
-
-        //// DELETE: api/ApiWithActions/5
-        //[HttpDelete("{id}")]
-        //public void Delete(int id)
-        //{
-        //}
     }
 }

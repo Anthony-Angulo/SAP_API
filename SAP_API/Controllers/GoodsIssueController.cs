@@ -1,21 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
 
-namespace SAP_API.Controllers
-{
+namespace SAP_API.Controllers {
+
     [Route("api/[controller]")]
     [ApiController]
     public class GoodsIssueController : ControllerBase {
 
-        // GET: api/GoodsIssue
+        // Note: Use GoodsReceiptSearchResponse because the answer is composed of the same attributes.
+        // If these change, a new class would have to be used that adapts to the new data.
+        /// <summary>
+        /// Get GoodsIssue List to WMS web Filter by DatatableParameters.
+        /// </summary>
+        /// <param name="request">DataTableParameters</param>
+        /// <returns>GoodsReceiptSearchResponse</returns>
+        /// <response code="200">GoodsReceiptSearchResponse(SearchResponse)</response>
+        // POST: api/GoodsIssue/Search
+        [ProducesResponseType(typeof(GoodsReceiptSearchDetail), StatusCodes.Status200OK)]
         [HttpPost("Search")]
-        public async Task<IActionResult> Get([FromBody] SearchRequest request) {
+        public async Task<IActionResult> Search([FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -89,7 +97,6 @@ namespace SAP_API.Controllers
             }
 
             oRecSet.DoQuery(query);
-            oRecSet.MoveFirst();
             var orders = context.XMLTOJSON(oRecSet.GetAsXML())["OIGE"].ToObject<List<GoodsReceiptSearchDetail>>();
 
             string queryCount = @"
@@ -104,7 +111,6 @@ namespace SAP_API.Controllers
             }
 
             oRecSet.DoQuery(queryCount);
-            oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OIGE"][0]["COUNT"].ToObject<int>();
 
             GoodsReceiptSearchResponse respose = new GoodsReceiptSearchResponse {
@@ -113,18 +119,45 @@ namespace SAP_API.Controllers
                 recordsFiltered = COUNT,
                 recordsTotal = COUNT,
             };
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
             return Ok(respose);
         }
 
-        // GET: api/GoodsIssue/5
+        // Class To Serialize GoodsIssue Query Result 
+        class GoodsIssueDetailLine {
+            public string ItemCode { set; get; }
+            public string Dscription { set; get; }
+            public double Quantity { set; get; }
+            public string UomCode { set; get; }
+            public string UomCode2 { set; get; }
+            public double InvQty { set; get; }
+        }
+
+        // Class To Serialize GoodsIssue Query Result
+        class GoodsIssueDetail {
+            public uint DocEntry { get; set; }
+            public uint DocNum { set; get; }
+            public string DocDate { set; get; }
+            public string DocStatus { set; get; }
+            public string WhsName { set; get; }
+            public List<GoodsIssueDetailLine> Lines { set; get; }
+        };
+
+        /// <summary>
+        /// Get GoodsIssue Detail to WMS GoodsIssue Detail Page
+        /// </summary>
+        /// <param name="DocEntry">DocEntry. An Unsigned Integer that serve as Document identifier.</param>
+        /// <returns>A GoodsIssue Detail</returns>
+        /// <response code="200">Returns GoodsIssue Detail</response>
+        /// <response code="204">No GoodsIssue Found</response>
+        // GET: api/GoodsIssue/:DocEntry
+        [ProducesResponseType(typeof(GoodsIssueDetail), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("{DocEntry}")]
-        public async Task<IActionResult> Get(int DocEntry) {
+        public async Task<IActionResult> Get(uint DocEntry) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery(@"
+            oRecSet.DoQuery($@"
                 SELECT
                     document.""DocEntry"",
                     document.""DocNum"",
@@ -139,11 +172,16 @@ namespace SAP_API.Controllers
                 FROM OIGE document
                 LEFT JOIN NNM1 series ON series.""Series"" = document.""Series""
                 LEFT JOIN OWHS warehouse ON warehouse.""WhsCode"" = series.""SeriesName""
-                WHERE document.""DocEntry"" = '" + DocEntry + "' ");
+                WHERE document.""DocEntry"" = '{DocEntry}';");
+
+            int rc = oRecSet.RecordCount;
+            if (rc == 0) {
+                return NoContent();
+            }
 
             JToken temp = context.XMLTOJSON(oRecSet.GetAsXML())["OIGE"][0];
 
-            oRecSet.DoQuery(@"
+            oRecSet.DoQuery($@"
                 Select
                     ""ItemCode"",
                     ""Dscription"",
@@ -151,16 +189,16 @@ namespace SAP_API.Controllers
                     ""UomCode"",
                     ""InvQty"",
                     ""UomCode2""
-                From IGE1 Where ""DocEntry"" = '" + DocEntry + "'");
-            oRecSet.MoveFirst();
+                From IGE1 Where ""DocEntry"" = '{DocEntry}';");
             temp["Lines"] = context.XMLTOJSON(oRecSet.GetAsXML())["IGE1"];
 
-            return Ok(temp);
-        }
+            GoodsIssueDetail output = temp.ToObject<GoodsIssueDetail>();
 
-        // POST: api/GoodsIssue
-        [HttpPost]
-        public void Post([FromBody] string value) {
+            //Force Garbage Collector. Recommendation by InterLatin Dude. SDK Problem with memory.
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
+            return Ok(output);
         }
 
     }

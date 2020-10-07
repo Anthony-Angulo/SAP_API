@@ -1,20 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
 
-namespace SAP_API.Controllers
-{
+namespace SAP_API.Controllers {
+
     [Route("api/[controller]")]
     [ApiController]
     public class GoodsReceiptController : ControllerBase {
 
+        /// <summary>
+        /// Get GoodsReceipt List to WMS web Filter by DatatableParameters.
+        /// </summary>
+        /// <param name="request">DataTableParameters</param>
+        /// <returns>GoodsReceiptSearchResponse</returns>
+        /// <response code="200">GoodsReceiptSearchResponse(SearchResponse)</response>
+        // POST: api/GoodsReceipt/Search
+        [ProducesResponseType(typeof(GoodsReceiptSearchDetail), StatusCodes.Status200OK)]
         [HttpPost("Search")]
-        public async Task<IActionResult> Get([FromBody] SearchRequest request) {
+        public async Task<IActionResult> Search([FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -89,8 +96,7 @@ namespace SAP_API.Controllers
             }
 
             oRecSet.DoQuery(query);
-            oRecSet.MoveFirst();
-            var orders = context.XMLTOJSON(oRecSet.GetAsXML())["OIGN"].ToObject<List<GoodsReceiptSearchDetail>>();
+            var goodsReceiptList = context.XMLTOJSON(oRecSet.GetAsXML())["OIGN"].ToObject<List<GoodsReceiptSearchDetail>>();
 
             string queryCount = @"
                 Select
@@ -104,28 +110,53 @@ namespace SAP_API.Controllers
             }
 
             oRecSet.DoQuery(queryCount);
-            oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OIGN"][0]["COUNT"].ToObject<int>();
 
             GoodsReceiptSearchResponse respose = new GoodsReceiptSearchResponse {
-                data = orders,
+                data = goodsReceiptList,
                 draw = request.Draw,
                 recordsFiltered = COUNT,
                 recordsTotal = COUNT,
             };
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
             return Ok(respose);
         }
 
+        // Class To Serialize GoodsReceipt Query Result 
+        class GoodsReceiptDetailLine {
+            public string ItemCode;
+            public string Dscription;
+            public double Quantity;
+            public string UomCode;
+            public string UomCode2;
+            public double InvQty;
+        }
+        
+        // Class To Serialize GoodsReceipt Query Result
+        class GoodsReceiptDetail {
+            public uint DocEntry;
+            public uint DocNum;
+            public string DocDate;
+            public string DocStatus;
+            public string WhsName;
+            public List<GoodsReceiptDetailLine> Lines;
+        };
 
-        // GET: api/GoodsReceipt/5
+        /// <summary>
+        /// Get GoodsRecipt Detail to WMS GoodsRecipt Detail Page
+        /// </summary>
+        /// <param name="DocEntry">DocEntry. An Unsigned Integer that serve as Document identifier.</param>
+        /// <returns>A GoodsReceipt Detail</returns>
+        /// <response code="200">Returns GoodsReceipt Detail</response>
+        /// <response code="204">No GoodsReceipt Found</response>
+        // GET: api/GoodsReceipt/:DocEntry
+        [ProducesResponseType(typeof(GoodsReceiptDetail), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("{DocEntry}")]
-        public async Task<IActionResult> Get(int DocEntry) {
+        public async Task<IActionResult> Get(uint DocEntry) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery(@"
+            oRecSet.DoQuery($@"
                 SELECT
                     document.""DocEntry"",
                     document.""DocNum"",
@@ -140,11 +171,16 @@ namespace SAP_API.Controllers
                 FROM OIGN document
                 LEFT JOIN NNM1 series ON series.""Series"" = document.""Series""
                 LEFT JOIN OWHS warehouse ON warehouse.""WhsCode"" = series.""SeriesName""
-                WHERE document.""DocEntry"" = '" + DocEntry + "' ");
+                WHERE document.""DocEntry"" = '{DocEntry}';");
+
+            int rc = oRecSet.RecordCount;
+            if (rc == 0) {
+                return NoContent();
+            }
 
             JToken temp = context.XMLTOJSON(oRecSet.GetAsXML())["OIGN"][0];
 
-            oRecSet.DoQuery(@"
+            oRecSet.DoQuery($@"
                 Select
                     ""ItemCode"",
                     ""Dscription"",
@@ -152,16 +188,22 @@ namespace SAP_API.Controllers
                     ""UomCode"",
                     ""InvQty"",
                     ""UomCode2""
-                From IGN1 Where ""DocEntry"" = '" + DocEntry + "'");
+                From IGN1 Where ""DocEntry"" = '{DocEntry}';");
             oRecSet.MoveFirst();
             temp["Lines"] = context.XMLTOJSON(oRecSet.GetAsXML())["IGN1"];
 
-            return Ok(temp);
-        }
+            GoodsReceiptDetail output = temp.ToObject<GoodsReceiptDetail>();
+            
+            //Force Garbage Collector. Recommendation by InterLatin Dude. SDK Problem with memory.
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
 
-        // POST: api/GoodsReceipt
-        [HttpPost]
-        public void Post([FromBody] string value) {
+            //var s1 = Stopwatch.StartNew();
+            //s1.Stop();
+            //const int _max = 1000000;
+            //Console.WriteLine(((double)(s1.Elapsed.TotalMilliseconds * 1000 * 1000) / _max).ToString("0.00 ns"));
+
+            return Ok(output);
         }
 
     }

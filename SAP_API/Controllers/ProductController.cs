@@ -569,7 +569,6 @@ namespace SAP_API.Controllers
             }
 
             oRecSet.DoQuery(query);
-            oRecSet.MoveFirst();
             var orders = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"].ToObject<List<ProductWithStockSearchDetail>>();
 
             string queryCount = @"
@@ -584,7 +583,6 @@ namespace SAP_API.Controllers
                 queryCount += " AND " + whereClause;
             }
             oRecSet.DoQuery(queryCount);
-            oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["COUNT"].ToObject<int>();
 
             var respose = new ProductWithStockSearchResponse {
@@ -593,8 +591,6 @@ namespace SAP_API.Controllers
                 recordsFiltered = COUNT,
                 recordsTotal = COUNT,
             };
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
             return Ok(respose);
         }
 
@@ -1709,7 +1705,6 @@ namespace SAP_API.Controllers
                     ""NumInSale"",
                     ""NumInBuy""
                 From OITM Where ""ItemCode"" = '" + id + "'");
-            oRecSet.MoveFirst();
             JToken Detail = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
 
             oRecSet.DoQuery(@"
@@ -1725,7 +1720,6 @@ namespace SAP_API.Controllers
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
                 Where header.""UgpCode"" = '" + id + "'");
-            oRecSet.MoveFirst();
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
 
             GC.Collect();
@@ -1768,5 +1762,6 @@ namespace SAP_API.Controllers
             GC.WaitForPendingFinalizers();
             return Ok(Products);
         }
+
     }
 }

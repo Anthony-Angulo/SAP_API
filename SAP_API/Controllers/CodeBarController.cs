@@ -10,13 +10,13 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class CodeBarController : ControllerBase {
-        /// <summary>
-        ///     Busqueda de Producto por codigo de barra 
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns>
-        ///     Regresa Detalle del Producto, sus codigos y su unidades de medida
-        /// </returns>
+
+        //  Summary:
+        //    Busqueda de Producto por codigo de barra 
+        //
+        //  Parameters:
+        //      id
+        //
         // GET: api/CodeBar/5
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(string id) {
@@ -85,13 +85,19 @@ namespace SAP_API.Controllers
             return Ok(new { Detail, CodeBars, uom });
         }
 
-        /// <summary>
-        ///     Agregar Codigo a un producto Relacionado con una unidad de medida
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns>
-        ///     Regresa el identificador del codigo creado
-        /// </returns>
+        public class Codebar {
+            public string ItemCode { set; get; }
+            public string Barcode { set; get; }
+            public int UOMEntry { set; get; }
+        }
+
+
+        //  Summary:
+        //    Agregar Codigo a un producto Relacionado con una unidad de medida
+        //
+        //  Parameters:
+        //      Codebar
+        //
         // POST: api/CodeBar
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] Codebar value) {

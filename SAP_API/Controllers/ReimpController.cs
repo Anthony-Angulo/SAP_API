@@ -24,7 +24,7 @@ namespace SAP_API.Controllers
             etiquetaFixIndividual(value.gti, value.lote, value.peso, value.ItemCode, value.ItemName, value.Fecha);
         }
 
-        public void etiquetaFixIndividual(string GTIN, string Lote, string Peso, string ItemCode, string ItemName, string Fecha) {
+        private void etiquetaFixIndividual(string GTIN, string Lote, string Peso, string ItemCode, string ItemName, string Fecha) {
             //string sUrlRequest = "http://api.ccfn.com.mx/json/productos/" + txtproducto.Text;
             //var json = new WebClient().DownloadString(sUrlRequest);
 

@@ -479,22 +479,13 @@ namespace SAP_API.Controllers
             //return File(new byte[] { }, "application/pdf");
         }
 
-        public class TarimaPrint {
-            public string WHS { set; get; }
-            public string Pallet { set; get; }
-            public string Request { set; get; }
-            public string Transfer { set; get; }
-            public string RequestCopy { set; get; }
-            public string IDPrinter { set; get; }
-        }
-
         // POST: api/TarimaImp
         [HttpPost("Tarima")]
         public void Post([FromBody] TarimaPrint value) {
             etiquetaproduccion(value.IDPrinter, value.WHS, value.Pallet, value.Request, value.Transfer, value.RequestCopy, DateTime.Now.ToString());
         }
 
-        public void etiquetaproduccion(string IDPrinter, string WHS, string NumeroTarima, string SolicitudTraslado, string Transferencia, string Recepcion, string Fecha) {
+        private void etiquetaproduccion(string IDPrinter, string WHS, string NumeroTarima, string SolicitudTraslado, string Transferencia, string Recepcion, string Fecha) {
 
             //string s = "^XA\n";
             //s += "^FW\n";

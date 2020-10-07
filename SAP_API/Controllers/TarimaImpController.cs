@@ -9,7 +9,7 @@ namespace SAP_API.Controllers
     [ApiController]
     public class TarimaImpController : ControllerBase {
 
-        public class TarimaPrint {
+        public class TarimaPrintTransfer {
             public string WHS { set; get; }
             public string Pallet { set; get; }
             public string Request { set; get; }
@@ -19,11 +19,11 @@ namespace SAP_API.Controllers
 
         // POST: api/TarimaImp
         [HttpPost]
-        public void Post([FromBody] TarimaPrint value) {
+        public void Post([FromBody] TarimaPrintTransfer value) {
             etiquetaproduccion(value.WHS, value.Pallet, value.Request, value.Transfer, value.RequestCopy, DateTime.Now.ToString());
         }
 
-        public void etiquetaproduccion(string WHS, string NumeroTarima, string SolicitudTraslado, string Transferencia, string Recepcion, string Fecha) {
+        private void etiquetaproduccion(string WHS, string NumeroTarima, string SolicitudTraslado, string Transferencia, string Recepcion, string Fecha) {
             //string sUrlRequest = "http://api.ccfn.com.mx/json/productos/" + txtproducto.Text;
             //var json = new WebClient().DownloadString(sUrlRequest);
 

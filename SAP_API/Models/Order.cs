@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SAP_API.Models
-{
+namespace SAP_API.Models {
     public class SearchRequest {
         public int Draw { get; set; }
         public int start { get; set; }
@@ -137,5 +138,60 @@ namespace SAP_API.Models
         public double equivalentePV { set; get; }
     }
 
+    public class OrderAuth {
+        public int ID { get; set; }
+
+        [StringLength(15)]
+        public string CardCode { get; set; }
+
+        [StringLength(100)]
+        public string CardName { get; set; }
+
+        [StringLength(100)]
+        public string CardFName { get; set; }
+
+        [StringLength(10)]
+        public string Currency { get; set; }
+
+        public double CurrencyRate { get; set; }
+
+        public int Payment { get; set; }
+
+        public int Serie { get; set; }
+
+        public int PriceList { get; set; }
+
+        [StringLength(200)]
+        public string Reason { get; set; }
+
+        [StringLength(200)]
+        public string Comments { get; set; }
+
+        public DateTime OrderDate { get; set; }
+
+        public Status AuthStatus { get; set; }
+
+        public DateTime AuthDate { get; set; }
+
+        public User? AuthUser { get; set; }
+
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public DateTime DateCreated { get; set; }
+    }
+
+    public class OrderAuthRow {
+        public int ID { get; set; }
+
+        public double Quantity { get; set; }
+
+        [StringLength(20)]
+        public string ItemCode { get; set; }
+
+        public int Uom { get; set; }
+
+        public double EquivalentePV { get; set; }
+
+        public OrderAuth Order { get; set; }
+    }
 
 }

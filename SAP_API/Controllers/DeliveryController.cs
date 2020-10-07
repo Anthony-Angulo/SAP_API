@@ -6,14 +6,14 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
 
-namespace SAP_API.Controllers
-{
+namespace SAP_API.Controllers {
+
     [Route("api/[controller]")]
     [ApiController]
     public class DeliveryController : ControllerBase {
 
-        [HttpPost("search")]
-        public async Task<IActionResult> GetSearch([FromBody] SearchRequest request) {
+        [HttpPost("Search")]
+        public async Task<IActionResult> Search([FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -98,7 +98,6 @@ namespace SAP_API.Controllers
             query += " LIMIT " + request.length + " OFFSET " + request.start + "";
 
             oRecSet.DoQuery(query);
-            oRecSet.MoveFirst();
             var orders = context.XMLTOJSON(oRecSet.GetAsXML())["ODLN"].ToObject<List<OrderSearchDetail>>();
 
             string queryCount = @"
@@ -113,10 +112,9 @@ namespace SAP_API.Controllers
                 queryCount += "Where " + whereClause;
             }
             oRecSet.DoQuery(queryCount);
-            oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["ODLN"][0]["COUNT"].ToObject<int>();
 
-            var respose = new OrderSearchResponse {
+            OrderSearchResponse respose = new OrderSearchResponse {
                 data = orders,
                 draw = request.Draw,
                 recordsFiltered = COUNT,
@@ -126,7 +124,6 @@ namespace SAP_API.Controllers
             GC.WaitForPendingFinalizers();
             return Ok(respose);
         }
-
 
         // GET: api/Order/5
         // Orden Detalle
@@ -198,7 +195,6 @@ namespace SAP_API.Controllers
 
             return Ok(temp);
         }
-
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

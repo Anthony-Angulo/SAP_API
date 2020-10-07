@@ -3,14 +3,172 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Linq;
+using SAP_API.Entities;
 using SAP_API.Models;
 
-namespace SAP_API.Controllers
-{
+namespace SAP_API.Controllers {
+
+    //[Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class WarehouseController : ControllerBase {
+
+        // Attributes
+        private readonly ApplicationDbContext _context;
+
+        //Constructor
+        public WarehouseController(ApplicationDbContext context) {
+            _context = context;
+        }
+
+        //  Summary:
+        //    Get Warehouse Data From Database.
+        //
+        //  Parameters:
+        //      None.
+        //
+        // GET: api/Warehouse/Extern
+        [HttpGet("Extern")]
+        public IEnumerable<Warehouse> GetExtern() {
+            return _context.Warehouses;
+        }
+
+        //  Summary:
+        //    Get Warehouse Data From Database.
+        //
+        //  Parameters:
+        //      id. An Unsigned Integer that serve as Warehouse identifier.
+        //
+        // GET: api/Warehouse/:id
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(uint id) {
+            Warehouse warehouse = _context.Warehouses.Find(id);
+            if (warehouse != null) {
+                return Ok(warehouse);
+            }
+            return NotFound();
+        }
+
+        //  Summary:
+        //    Register a Warehouse Extern Database.
+        //
+        //  Parameters:
+        //      WarehouseDto.
+        //
+        // POST: api/Warehouse
+        //[Authorize(Permissions.Warehouses.Create)]
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody] WarehouseDto value) {
+
+            if (value == null) {
+                return BadRequest("Datos Invalidos");
+            }
+
+            Warehouse warehouse = new Warehouse {
+                WhsCode = value.WhsCode,
+                WhsName = value.WhsName,
+                Active = value.Active,
+                ActiveCRM = value.ActiveCRM
+            };
+
+            var result = _context.Warehouses.Add(warehouse);
+
+            if (result.State != EntityState.Added) {
+                string Errors = "";
+                return BadRequest(Errors);
+            }
+
+            try {
+                _context.SaveChanges();
+            }
+            catch (DbUpdateConcurrencyException) {
+                return BadRequest("A database command did not affect the expected number of rows. This usually indicates an optimistic concurrency violation; that is, a row has been changed in the database since it was queried.");
+            }
+            catch (DbUpdateException) {
+                return BadRequest("An error occurred sending updates to the database.");
+            }
+            //catch (DbEntityValidationException) {
+            //    return BadRequest("The save was aborted because validation of entity property values failed.");
+            //}
+            catch (NotSupportedException) {
+                return BadRequest("An attempt was made to use unsupported behavior such as executing multiple asynchronous commands concurrently on the same context instance.");
+            }
+            catch (ObjectDisposedException) {
+                return BadRequest("The context or connection have been disposed.");
+            }
+            catch (InvalidOperationException) {
+                return BadRequest("Some error occurred attempting to process entities in the context either before or after sending commands to the database.");
+            }
+
+            return Ok();
+        }
+
+        // PUT: api/Warehouse/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Put(int id, [FromBody] WarehouseDto value) {
+
+            if (value == null) {
+                return BadRequest("Datos Invalidos");
+            }
+
+            Warehouse warehouse = _context.Warehouses.Find(id);
+            if (warehouse == null) {
+                return BadRequest("No Exite Esa Sucursal");
+            }
+
+            if (warehouse.WhsCode == value.WhsCode && warehouse.WhsName == value.WhsName && warehouse.Active == value.Active && warehouse.ActiveCRM == value.ActiveCRM) {
+                string Errors = "No Hay Cambios que Realizar";
+                return BadRequest(Errors);
+            }
+
+            warehouse.WhsCode = value.WhsCode;
+            warehouse.WhsName = value.WhsName;
+            warehouse.Active = value.Active;
+            warehouse.ActiveCRM = value.ActiveCRM;
+
+            var result = _context.Warehouses.Update(warehouse);
+
+            if (result.State == EntityState.Detached) {
+                string Errors = "No Exite Esta Sucursal";
+                return BadRequest(Errors);
+            }
+
+            if (result.State == EntityState.Unchanged) {
+                string Errors = "No Hay Cambios que Realizar";
+                return BadRequest(Errors);
+            }
+
+            if (result.State != EntityState.Modified) {
+                string Errors = "";
+                return BadRequest(Errors);
+            }
+
+            try {
+                _context.SaveChanges();
+            }
+            catch (DbUpdateConcurrencyException) {
+                return BadRequest("A database command did not affect the expected number of rows. This usually indicates an optimistic concurrency violation; that is, a row has been changed in the database since it was queried.");
+            }
+            catch (DbUpdateException) {
+                return BadRequest("An error occurred sending updates to the database.");
+            }
+            //catch (DbEntityValidationException) {
+            //    return BadRequest("The save was aborted because validation of entity property values failed.");
+            //}
+            catch (NotSupportedException) {
+                return BadRequest("An attempt was made to use unsupported behavior such as executing multiple asynchronous commands concurrently on the same context instance.");
+            }
+            catch (ObjectDisposedException) {
+                return BadRequest("The context or connection have been disposed.");
+            }
+            catch (InvalidOperationException) {
+                return BadRequest("Some error occurred attempting to process entities in the context either before or after sending commands to the database.");
+            }
+
+            return Ok();
+        }
 
         public class WarehouseWithSerie {
             public string WhsName { get; set; }
