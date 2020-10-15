@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
+using SAP_API.Entities;
 using SAP_API.Models;
 
 namespace SAP_API.Controllers {
@@ -912,33 +913,33 @@ namespace SAP_API.Controllers {
             return Ok(temp);
         }
 
-        private JToken limiteCredito(string CardCode, string Series, SAPContext context) {
+        private JToken limiteCredito(string CardCode, int Series, SAPContext context) {
 
             JToken result;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
-            oRecSet.DoQuery(@"CALL ""ValidaCreditoMXM"" ('" + CardCode + "','" + Series + "',0)");
+            oRecSet.DoQuery($@"CALL ""ValidaCreditoMXM"" ('{CardCode}', '{Series}', 0)");
             oRecSet.MoveFirst();
             result = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
             if (result["False"] == null) {
                 return JObject.Parse(@"{ RESULT: 'True', AUTH: 'ValidaCreditoMXM'}");
             }
 
-            oRecSet.DoQuery(@"CALL ""ValidaCreditoENS"" ('" + CardCode + "','" + Series + "',0)");
+            oRecSet.DoQuery($@"CALL ""ValidaCreditoENS"" ('{CardCode}', '{Series}', 0)");
             oRecSet.MoveFirst();
             result = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
             if (result["False"] == null) {
                 return JObject.Parse(@"{ RESULT: 'True', AUTH: 'ValidaCreditoENS'}");
             }
 
-            oRecSet.DoQuery(@"CALL ""ValidaCreditoTJ"" ('" + CardCode + "','" + Series + "',0)");
+            oRecSet.DoQuery($@"CALL ""ValidaCreditoTJ"" ('{CardCode}', '{Series}', 0)");
             oRecSet.MoveFirst();
             result = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
             if (result["False"] == null) {
                 return JObject.Parse(@"{ RESULT: 'True', AUTH: 'ValidaCreditoTJ'}");
             }
 
-            oRecSet.DoQuery(@"CALL ""ValidaCreditoSLR"" ('" + CardCode + "','" + Series + "',0)");
+            oRecSet.DoQuery($@"CALL ""ValidaCreditoSLR"" ('{CardCode}', '{Series}', 0)");
             oRecSet.MoveFirst();
             result = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
             if (result["False"] == null) {
@@ -948,15 +949,15 @@ namespace SAP_API.Controllers {
 
         }
 
-        private JToken facturasPendientes(string CardCode, string Series, SAPContext context) {
+        private JToken facturasPendientes(string CardCode, int Series, SAPContext context) {
 
             JToken result;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery(@"
+            oRecSet.DoQuery($@"
                 SELECT 'True' as Result, 'FacturasVencidasMXM' as Auth
                 FROM Dummy
-                WHERE '" + CardCode + @"' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE AND T0.""DocStatus"" = 'O')
-                AND  '" + Series + @"' IN (
+                WHERE '{CardCode}' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE AND T0.""DocStatus"" = 'O')
+                AND  '{Series}' IN (
                     SELECT T1.""Series"" FROM NNM1 T1
                     WHERE T1.""ObjectCode"" = 17
                     AND T1.""SeriesName"" IN (SELECT ""WhsCode"" FROM OWHS WHERE ""Location"" = 1))");
@@ -965,12 +966,12 @@ namespace SAP_API.Controllers {
             if (result["RESULT"].ToString() != String.Empty) {
                 return result;
             }
-            
-            oRecSet.DoQuery(@"
+
+            oRecSet.DoQuery($@"
                 SELECT 'True' as Result, 'FacturasVencidasENS' as Auth
                 FROM Dummy
-                WHERE '" + CardCode + @"' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE AND T0.""DocStatus"" = 'O')
-                AND  '" + Series + @"' IN (
+                WHERE '{CardCode}' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE AND T0.""DocStatus"" = 'O')
+                AND  '{Series}' IN (
                     SELECT T1.""Series"" FROM NNM1 T1
                     WHERE T1.""ObjectCode"" = 17
                     AND T1.""SeriesName"" IN (SELECT ""WhsCode"" FROM OWHS WHERE ""Location"" = 4))");
@@ -980,11 +981,11 @@ namespace SAP_API.Controllers {
                 return result;
             }
 
-            oRecSet.DoQuery(@"
+            oRecSet.DoQuery($@"
                 SELECT 'True' as Result, 'FacturasVencidasTJ' as Auth
                 FROM Dummy
-                WHERE '" + CardCode + @"' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE AND T0.""DocStatus"" = 'O')
-                AND  '" + Series + @"' IN (
+                WHERE '{CardCode}' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE AND T0.""DocStatus"" = 'O')
+                AND  '{Series}' IN (
                     SELECT T1.""Series"" FROM NNM1 T1
                     WHERE T1.""ObjectCode"" = 17
                     AND T1.""SeriesName"" IN (SELECT ""WhsCode"" FROM OWHS WHERE ""Location"" = 2))");
@@ -994,11 +995,11 @@ namespace SAP_API.Controllers {
                 return result;
             }
 
-            oRecSet.DoQuery(@"
+            oRecSet.DoQuery($@"
                 SELECT 'True' as Result, 'FacturasVencidasSLR' as Auth
                 FROM Dummy
-                WHERE '" + CardCode + @"' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE AND T0.""DocStatus"" = 'O')
-                AND  '" + Series + @"' IN (
+                WHERE '{CardCode}' IN (SELECT Distinct T0.""CardCode"" FROM OINV T0 WHERE T0.""DocDueDate"" < CURRENT_DATE AND T0.""DocStatus"" = 'O')
+                AND  '{Series}' IN (
                     SELECT T1.""Series"" FROM NNM1 T1
                     WHERE T1.""ObjectCode"" = 17
                     AND T1.""SeriesName"" IN (SELECT ""WhsCode"" FROM OWHS WHERE ""Location"" = 3))");
@@ -1010,7 +1011,7 @@ namespace SAP_API.Controllers {
             return JObject.Parse(@"{ RESULT: 'False', AUTH: ''}");
         }
 
-        private List<JToken> auth(string CardCode, string Series, SAPContext context) {
+        private List<JToken> auth(string CardCode, int Series, SAPContext context) {
             List <JToken> result = new List<JToken>();
             JToken resultfact = facturasPendientes(CardCode, Series, context);
             JToken resultcredit = limiteCredito(CardCode, Series, context);
@@ -1024,19 +1025,28 @@ namespace SAP_API.Controllers {
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] CreateOrder value) {
 
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPMulti SAPMultiInstance = HttpContext.RequestServices.GetService(typeof(SAPMulti)) as SAPMulti;
+
+            SAPContext context = SAPMultiInstance.GetCurrentInstance();
+
+            if (context == null) {
+                return UnprocessableEntity("Servicio saturado. Favor de reintentar en un minuto.");
+            }
+
+            context.oCompany.StartTransaction();
 
             if (value.auth == 0 && value.payment != 19) {
                 List<JToken> resultAuth = new List<JToken>();
                 if (value.payment == 8) {
-                    resultAuth.Add(facturasPendientes(value.cardcode, value.series.ToString(), context));
+                    resultAuth.Add(facturasPendientes(value.cardcode, value.series, context));
                     if (resultAuth[0]["RESULT"].ToString() == "True") {
+                        context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                         return Conflict(resultAuth);
                     }
-                }
-                else {
-                    resultAuth = auth(value.cardcode, value.series.ToString(), context);
+                } else {
+                    resultAuth = auth(value.cardcode, value.series, context);
                     if (resultAuth[0]["RESULT"].ToString() == "True" || resultAuth[1]["RESULT"].ToString() == "True") {
+                        context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                         return Conflict(resultAuth);
                     }
                 }
@@ -1044,7 +1054,6 @@ namespace SAP_API.Controllers {
 
             SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            SAPbobsCOM.Items items = (SAPbobsCOM.Items)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
             SAPbobsCOM.BusinessPartners contact = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
 
             oRecSet.DoQuery($@"
@@ -1057,10 +1066,11 @@ namespace SAP_API.Controllers {
                 Where serie.""ObjectCode"" = 17 AND serie.""Series"" = {value.series};");
 
             if (oRecSet.RecordCount == 0) {
+                context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                 return BadRequest(new { error = "Error en sucursal" });
             }
-            
-            string warehouse = context.XMLTOJSON(oRecSet.GetAsXML())["OWHS"][0]["WhsCode"].ToString();
+
+            string warehouse = (string)oRecSet.Fields.Item("WhsCode").Value;
 
             order.CardCode = value.cardcode;
             order.Series = value.series;
@@ -1070,6 +1080,7 @@ namespace SAP_API.Controllers {
 
             if (!contact.GetByKey(value.cardcode)) {
                 string error = context.oCompany.GetLastErrorDescription();
+                context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                 return BadRequest(new { error });
             }
 
@@ -1085,9 +1096,7 @@ namespace SAP_API.Controllers {
             if (temp != String.Empty) {
                 order.UserFields.Fields.Item("U_SO1_02FORMAPAGO").Value = temp;
             }
-
-            Stopwatch s1 = Stopwatch.StartNew();
-            
+           
             for (int i = 0; i < value.rows.Count; i++) {
 
                 order.Lines.ItemCode = value.rows[i].code;
@@ -1102,13 +1111,12 @@ namespace SAP_API.Controllers {
                     AND ""PriceList"" = {value.priceList};");
 
                 if(oRecSet.RecordCount == 0) {
+                    context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                     return BadRequest(new { error = "Error en Lista de Precio" });
                 }
 
-                var PriceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"][0];
-
-                double Price = PriceList["Price"].ToObject<double>();
-                string Currency = PriceList["Currency"].ToString();
+                double Price = (double)oRecSet.Fields.Item("Price").Value;
+                string Currency = (string)oRecSet.Fields.Item("Currency").Value;
 
                 if (value.rows[i].uom == -2) {
                     order.Lines.UnitPrice = Price ;
@@ -1116,24 +1124,6 @@ namespace SAP_API.Controllers {
                     order.Lines.UnitPrice = Price * value.rows[i].equivalentePV;
                 }
                 order.Lines.Currency = Currency;
-                
-                /*
-                items.GetByKey(value.rows[i].code);
-                for (int j = 0; j < items.PriceList.Count; j++) {
-
-                    items.PriceList.SetCurrentLine(j);
-                    if (items.PriceList.PriceList == value.priceList) {
-                        if (value.rows[i].uom == -2) {
-                            order.Lines.UnitPrice = items.PriceList.Price;
-                        } else {
-                            order.Lines.UnitPrice = items.PriceList.Price * value.rows[i].equivalentePV;
-                        }
-                        order.Lines.Currency = items.PriceList.Currency;
-                        break;
-                    }
-                }
-
-                */
 
                 if (value.rows[i].uom == -2) {
                     order.Lines.UoMEntry = 185;
@@ -1146,19 +1136,16 @@ namespace SAP_API.Controllers {
 
                 order.Lines.Add();
             }
-            s1.Stop();
-
-            const int _max = 1000000;
-            Console.WriteLine(((double)(s1.Elapsed.TotalMilliseconds * 1000 * 1000) / _max).ToString("0.00 ns"));
-
 
             order.Comments = value.comments;
-            int result = order.Add();
-            if (result == 0) {
-                return Ok(new { value = context.oCompany.GetNewObjectKey() });
+
+            if (order.Add() == 0) {
+                context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
+                return Ok();
             } else {
                 string error = context.oCompany.GetLastErrorDescription();
-                return BadRequest(new { id = 12, error });
+                context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                return BadRequest(new { error });
             }
         }
 

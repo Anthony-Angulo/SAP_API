@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -8,16 +10,17 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using SAP_API.Entities;
 using SAP_API.Models;
+using SAP_API.Middlewares;
 
 namespace SAP_API {
     public class Startup {
@@ -86,9 +89,11 @@ namespace SAP_API {
             }).AddJsonOptions(options => {
                 options.SerializerSettings.ContractResolver = new DefaultContractResolver();
             }).SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
-            
-            //services.Add(new ServiceDescriptor(typeof(SAPContext[]), new SAPContext[4]));
+
             services.Add(new ServiceDescriptor(typeof(SAPContext), new SAPContext()));
+            services.Add(new ServiceDescriptor(typeof(SAPMulti), new SAPMulti()));
+            //services.Add(new ServiceDescriptor(typeof(SAPContext[]), new SAPContext[10]));
+            
 
             services.AddSwaggerGen(c =>
             {
@@ -151,36 +156,24 @@ namespace SAP_API {
             app.UseCors("CORS");
             app.UseHttpsRedirection();
 
-            /*
-            SAPContext[] SAPContext = app.ApplicationServices.GetService(typeof(SAPContext[])) as SAPContext[];
 
-            for (int i = 0; i< SAPContext.Length; i++) {
-                SAPContext[i] = new SAPContext();
-            }
+            SAPMulti SAPMultiInstance = app.ApplicationServices.GetService(typeof(SAPMulti)) as SAPMulti;
+
+            SAPMultiInstance.Init();
 
             app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action => {
                 action.Use(async (context, next) => {
-                    for (int i = 0; i < SAPContext.Length; i++)
-                    {
-                        if (!SAPContext[i].oCompany.Connected)
-                        {
-                            int code = SAPContext[i].oCompany.Connect();
-                            if (code != 0)
-                            {
-                                string error = SAPContext[i].oCompany.GetLastErrorDescription();
-                                var result = JsonConvert.SerializeObject(new { error });
-                                context.Response.ContentType = "application/json";
-                                context.Response.StatusCode = 400;
-                                await context.Response.WriteAsync(result);
-                                return;
-                            }
-                        }
+                    var Result = SAPMultiInstance.ConnectAll();
+                    if (!Result.Result) {
+                        var result = JsonConvert.SerializeObject(new { error = Result.Errors });
+                        context.Response.ContentType = "application/json";
+                        context.Response.StatusCode = 400;
+                        await context.Response.WriteAsync(result);
+                        return;
                     }
                     await next();
                 });
             });
-
-            */
 
             SAPContext SAPContext = app.ApplicationServices.GetService(typeof(SAPContext)) as SAPContext;
 
@@ -188,8 +181,7 @@ namespace SAP_API {
                 action.Use(async (context, next) => {
                     if (!SAPContext.oCompany.Connected) {
                         int code = SAPContext.oCompany.Connect();
-                        if (code != 0)
-                        {
+                        if (code != 0) {
                             string error = SAPContext.oCompany.GetLastErrorDescription();
                             var result = JsonConvert.SerializeObject(new { error });
                             context.Response.ContentType = "application/json";
@@ -201,6 +193,8 @@ namespace SAP_API {
                     await next();
                 });
             });
+
+            app.UseLogMiddleware();
 
             app.UseAuthentication();
             app.UseMvc();

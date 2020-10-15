@@ -300,14 +300,15 @@ namespace SAP_API.Controllers
             newRequest.Series = transferRequest.Series;
             newRequest.UserFields.Fields.Item("U_SO1_02NUMRECEPCION").Value = transferRequest.DocNum.ToString();
 
-                
             for (int j = 0; j < transfer.Lines.Count; j++) {
                     
                 transfer.Lines.SetCurrentLine(j);
-                newRequest.Lines.ItemCode = transfer.Lines.ItemCode;
+                transferRequest.Lines.SetCurrentLine(transfer.Lines.BaseLine);
+
+                newRequest.Lines.ItemCode = transferRequest.Lines.ItemCode;
                 newRequest.Lines.UoMEntry = transfer.Lines.UoMEntry;
-                newRequest.Lines.UseBaseUnits = transfer.Lines.UseBaseUnits;
-                newRequest.Lines.Quantity = transfer.Lines.Count;
+                newRequest.Lines.UseBaseUnits = transferRequest.Lines.UseBaseUnits;
+                newRequest.Lines.Quantity = transfer.Lines.Quantity;
                 newRequest.Lines.FromWarehouseCode = transferRequest.Lines.WarehouseCode;
                 newRequest.Lines.WarehouseCode = transferRequest.ToWarehouse;
                 newRequest.Lines.Add();
