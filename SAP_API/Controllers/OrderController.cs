@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -368,9 +369,11 @@ namespace SAP_API.Controllers {
                 LEFT JOIN OCTG payment ON payment.""GroupNum"" = ord.""GroupNum""
                 LEFT JOIN OCRD contact ON contact.""CardCode"" = ord.""CardCode""
                 WHERE ord.""DocEntry"" = '" + DocEntry + "' ");
+
             if (oRecSet.RecordCount == 0) {
                 return NotFound("No Existe Documento");
             }
+
             order = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"][0];
             DocCur = order["DocCur"].ToString();
             oRecSet.DoQuery(@"
@@ -598,8 +601,7 @@ namespace SAP_API.Controllers {
                     ""CardCode""
                 From ORDR WHERE ""DocNum"" = {DocNum};");
 
-            int rc = oRecSet.RecordCount;
-            if (rc == 0) {
+            if (oRecSet.RecordCount == 0) {
                 return NoContent();
             }
 
@@ -635,14 +637,14 @@ namespace SAP_API.Controllers {
 
             order["Lines"] = context.XMLTOJSON(oRecSet.GetAsXML())["RDR1"];
 
-            foreach (var pro in order["Lines"]) {
+            foreach (var line in order["Lines"]) {
 
                 oRecSet.DoQuery($@"
                     Select ""BcdCode""
-                    From OBCD Where ""ItemCode"" = '{pro["ItemCode"]}';");
+                    From OBCD Where ""ItemCode"" = '{line["ItemCode"]}';");
 
                 var temp = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"].Select(Q => (string)Q["BcdCode"]);
-                pro["CodeBars"] = JArray.FromObject(temp);
+                line["CodeBars"] = JArray.FromObject(temp);
 
                 oRecSet.DoQuery($@"
                     Select 
@@ -655,8 +657,8 @@ namespace SAP_API.Controllers {
                     JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                     JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                     JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                    Where header.""UgpCode"" = '{pro["ItemCode"]}';");
-                pro["Uoms"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+                    Where header.""UgpCode"" = '{line["ItemCode"]}';");
+                line["Uoms"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             }
 
             var output = order.ToObject<OrderDeliveryOutput>();
@@ -1045,15 +1047,19 @@ namespace SAP_API.Controllers {
             SAPbobsCOM.Items items = (SAPbobsCOM.Items)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
             SAPbobsCOM.BusinessPartners contact = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
 
-            oRecSet.DoQuery(@"
+            oRecSet.DoQuery($@"
                 Select
                     warehouse.""WhsCode"",
                     warehouse.""WhsName"",
                     serie.""Series""
                 From OWHS warehouse
                 LEFT JOIN NNM1 serie ON serie.""SeriesName"" = warehouse.""WhsCode""
-                Where serie.""ObjectCode"" = 17 AND serie.""Series"" = " + value.series);
-            oRecSet.MoveFirst();
+                Where serie.""ObjectCode"" = 17 AND serie.""Series"" = {value.series};");
+
+            if (oRecSet.RecordCount == 0) {
+                return BadRequest(new { error = "Error en sucursal" });
+            }
+            
             string warehouse = context.XMLTOJSON(oRecSet.GetAsXML())["OWHS"][0]["WhsCode"].ToString();
 
             order.CardCode = value.cardcode;
@@ -1062,32 +1068,59 @@ namespace SAP_API.Controllers {
             order.DocDueDate = value.date;
             order.PaymentGroupCode = value.payment;
 
-            if (contact.GetByKey(value.cardcode)) {
-                String temp = (String)contact.UserFields.Fields.Item("U_B1SYS_MainUsage").Value;
-                if (temp != String.Empty) {
-                    order.UserFields.Fields.Item("U_SO1_02USOCFDI").Value = temp;
-                }
-                temp = (String)contact.UserFields.Fields.Item("U_IL_MetPago").Value;
-                if (temp != String.Empty) {
-                    order.UserFields.Fields.Item("U_SO1_02METODOPAGO").Value = temp;
-                }
-                temp = (String)contact.UserFields.Fields.Item("U_IL_ForPago").Value;
-                if (temp != String.Empty) {
-                    order.UserFields.Fields.Item("U_SO1_02FORMAPAGO").Value = temp;
-                }
-            } else {
+            if (!contact.GetByKey(value.cardcode)) {
                 string error = context.oCompany.GetLastErrorDescription();
-                return BadRequest(new { id = 11 , error });
+                return BadRequest(new { error });
             }
 
+            String temp = (String)contact.UserFields.Fields.Item("U_B1SYS_MainUsage").Value;
+            if (temp != String.Empty) {
+                order.UserFields.Fields.Item("U_SO1_02USOCFDI").Value = temp;
+            }
+            temp = (String)contact.UserFields.Fields.Item("U_IL_MetPago").Value;
+            if (temp != String.Empty) {
+                order.UserFields.Fields.Item("U_SO1_02METODOPAGO").Value = temp;
+            }
+            temp = (String)contact.UserFields.Fields.Item("U_IL_ForPago").Value;
+            if (temp != String.Empty) {
+                order.UserFields.Fields.Item("U_SO1_02FORMAPAGO").Value = temp;
+            }
+
+            Stopwatch s1 = Stopwatch.StartNew();
+            
             for (int i = 0; i < value.rows.Count; i++) {
 
                 order.Lines.ItemCode = value.rows[i].code;
                 order.Lines.WarehouseCode = warehouse;
+                
+                oRecSet.DoQuery($@"
+                    Select
+                        ""Currency"",
+                        ""Price""
+                    FROM ITM1
+                    WHERE ""ItemCode"" = '{value.rows[i].code}' 
+                    AND ""PriceList"" = {value.priceList};");
 
+                if(oRecSet.RecordCount == 0) {
+                    return BadRequest(new { error = "Error en Lista de Precio" });
+                }
+
+                var PriceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"][0];
+
+                double Price = PriceList["Price"].ToObject<double>();
+                string Currency = PriceList["Currency"].ToString();
+
+                if (value.rows[i].uom == -2) {
+                    order.Lines.UnitPrice = Price ;
+                } else {
+                    order.Lines.UnitPrice = Price * value.rows[i].equivalentePV;
+                }
+                order.Lines.Currency = Currency;
+                
+                /*
                 items.GetByKey(value.rows[i].code);
-
                 for (int j = 0; j < items.PriceList.Count; j++) {
+
                     items.PriceList.SetCurrentLine(j);
                     if (items.PriceList.PriceList == value.priceList) {
                         if (value.rows[i].uom == -2) {
@@ -1100,6 +1133,8 @@ namespace SAP_API.Controllers {
                     }
                 }
 
+                */
+
                 if (value.rows[i].uom == -2) {
                     order.Lines.UoMEntry = 185;
                     order.Lines.UserFields.Fields.Item("U_CjsPsVr").Value = value.rows[i].quantity;
@@ -1111,14 +1146,15 @@ namespace SAP_API.Controllers {
 
                 order.Lines.Add();
             }
-            
+            s1.Stop();
+
+            const int _max = 1000000;
+            Console.WriteLine(((double)(s1.Elapsed.TotalMilliseconds * 1000 * 1000) / _max).ToString("0.00 ns"));
+
+
             order.Comments = value.comments;
             int result = order.Add();
             if (result == 0) {
-                //string objtype = context.oCompany.GetNewObjectType();
-                //if (objtype == "112") {
-                //    return Ok(new { value = "Borrador" });
-                //}
                 return Ok(new { value = context.oCompany.GetNewObjectKey() });
             } else {
                 string error = context.oCompany.GetLastErrorDescription();
@@ -1136,7 +1172,6 @@ namespace SAP_API.Controllers {
             SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             SAPbobsCOM.Items items = (SAPbobsCOM.Items)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
-            SAPbobsCOM.BusinessPartners contact = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
 
             oRecSet.DoQuery(@"
                 Select
@@ -1155,27 +1190,6 @@ namespace SAP_API.Controllers {
             order.DocDueDate = value.date;
             order.Address = value.address;
             order.Address2 = "";
-
-            //if (contact.GetByKey(value.cardcode))
-            //{
-            //    String temp = (String)contact.UserFields.Fields.Item("U_B1SYS_MainUsage").Value;
-            //    if (temp != String.Empty) {
-            //        order.UserFields.Fields.Item("U_SO1_02USOCFDI").Value = temp;
-            //    }
-            //    temp = (String)contact.UserFields.Fields.Item("U_IL_MetPago").Value;
-            //    if (temp != String.Empty) {
-            //        order.UserFields.Fields.Item("U_SO1_02METODOPAGO").Value = temp;
-            //    }
-            //    temp = (String)contact.UserFields.Fields.Item("U_IL_ForPago").Value;
-            //    if (temp != String.Empty) {
-            //        order.UserFields.Fields.Item("U_SO1_02FORMAPAGO").Value = temp;
-            //    }
-            //}
-            //else
-            //{
-            //    string error = context.oCompany.GetLastErrorDescription();
-            //    return BadRequest(new { error });
-            //}
 
             for (int i = 0; i < value.rows.Count; i++) {
                 order.Lines.ItemCode = value.rows[i].code;

@@ -19,7 +19,7 @@ namespace SAP_API.Controllers {
         /// <returns>GoodsReceiptSearchResponse</returns>
         /// <response code="200">GoodsReceiptSearchResponse(SearchResponse)</response>
         // POST: api/GoodsReceipt/Search
-        [ProducesResponseType(typeof(GoodsReceiptSearchDetail), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(GoodsReceiptSearchResponse), StatusCodes.Status200OK)]
         [HttpPost("Search")]
         public async Task<IActionResult> Search([FromBody] SearchRequest request) {
 

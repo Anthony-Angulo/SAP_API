@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using SAP_API.Entities;
@@ -11,49 +12,81 @@ using SAP_API.Models;
 
 namespace SAP_API.Controllers {
 
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class RoleController : ControllerBase {
 
+        // Atributtes
         private readonly ApplicationDbContext _context;
         private readonly RoleManager<IdentityRole> _roleManager;
 
-        public RoleController(ApplicationDbContext context, RoleManager<IdentityRole> roleManager) {
+        // Constructor
+        public RoleController(ApplicationDbContext context,
+                              RoleManager<IdentityRole> roleManager) {
             _roleManager = roleManager;
             _context = context;
         }
 
+        /// <summary>
+        /// Get Role List From External Database.
+        /// </summary>
+        /// <returns>Role List</returns>
+        /// <response code="200">Role List </response>
         // GET: api/Role
-        [Authorize]
+        [ProducesResponseType(typeof(IdentityRole[]), StatusCodes.Status200OK)]
         [HttpGet]
-        public IEnumerable<IdentityRole> Get() {
-            return _context.Roles;
+        public async Task<IActionResult> Get() {
+            return Ok(_context.Roles);
         }
 
-        // GET: api/Role/5
-        [Authorize]
+        class RoleOutput {
+            public string Name { get; set; }
+            public string ID { get; set; }
+            public List<Permission.PermissionsOutput> PermissionsList { get; set; }
+        }
+
+        /// <summary>
+        /// Get Role Detail From External Database.
+        /// </summary>
+        /// <returns>Role Detail</returns>
+        /// <response code="200">Role Detail</response>
+        /// <response code="204">Role not Found</response>
+        // GET: api/Role/:id
+        [ProducesResponseType(typeof(RoleOutput), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(string id) {
+            
             var Role = await _roleManager.FindByIdAsync(id);
+
             if (Role != null) {
-                var claims = await _roleManager.GetClaimsAsync(Role);
-                var PermissionsClaimList = claims.Where(x => x.Type == CustomClaimTypes.Permission);
-
-                List<string> permissionValueList = PermissionsClaimList.Select(x => x.Value).ToList();
-                var PermissionsList = Permission.Get(permissionValueList);
-
-                Object result = new {
-                    PermissionsList,
-                    Name = Role.Name,
-                    ID = Role.Id
-                };
-                return Ok(result);
+                return NoContent();
             }
-            return NotFound();
+
+            var claims = await _roleManager.GetClaimsAsync(Role);
+            var PermissionsClaimList = claims.Where(x => x.Type == CustomClaimTypes.Permission);
+
+            List<string> permissionValueList = PermissionsClaimList.Select(x => x.Value).ToList();
+            var PermissionsList = Permission.Get(permissionValueList);
+
+            RoleOutput output = new RoleOutput {
+                PermissionsList = PermissionsList,
+                Name = Role.Name,
+                ID = Role.Id
+            };
+
+            return Ok(output);
+
         }
 
+        /// <summary>
+        /// Register Role into External Database.
+        /// </summary>
+        /// <returns></returns>
+        /// <response code="200"></response>
         // POST: api/Role
-        [Authorize]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] RoleDto value) {
 
@@ -67,8 +100,13 @@ namespace SAP_API.Controllers {
             return Ok();
         }
 
-        // PUT: api/Warehouse/5
-        [Authorize]
+        /// <summary>
+        /// Edit Role From External Database.
+        /// </summary>
+        /// <returns></returns>
+        /// <response code="200"></response>
+        // PUT: api/Role/:id
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [HttpPut("{id}")]
         public async Task<IActionResult> Put(string id, [FromBody] RoleDto value) {
 

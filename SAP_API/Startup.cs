@@ -87,6 +87,7 @@ namespace SAP_API {
                 options.SerializerSettings.ContractResolver = new DefaultContractResolver();
             }).SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
             
+            //services.Add(new ServiceDescriptor(typeof(SAPContext[]), new SAPContext[4]));
             services.Add(new ServiceDescriptor(typeof(SAPContext), new SAPContext()));
 
             services.AddSwaggerGen(c =>
@@ -150,12 +151,45 @@ namespace SAP_API {
             app.UseCors("CORS");
             app.UseHttpsRedirection();
 
+            /*
+            SAPContext[] SAPContext = app.ApplicationServices.GetService(typeof(SAPContext[])) as SAPContext[];
+
+            for (int i = 0; i< SAPContext.Length; i++) {
+                SAPContext[i] = new SAPContext();
+            }
+
+            app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action => {
+                action.Use(async (context, next) => {
+                    for (int i = 0; i < SAPContext.Length; i++)
+                    {
+                        if (!SAPContext[i].oCompany.Connected)
+                        {
+                            int code = SAPContext[i].oCompany.Connect();
+                            if (code != 0)
+                            {
+                                string error = SAPContext[i].oCompany.GetLastErrorDescription();
+                                var result = JsonConvert.SerializeObject(new { error });
+                                context.Response.ContentType = "application/json";
+                                context.Response.StatusCode = 400;
+                                await context.Response.WriteAsync(result);
+                                return;
+                            }
+                        }
+                    }
+                    await next();
+                });
+            });
+
+            */
+
             SAPContext SAPContext = app.ApplicationServices.GetService(typeof(SAPContext)) as SAPContext;
+
             app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action => {
                 action.Use(async (context, next) => {
                     if (!SAPContext.oCompany.Connected) {
                         int code = SAPContext.oCompany.Connect();
-                        if (code != 0) {
+                        if (code != 0)
+                        {
                             string error = SAPContext.oCompany.GetLastErrorDescription();
                             var result = JsonConvert.SerializeObject(new { error });
                             context.Response.ContentType = "application/json";
@@ -167,6 +201,7 @@ namespace SAP_API {
                     await next();
                 });
             });
+
             app.UseAuthentication();
             app.UseMvc();
 

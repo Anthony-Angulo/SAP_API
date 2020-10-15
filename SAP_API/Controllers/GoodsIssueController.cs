@@ -174,8 +174,7 @@ namespace SAP_API.Controllers {
                 LEFT JOIN OWHS warehouse ON warehouse.""WhsCode"" = series.""SeriesName""
                 WHERE document.""DocEntry"" = '{DocEntry}';");
 
-            int rc = oRecSet.RecordCount;
-            if (rc == 0) {
+            if (oRecSet.RecordCount == 0) {
                 return NoContent();
             }
 

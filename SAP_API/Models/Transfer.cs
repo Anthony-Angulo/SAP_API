@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using SAPbobsCOM;
+using System.Collections.Generic;
 
 namespace SAP_API.Models
 {
@@ -33,23 +34,36 @@ namespace SAP_API.Models
         public double InvQty { get; set; }
         public string UomCode2 { get; set; }
     }
-    public class Transfer {
-        public int order { set; get; }
-        public List<TransferRow> products { set; get; }
-    }
-    public class TransferRow {
-        public string ItemCode { set; get; }
-        public double Count { set; get; }
-        public int Line { set; get; }
-        public int UoMEntry { set; get; }
-        public SAPbobsCOM.BoYesNoEnum  UseBaseUnits { set; get; }
-        public string WarehouseCode { set; get; }
-        public string Pallet { set; get; }
-        public List<TranferRowBatch> batch { set; get; }
-    }
+
+    //public class TransferRow {
+    //    public string ItemCode { set; get; }
+    //    public double Count { set; get; }
+    //    public int Line { set; get; }
+    //    public int UoMEntry { set; get; }
+    //    public SAPbobsCOM.BoYesNoEnum UseBaseUnits { set; get; }
+    //    public string Pallet { set; get; }
+    //    public List<TranferRowBatch> batch { set; get; }
+    //}
 
     public class TranferRowBatch {
         public double quantity { set; get; }
         public string name { set; get; }
     }
+
+    public class Transfer {
+        public int DocEntry { set; get; }
+        public List<TransferRow> TransferRows { set; get; }
+    }
+    public class TransferRow {
+        public int LineNum { set; get; }
+        public string Pallet { get; set; }
+        public double Count { get; set; }
+        public List<TransferRowBatch> BatchList { set; get; }
+        
+    }
+    public class TransferRowBatch {
+        public double Quantity { set; get; }
+        public string Code { set; get; }
+    }
+
 }

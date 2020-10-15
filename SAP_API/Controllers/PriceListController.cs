@@ -12,19 +12,21 @@ namespace SAP_API.Controllers {
     [ApiController]
     public class PriceListController : ControllerBase {
 
-        //  Summary:
-        //    Get PriceList Information with the SDK Object
-        //
-        //  Parameters:
-        //      None.
-        //
+        // TODO: Class To Serialize Output
+        /// <summary>
+        /// Get PriceList Information with the SDK Object.
+        /// </summary>
+        /// <returns>PriceList</returns>
+        /// <response code="200">PriceList</response>
         // GET: api/PriceList
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [HttpGet]
         public async Task<IActionResult> Get() {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.PriceLists items = (SAPbobsCOM.PriceLists)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPriceLists);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
             List<Object> list = new List<Object>();
 
             oRecSet.DoQuery("Select * From OPLN");
@@ -39,22 +41,28 @@ namespace SAP_API.Controllers {
             return Ok(list);
         }
 
-        //  Summary:
-        //    Get PriceList Name and Num.
-        //
-        //  Parameters:
-        //      None.
-        //
+        // Class To Serialize Output
+        class PriceListOutput {
+            public string ListName { get; set; }
+            public uint ListNum { get; set; }
+        }
+
+        /// <summary>
+        /// Get PriceList Name and Num.
+        /// </summary>
+        /// <returns>PriceList</returns>
+        /// <response code="200">PriceList</response>
         // GET: api/PriceList/CRMList
+        [ProducesResponseType(typeof(PriceListOutput[]), StatusCodes.Status200OK)]
         [HttpGet("CRMList")]
         public async Task<IActionResult> GetCRMList() {
             
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery("Select \"ListName\", \"ListNum\" From OPLN");
-            oRecSet.MoveFirst();
-            JToken priceList = context.XMLTOJSON(oRecSet.GetAsXML())["OPLN"];
-            return Ok(priceList);
+            oRecSet.DoQuery(@"Select ""ListName"", ""ListNum"" From OPLN;");
+            JToken temp = context.XMLTOJSON(oRecSet.GetAsXML())["OPLN"];
+            List<PriceListOutput> output = temp.ToObject<List<PriceListOutput>>();
+            return Ok(output);
         }
 
     }

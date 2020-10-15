@@ -16,13 +16,15 @@ namespace SAP_API.Controllers {
             public double CurrencyRate;
         }
 
-        //  Summary:
-        //    Get CurrencyRate From the Current Date.
-        //
-        //  Parameters:
-        //      None.
-        //
+        /// <summary>
+        /// Get CurrencyRate From the Current Date.
+        /// </summary>
+        /// <returns>Currenct CurrencyRate</returns>
+        /// <response code="200">Returns CurrencyRate</response>
+        /// <response code="409">Error</response>
         // GET: api/CurrencyRate
+        [ProducesResponseType(typeof(CurrencyRateDetail), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status204NoContent)]
         [HttpGet]
         public async Task<IActionResult> Get() {
 
@@ -30,11 +32,11 @@ namespace SAP_API.Controllers {
             SAPbobsCOM.SBObob SBO = (SAPbobsCOM.SBObob)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoBridge);
             try {
                 SAPbobsCOM.Recordset oRecSet = SBO.GetCurrencyRate("USD", DateTime.Today);
-                JToken currency = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
-                CurrencyRateDetail currencyRateDetail = currency.ToObject<CurrencyRateDetail>();
+                JToken temp = context.XMLTOJSON(oRecSet.GetAsXML())["Recordset"][0];
+                CurrencyRateDetail CurrencyOutput = temp.ToObject<CurrencyRateDetail>();
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
-                return Ok(currencyRateDetail);
+                return Ok(CurrencyOutput);
             } catch(Exception ex) {
                 return Conflict(ex.Message);
             }

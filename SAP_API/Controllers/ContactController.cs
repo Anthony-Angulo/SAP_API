@@ -6,14 +6,22 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
 
-namespace SAP_API.Controllers
-{
+namespace SAP_API.Controllers {
+
     [Route("api/[controller]")]
     [ApiController]
     public class ContactController : ControllerBase {
 
+        /// <summary>
+        /// Get Client List to CRM web Filter by DatatableParameters.
+        /// </summary>
+        /// <param name="request">DataTableParameters</param>
+        /// <returns>ClientSearchResponse</returns>
+        /// <response code="200">ClientSearchResponse(SearchResponse)</response>
+        // POST: api/Contact/Clients/Search
+        [ProducesResponseType(typeof(ClientSearchResponse), StatusCodes.Status200OK)]
         [HttpPost("Clients/Search")]
-        public async Task<IActionResult> Get([FromBody] SearchRequest request) {
+        public async Task<IActionResult> GetClients([FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -71,19 +79,25 @@ namespace SAP_API.Controllers
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0]["COUNT"].ToObject<int>();
 
-            ClientSearchResponse respose = new ClientSearchResponse
-            {
+            ClientSearchResponse respose = new ClientSearchResponse {
                 data = orders,
                 draw = request.Draw,
                 recordsFiltered = COUNT,
                 recordsTotal = COUNT,
             };
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
+
             return Ok(respose);
         }
 
-        [HttpPost("providers/search")]
+        /// <summary>
+        /// Get Provider List to CRM web Filter by DatatableParameters.
+        /// </summary>
+        /// <param name="request">DataTableParameters</param>
+        /// <returns>ProviderSearchResponse</returns>
+        /// <response code="200">ProviderSearchResponse(SearchResponse)</response>
+        // POST: api/Contact/Providers/Search
+        [ProducesResponseType(typeof(ProviderSearchResponse), StatusCodes.Status200OK)]
+        [HttpPost("Providers/Search")]
         public async Task<IActionResult> GetProviders([FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
@@ -131,7 +145,6 @@ namespace SAP_API.Controllers
             query += " LIMIT " + request.length + " OFFSET " + request.start + "";
 
             oRecSet.DoQuery(query);
-            oRecSet.MoveFirst();
             var orders = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"].ToObject<List<ProviderSearchDetail>>();
 
             string queryCount = @"
@@ -143,27 +156,33 @@ namespace SAP_API.Controllers
                 queryCount += " AND " + whereClause;
             }
             oRecSet.DoQuery(queryCount);
-            oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0]["COUNT"].ToObject<int>();
 
-            ProviderSearchResponse respose = new ProviderSearchResponse
-            {
+            ProviderSearchResponse respose = new ProviderSearchResponse {
                 data = orders,
                 draw = request.Draw,
                 recordsFiltered = COUNT,
                 recordsTotal = COUNT,
             };
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
+
             return Ok(respose);
         }
 
+        /// <summary>
+        /// Get Client Info to CRM 
+        /// </summary>
+        /// <param name="CardCode">CardCode. A String that serve as Client identifier.</param>
+        /// <returns>A Client Basic Info</returns>
+        /// <response code="200">Returns Client Info</response>
+        /// <response code="204">No Client Found</response>
+        // GET: api/Contact/CRMClientToSell/:CardCode
+        [ProducesResponseType(typeof(ContactToSell), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("CRMClientToSell/{CardCode}")]
         public async Task<IActionResult> GetCRMClientToSell(string CardCode) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            JToken contact;
 
             oRecSet.DoQuery(@"
                 Select
@@ -186,10 +205,10 @@ namespace SAP_API.Controllers
                 Where ""CardCode"" = '" + CardCode + "'");
 
             if (oRecSet.RecordCount == 0) {
-                return NotFound("No Existe Contacto");
+                return NoContent();
             }
 
-            contact = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0];
+            JToken temp = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0];
 
             oRecSet.DoQuery(@"
                 Select
@@ -199,21 +218,30 @@ namespace SAP_API.Controllers
                 JOIN OPYM paymentMethod ON paymentMethod.""PayMethCod"" = paymentMethodCardCode.""PymCode""
                 Where ""CardCode"" = '" + CardCode  + "'");
 
-            contact["PaymentMethods"] = context.XMLTOJSON(oRecSet.GetAsXML())["CRD2"];
+            temp["PaymentMethods"] = context.XMLTOJSON(oRecSet.GetAsXML())["CRD2"];
 
-            ContactToSell contactToSell = contact.ToObject<ContactToSell>();
+            ContactToSell ContactOutput = temp.ToObject<ContactToSell>();
 
-            oRecSet = null;
-            contact = null;
-
+            //Force Garbage Collector. Recommendation by InterLatin Dude. SDK Problem with memory.
             GC.Collect();
             GC.WaitForPendingFinalizers();
 
-            return Ok(contactToSell);
+            return Ok(ContactOutput);
         }
 
+        // TODO: Class To Serialize Result.
+        /// <summary>
+        /// Get Provider Info to CRM 
+        /// </summary>
+        /// <param name="CardCode">CardCode. A String that serve as Provider identifier.</param>
+        /// <returns>A Provider Basic Info</returns>
+        /// <response code="200">Returns Provider Info</response>
+        /// <response code="204">No Provider Found</response>
+        // GET: api/Contact/CRMProviderToBuy/:CardCode
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("CRMProviderToBuy/{CardCode}")]
-        public async Task<IActionResult> CRMProviderToBuy(string CardCode) {
+        public async Task<IActionResult> GetCRMProviderToBuy(string CardCode) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -228,15 +256,17 @@ namespace SAP_API.Controllers
                 Where ""CardCode"" = '" + CardCode + "'");
 
             if (oRecSet.RecordCount == 0) {
-                return NotFound("No Existe Contacto");
+                return NoContent();
             }
 
             JToken contact = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0];
+
+            //Force Garbage Collector. Recommendation by InterLatin Dude. SDK Problem with memory.
             GC.Collect();
             GC.WaitForPendingFinalizers();
+
             return Ok(contact);
         }
-
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -271,42 +301,13 @@ namespace SAP_API.Controllers
             return NotFound("No Existe Contacto");
         }
 
-        // GET: api/Contact/CRMList
-        [HttpGet("CRMList")]
-        public async Task<IActionResult> GetCRMList() {
-
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery("Select \"CardCode\", \"CardName\", \"CardFName\"  From OCRD Where \"CardType\" = 'C' AND \"CardCode\" NOT LIKE '%-D'");
-            oRecSet.MoveFirst();
-            JToken contacts = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"];
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            //return Ok(context.comp(contacts, 0).Result);
-            return Ok(contacts);
-        }
-
-        // GET: api/Contact/CRMListProveedor
-        [HttpGet("CRMListProveedor")]
-        public async Task<IActionResult> GetCRMListProveedor() {
-
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery("Select \"CardCode\", \"CardName\", \"Currency\", \"CardFName\"  From OCRD Where \"CardType\" = 'S'");
-            oRecSet.MoveFirst();
-            JToken contacts = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"];
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            return Ok(contacts);
-        }
-
         // GET: api/Contact/APPCRM/200
         [HttpGet("APPCRM/{id}")]
         public async Task<IActionResult> GetAPPCRM(int id) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery(@"
+            oRecSet.DoQuery($@"
                 Select
                     ""CardCode"",
                     ""CardName"",
@@ -319,14 +320,17 @@ namespace SAP_API.Controllers
                     ""ListNum""
                 From OCRD employeeSales
                 JOIN OHEM employee ON ""SlpCode"" = ""salesPrson""
-                Where ""CardType"" = 'C' AND ""empID"" = " + id + @" AND ""CardCode"" NOT LIKE '%-D'");
+                Where ""CardType"" = 'C' AND ""empID"" = {id} AND ""CardCode"" NOT LIKE '%-D'");
+            
             if (oRecSet.RecordCount == 0) {
                 return Ok(new List<string>());
             }
+
             JToken contacts = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"];
+            
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            //return Ok(await context.comp(contacts, 3));
+            
             return Ok(contacts);
         }
 
@@ -336,6 +340,7 @@ namespace SAP_API.Controllers
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            
             oRecSet.DoQuery(@"
                 Select
                     ""CardCode"",
@@ -348,25 +353,25 @@ namespace SAP_API.Controllers
                     ""GroupNum"",
                     ""ListNum""
                 From OCRD Where ""CardType"" = 'C' AND ""CardCode"" NOT LIKE '%-D'");
-            oRecSet.MoveFirst();
+            
             JToken contacts = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"];
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            //return Ok(await context.comp(contacts, 3));
             return Ok(contacts);
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Get(string id) {
+        [HttpGet("{CardCode}")]
+        public async Task<IActionResult> Get(string CardCode) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.BusinessPartners items = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
+            SAPbobsCOM.BusinessPartners Bp = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
 
-            if (items.GetByKey(id)) {
-                JToken contact = context.XMLTOJSON(items.GetAsXML());
-                return Ok(contact);
+            if (!Bp.GetByKey(CardCode)) {
+                return NoContent();
             }
-            return NotFound("No Existe Contacto");
+            JToken output = context.XMLTOJSON(Bp.GetAsXML());
+            return Ok(output);
+
         }
 
     }

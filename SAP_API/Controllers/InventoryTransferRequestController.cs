@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -12,8 +13,15 @@ namespace SAP_API.Controllers
     [ApiController]
     public class InventoryTransferRequestController : ControllerBase {
 
+        /// <summary>
+        /// Get InvntoryTransferRequest List to WMS web Filter by DatatableParameters.
+        /// </summary>
+        /// <param name="request">DataTableParameters</param>
+        /// <returns>TransferRequestSearchResponse</returns>
+        /// <response code="200">TransferRequestSearchResponse(SearchResponse)</response>
         // POST: api/InventoryTransferRequest/Search
-        [HttpPost("search")]
+        [ProducesResponseType(typeof(TransferRequestSearchResponse), StatusCodes.Status200OK)]
+        [HttpPost("Search")]
         public async Task<IActionResult> GetSearch([FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
@@ -112,7 +120,6 @@ namespace SAP_API.Controllers
             return Ok(respose);
         }
 
-
         // GET: api/InventoryTransferRequest/WMSDetail/5/DocEntry
         [HttpGet("WMSDetail/{id}/{doctype}")]
         public async Task<IActionResult> GetWMSDetail(int id, string doctype) {
@@ -160,28 +167,7 @@ namespace SAP_API.Controllers
                 DocEntry = transfer["DocEntry"].ToObject<int>();
                 DocNum = id;
             }
-            
-
-            //oRecSet.DoQuery(@"
-            //    SELECT
-            //        *
-            //    From  IBT1 Where ""WhsCode"" = 'S01' AND ""ItemCode"" = 'A0305243'");
-
-            //transfer["IBT1"] = context.XMLTOJSON(oRecSet.GetAsXML())["IBT1"];
-
-            // Inventory Transfer Request Rows
-            //oRecSet.DoQuery(@"
-            //    SELECT
-            //        ""DocEntry"",
-            //        ""LineNum"",
-            //        ""LineStatus"",
-            //        ""ItemCode"",
-            //        ""Dscription"",
-            //        ""Quantity"",
-            //        ""OpenQty"",
-            //        ""WhsCode"",
-            //        ""UomCode""
-            //    FROM WTQ1 WHERE ""DocEntry"" = " + docentry);
+   
             oRecSet.DoQuery(@"
                 SELECT
                     ""LineNum"",
@@ -281,9 +267,137 @@ namespace SAP_API.Controllers
             return Ok(transfer);
         }
 
+        class TransferDeliveryOutputLineUom {
+            public uint BaseEntry { get; set; }
+            public string BaseUom { get; set; }
+            public uint UomEntry { get; set; }
+            public string UomCode { get; set; }
+            public double BaseQty { get; set; }
+        }
+        class TransferDeliveryOutputLine {
+            public string LineStatus { get; set; }
+            public uint LineNum { get; set; }
+            public string ItemCode { get; set; }
+            public uint UomEntry { get; set; }
+            public string WhsCode { get; set; }
+            public string UomCode { get; set; }
+            public double OpenInvQty { get; set; }
+            public double OpenQty { get; set; }
+            public string FromWhsCod { get; set; }
+            public string ItemName { get; set; }
+            public char QryGroup44 { get; set; }
+            public char QryGroup45 { get; set; }
+            public char ManBtchNum { get; set; }
+            public double U_IL_PesMax { get; set; }
+            public double U_IL_PesMin { get; set; }
+            public double U_IL_PesProm { get; set; }
+            public string U_IL_TipPes { get; set; }
+            public double NumInSale { get; set; }
+            public double NumInBuy { get; set; }
+            public List<string> CodeBars { get; set; }
+            public List<TransferDeliveryOutputLineUom> Uoms { get; set; }
+        }
+        class TransferDeliveryOutput {
+            public uint DocEntry { get; set; }
+            public uint DocNum { get; set; }
+            public string DocStatus { get; set; }
+            public string ToWhsCode { get; set; }
+            public string Filler { get; set; }
+            public List<TransferDeliveryOutputLine> Lines { get; set; }
+        }
+        /// <summary>
+        /// Get TransferRequest Detail to WMS App Delivery. This route return header and lines
+        /// document, plus BarCodes and Uoms Detail.
+        /// </summary>
+        /// <param name="DocNum">DocNum. An Unsigned Integer that serve as TrasnferRequest Document identifier.</param>
+        /// <returns>A TrasnferRequest Detail To Delivery</returns>
+        /// <response code="200">Returns TransferRequest</response>
+        /// <response code="204">No Order Found</response>
+        /// <response code="400">Document Found, Document Close</response>
+        // GET: api/InventoryTransferRequest/Delivery/:DocNum
+        [ProducesResponseType(typeof(TransferDeliveryOutput), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [HttpGet("Delivery/{DocNum}")]
+        public async Task<IActionResult> GetReception(uint DocNum) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery($@"
+                Select
+                    ""DocEntry"",
+                    ""DocNum"",
+                    ""DocStatus"",
+                    ""ToWhsCode"",
+                    ""Filler""
+                From OWTQ WHERE ""DocNum"" = {DocNum};");
+
+            if (oRecSet.RecordCount == 0) {
+                return NoContent();
+            }
+
+            JToken request = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"][0];
+
+            if (request["DocStatus"].ToString() != "O") {
+                return BadRequest("Documento Cerrado");
+            }
+
+            oRecSet.DoQuery($@"
+                Select
+                    ""LineStatus"",
+                    ""LineNum"",
+                    Line.""ItemCode"",
+                    ""FromWhsCod"",
+                    ""UomEntry"",
+                    ""WhsCode"",
+                    ""UomCode"",
+                    ""OpenInvQty"",
+                    ""OpenQty"",
+                    ""ItemName"",
+                    ""QryGroup44"",
+                    ""QryGroup45"",
+                    ""ManBtchNum"",
+                    ""U_IL_PesMax"",
+                    ""U_IL_PesMin"",
+                    ""U_IL_PesProm"",
+                    ""U_IL_TipPes"",
+                    ""NumInSale""
+                From WTQ1 as Line
+                JOIN OITM as Detail on Detail.""ItemCode"" = Line.""ItemCode""
+                WHERE Line.""DocEntry"" = {request["DocEntry"]};");
+
+            request["Lines"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTQ1"];
+
+            foreach (var line in request["Lines"]) {
+
+                oRecSet.DoQuery($@"
+                    Select ""BcdCode""
+                    From OBCD Where ""ItemCode"" = '{line["ItemCode"]}';");
+
+                var temp = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"].Select(Q => (string)Q["BcdCode"]);
+                line["CodeBars"] = JArray.FromObject(temp);
+
+                oRecSet.DoQuery($@"
+                    Select 
+                        header.""BaseUom"" as ""BaseEntry"",
+                        baseUOM.""UomCode"" as ""BaseUom"",
+                        detail.""UomEntry"",
+                        UOM.""UomCode"",
+                        detail.""BaseQty""
+                    From OUGP header
+                    JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                    JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                    JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                    Where header.""UgpCode"" = '{line["ItemCode"]}';");
+                line["Uoms"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            }
+
+            TransferDeliveryOutput output = request.ToObject<TransferDeliveryOutput>();
+            return Ok(output);
+        }
+
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
 
         // GET: api/InventoryTransferRequest/list
         [HttpGet("list/{date}")]
@@ -328,88 +442,6 @@ namespace SAP_API.Controllers
             }
             return NotFound("No Existe Documento");
         }
-
-        // GET: api/InventoryTransferRequest/Reception/5
-        [HttpGet("Reception/{id}")]
-        public async Task<IActionResult> GetReception(int id) {
-
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
-            oRecSet.DoQuery(@"
-                Select
-                    ""DocEntry"",
-                    ""DocNum"",
-                    ""DocStatus"",
-                    ""ToWhsCode"",
-                    ""Filler""
-                From OWTQ WHERE ""DocNum"" = " + id);
-
-            int rc = oRecSet.RecordCount;
-            if (rc == 0) {
-                return NotFound();
-            }
-
-            JToken request = context.XMLTOJSON(oRecSet.GetAsXML());
-            request["AdmInfo"]?.Parent.Remove();
-            request["OWTQ"] = request["OWTQ"][0];
-
-            if (request["OWTQ"]["DocStatus"].ToString() != "O") {
-                return BadRequest("Documento Cerrado");
-            }
-
-            oRecSet.DoQuery(@"
-                Select
-                    ""LineStatus"",
-                    ""LineNum"",
-                    ""ItemCode"",
-                    ""Dscription"",
-                    ""UseBaseUn"",
-                    ""UomEntry"",
-                    ""WhsCode"",
-                    ""UomCode"",
-                    ""FromWhsCod"",
-                    ""OpenInvQty"",
-                    ""OpenQty""
-                From WTQ1 WHERE ""DocEntry"" = " + request["OWTQ"]["DocEntry"]);
-
-            request["WTQ1"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTQ1"];
-
-            foreach (var pro in request["WTQ1"]) {
-                oRecSet.DoQuery(@"
-                    Select
-                        ""ItemCode"",
-                        ""ItemName"",
-                        ""QryGroup7"",
-                        ""QryGroup41"",
-                        ""QryGroup42"",
-                        ""QryGroup44"",
-                        ""QryGroup45"",
-                        ""ManBtchNum"",
-                        ""U_IL_PesMax"",
-                        ""U_IL_PesMin"",
-                        ""U_IL_PesProm"",
-                        ""U_IL_TipPes"",
-                        ""NumInSale"",
-                        ""NumInBuy""
-                    From OITM Where ""ItemCode"" = '" + pro["ItemCode"] + "'");
-                oRecSet.MoveFirst();
-                pro["Detail"] = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
-                oRecSet.DoQuery(@"
-                    Select
-                        ""BcdEntry"",
-                        ""BcdCode"",
-                        ""BcdName"",
-                        ""ItemCode"",
-                        ""UomEntry""
-                    From OBCD Where ""ItemCode"" = '" + pro["ItemCode"] + "'");
-                oRecSet.MoveFirst();
-                pro["CodeBars"] = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
-            }
-
-            return Ok(request);
-        }
-
 
         // GET: api/InventoryTransferRequest/Detail/5
         [HttpGet("Detail/{id}/{doctype}")]

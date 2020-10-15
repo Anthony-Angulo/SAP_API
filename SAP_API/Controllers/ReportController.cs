@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
@@ -12,12 +9,6 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class ReportController : ControllerBase {
-
-        // GET: api/Report/5
-        [HttpGet("{id}", Name = "Get")]
-        public string Get(int id) {
-            return "value";
-        }
 
         // GET: api/Report/5
         [HttpGet("WarehouseGroupDate/{warehouseCode}/{group}/{fromDate}/{toDate}")]

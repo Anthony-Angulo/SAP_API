@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +14,16 @@ namespace SAP_API.Controllers {
     [ApiController]
     public class DeliveryController : ControllerBase {
 
+        // Note: Use OrderSearchResponse because the answer is composed of the same attributes.
+        // If these change, a new class would have to be used that adapts to the new data.
+        /// <summary>
+        /// Get Delivery List to WMS web Filter by DatatableParameters.
+        /// </summary>
+        /// <param name="request">DataTableParameters</param>
+        /// <returns>OrderSearchResponse</returns>
+        /// <response code="200">OrderSearchResponse(SearchResponse)</response>
+        // POST: api/Delivery/Search
+        [ProducesResponseType(typeof(OrderSearchResponse), StatusCodes.Status200OK)]
         [HttpPost("Search")]
         public async Task<IActionResult> Search([FromBody] SearchRequest request) {
 
@@ -120,19 +132,26 @@ namespace SAP_API.Controllers {
                 recordsFiltered = COUNT,
                 recordsTotal = COUNT,
             };
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
             return Ok(respose);
         }
 
-        // GET: api/Order/5
-        // Orden Detalle
+        // TODO: Class To Serialize Result.
+        /// <summary>
+        /// Get Delivery Detail to WMS Delivery Detail Page
+        /// </summary>
+        /// <param name="DocEntry">DocEntry. An Unsigned Integer that serve as Document identifier.</param>
+        /// <returns>A Delivery Detail</returns>
+        /// <response code="200">Returns Delivery Detail</response>
+        /// <response code="204">No Delivery Found</response>
+        // GET: api/Delivery/:DocEntry
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("Detail/{DocEntry}")]
         public async Task<IActionResult> GetDetail(int DocEntry) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery(@"
+            oRecSet.DoQuery($@"
                 SELECT
                     ord.""DocEntry"",
                     ord.""DocNum"",
@@ -168,11 +187,15 @@ namespace SAP_API.Controllers {
                 LEFT JOIN OSLP employee ON employee.""SlpCode"" = ord.""SlpCode""
                 LEFT JOIN OCTG payment ON payment.""GroupNum"" = ord.""GroupNum""
                 LEFT JOIN OCRD contact ON contact.""CardCode"" = ord.""CardCode""
-                WHERE ord.""DocEntry"" = '" + DocEntry + "' ");
+                WHERE ord.""DocEntry"" = '{DocEntry}';");
+
+            if (oRecSet.RecordCount == 0) {
+                return NoContent();
+            }
 
             JToken temp = context.XMLTOJSON(oRecSet.GetAsXML())["ODLN"][0];
 
-            oRecSet.DoQuery(@"
+            oRecSet.DoQuery($@"
                 Select
                     ""LineNum"",
                     ""ItemCode"",
@@ -189,38 +212,113 @@ namespace SAP_API.Controllers {
                     ""U_CjsPsVr"",
                     ""TotalFrgn"",
                     ""Rate""
-                From DLN1 Where ""DocEntry"" = '" + DocEntry + "'");
-            oRecSet.MoveFirst();
+                From DLN1 Where ""DocEntry"" = '{DocEntry}';");
+
             temp["DLN1"] = context.XMLTOJSON(oRecSet.GetAsXML())["DLN1"];
 
             return Ok(temp);
         }
 
+
+        /// <summary>
+        /// Add a Delivery Document Linked to a Order Document.
+        /// </summary>
+        /// <param name="value">A Delivery Parameters</param>
+        /// <returns>Message</returns>
+        /// <response code="200">Delivery Added</response>
+        /// <response code="400">Error</response>
+        /// <response code="204">Document not Found</response>
+        // POST: api/Delivery
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody] Delivery value) {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            int DeliveryDocumentCount = value.DeliveryRows.Select(row => row.DeliveryRowDetailList).Select(Detail => Detail.Count).Max();
+            SAPbobsCOM.Documents[] deliveryList = new SAPbobsCOM.Documents[DeliveryDocumentCount];
+
+            for (int i = 0; i < deliveryList.Length; i++) {
+                deliveryList[i] = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oDeliveryNotes);
+            }
+
+            if (!order.GetByKey(value.DocEntry)) {
+                return NoContent();
+            }
+
+            oRecSet.DoQuery($@"
+                Select
+                    serie1.""SeriesName"",
+                    serie1.""Series"",
+                    serie1.""ObjectCode"",
+                    serie2.""SeriesName""as s1,
+                    serie2.""Series"" as s2,
+                    serie2.""ObjectCode"" as s3
+                From NNM1 serie1
+                JOIN NNM1 serie2 ON serie1.""SeriesName"" = serie2.""SeriesName""
+                Where serie1.""ObjectCode"" = 15 AND serie2.""Series"" = '{order.Series}';");
+
+            if (oRecSet.RecordCount == 0) {
+                return BadRequest("Error Con la Sucursal");
+            }
+
+            int Serie = context.XMLTOJSON(oRecSet.GetAsXML())["NNM1"][0]["Series"].ToObject<int>();
+
+            for (int i = 0; i < deliveryList.Length; i++) {
+                deliveryList[i].CardCode = order.CardCode;
+                deliveryList[i].DocDate = DateTime.Now;
+                deliveryList[i].DocDueDate = DateTime.Now;
+                deliveryList[i].Series = Serie;
+            }
+
+            for (int i = 0; i < value.DeliveryRows.Count; i++) {
+
+                for (int j = 0; j < value.DeliveryRows[i].DeliveryRowDetailList.Count; j++) {
+
+                    deliveryList[j].Lines.BaseEntry = order.DocEntry;
+                    deliveryList[j].Lines.BaseLine = value.DeliveryRows[i].LineNum;
+                    deliveryList[j].Lines.UoMEntry = value.DeliveryRows[i].DeliveryRowDetailList[j].UomEntry;
+                    deliveryList[j].Lines.BaseType = (int)SAPbobsCOM.BoAPARDocumentTypes.bodt_Order;
+                    deliveryList[j].Lines.Quantity = value.DeliveryRows[i].DeliveryRowDetailList[j].Count;
+
+                    for (int k = 0; k < value.DeliveryRows[i].DeliveryRowDetailList[j].BatchList.Count; k++) {
+
+                        deliveryList[j].Lines.BatchNumbers.BaseLineNumber = deliveryList[j].Lines.LineNum;
+                        deliveryList[j].Lines.BatchNumbers.BatchNumber = value.DeliveryRows[i].DeliveryRowDetailList[j].BatchList[k].Code;
+                        deliveryList[j].Lines.BatchNumbers.Quantity = value.DeliveryRows[i].DeliveryRowDetailList[j].BatchList[k].Quantity;
+                        deliveryList[j].Lines.BatchNumbers.Add();
+                    }
+
+                    deliveryList[j].Lines.Add();
+                }
+            }
+
+            StringBuilder Errors = new StringBuilder();
+            for (int i = 0; i < deliveryList.Length; i++) {
+                if (deliveryList[i].Add() != 0) {
+                    Errors.AppendLine($"Documento Numero: {i}");
+                    Errors.AppendLine(context.oCompany.GetLastErrorDescription());
+                }
+            }
+
+            if (Errors.Length != 0) {
+                string error = Errors.ToString();
+                return BadRequest(error);
+            }
+
+            //Force Garbage Collector. Recommendation by InterLatin Dude. SDK Problem with memory.
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            
+            return Ok();
+        }
+
+
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        //// GET: api/Delivery
-        //[HttpGet]
-        //public async Task<IActionResult> Get() {
-
-        //    SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-        //    SAPbobsCOM.Documents items = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oDeliveryNotes);
-        //    SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
-        //    List<Object> list = new List<Object>();
-
-        //    oRecSet.DoQuery("Select * From ODLN");
-        //    items.Browser.Recordset = oRecSet;
-        //    items.Browser.MoveFirst();
-
-        //    while (items.Browser.EoF == false) {
-        //        JToken temp = context.XMLTOJSON(items.GetAsXML());
-        //        //temp["ODLN"] = temp["ODLN"][0];
-        //        list.Add(temp);
-        //        items.Browser.MoveNext();
-        //    }
-
-        //    return Ok(list);
-        //}
 
         // GET: api/Delivery/list/20191022
         [HttpGet("list/{date}")]
@@ -252,69 +350,7 @@ namespace SAP_API.Controllers {
             return Ok(list);
         }
 
-        // POST: api/Delivery
-        [HttpPost]
-        public async Task<IActionResult> Post([FromBody] Delivery value) {
-
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
-            SAPbobsCOM.Documents delivery = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oDeliveryNotes);
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
-            if (order.GetByKey(value.order)) {
-                delivery.CardCode = order.CardCode;
-                delivery.DocDate = DateTime.Now;
-                delivery.DocDueDate = DateTime.Now;
-
-                oRecSet.DoQuery(@"
-                Select
-                    serie1.""SeriesName"",
-                    serie1.""Series"",
-                    serie1.""ObjectCode"",
-                    serie2.""SeriesName""as s1,
-                    serie2.""Series"" as s2,
-                    serie2.""ObjectCode"" as s3
-                From NNM1 serie1
-                JOIN NNM1 serie2 ON serie1.""SeriesName"" = serie2.""SeriesName""
-                Where serie1.""ObjectCode"" = 15 AND serie2.""Series"" = '" + order.Series + "'");
-                oRecSet.MoveFirst();
-                delivery.Series = context.XMLTOJSON(oRecSet.GetAsXML())["NNM1"][0]["Series"].ToObject<int>();
-
-                for (int i = 0; i < value.products.Count; i++) {
-                    //delivery.Lines.ItemCode = value.products[i].ItemCode;
-                    //delivery.Lines.Quantity = value.products[i].Count;
-                    //delivery.Lines.UoMEntry = value.products[i].UoMEntry;
-
-                    //delivery.Lines.WarehouseCode = value.products[i].WarehouseCode;
-                    delivery.Lines.BaseEntry = order.DocEntry;
-                    delivery.Lines.BaseLine = value.products[i].Line;
-                    delivery.Lines.BaseType = 17;
-                    delivery.Lines.Quantity = value.products[i].Count;
-                     
-                    for (int j = 0; j < value.products[i].batch.Count; j++) {
-                        delivery.Lines.BatchNumbers.BaseLineNumber = delivery.Lines.LineNum;
-                        delivery.Lines.BatchNumbers.BatchNumber = value.products[i].batch[j].name;
-                        delivery.Lines.BatchNumbers.Quantity = value.products[i].batch[j].quantity;
-                        delivery.Lines.BatchNumbers.Add();
-                    }
-                    
-                    delivery.Lines.Add();
-                }
-
-                //delivery.Comments = "Test";
-                int result = delivery.Add();
-                if (result == 0) {
-                    return Ok(new { value });
-                } else {
-                    string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error });
-                }
-
-            }
-
-            return BadRequest(new { error = "No Existe Documento" });
-        }
-
+        
         // POST: api/Delivery/MASS
         [HttpPost("MASS")]
         public async Task<IActionResult> PostMASS([FromBody] DeliveryModelMASS value) {

@@ -1,26 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
-namespace SAP_API.Models
-{
+namespace SAP_API.Models {
+
     public class Delivery {
-        public int order { set; get; }
-        public List<DeliveryRow> products { set; get; }
+        public int DocEntry { set; get; }
+        public List<DeliveryRow> DeliveryRows { set; get; }
     }
     public class DeliveryRow {
-        public string ItemCode { set; get; }
+        public int LineNum { set; get; }
+        public List<DeliveryRowDetail> DeliveryRowDetailList { set; get; }
+    }
+
+    public class DeliveryRowDetail {
         public double Count { set; get; }
-        public int Line { set; get; }
-        public int UoMEntry { set; get; }
-        public string WarehouseCode { set; get; }
-        public string Pallet { set; get; }
-        public List<DeliveryRowBatch> batch { set; get; }
+        public int UomEntry { set; get; }
+        public List<DeliveryRowBatch> BatchList { set; get; }
     }
 
     public class DeliveryRowBatch {
-        public double quantity { set; get; }
-        public string name { set; get; }
-        public DateTime expirationDate { set; get; }
+        public double Quantity { set; get; }
+        [Required]
+        public string Code { set; get; }
     }
     ///
 

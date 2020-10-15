@@ -85,42 +85,51 @@ namespace SAP_API.Controllers {
             return BadRequest("Error al Intentar Iniciar Sesion");
         }
 
+        /// <summary>
+        /// Register User.
+        /// </summary>
+        /// <param name="register">Register Data</param>
+        /// <returns></returns>
+        /// <response code="200"></response>
+        /// <response code="400">Register Failed</response>
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [Authorize]
         [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto model) {
+        public async Task<IActionResult> Register([FromBody] RegisterDto register) {
 
-            Warehouse warehouse = _context.Warehouses.Find(model.Warehouse);
+            Warehouse warehouse = _context.Warehouses.Find(register.Warehouse);
             if (warehouse == null) {
                 return BadRequest("No Warehouse");
             }
-            Department department = _context.Departments.Find(model.Department);
+            Department department = _context.Departments.Find(register.Department);
             if (department == null) {
                 return BadRequest("No Departamento");
             }
 
-            IdentityRole Role = await _roleManager.FindByIdAsync(model.Role);
+            IdentityRole Role = await _roleManager.FindByIdAsync(register.Role);
             if (Role == null) {
                 return BadRequest("NO ROL");
             }
 
             User user = new User {
-                UserName = model.Email,
-                Email = model.Email,
-                Name = model.Name,
-                LastName = model.LastName,
-                SAPID = model.SAPID,
-                Active = model.Active,
+                UserName = register.Email,
+                Email = register.Email,
+                Name = register.Name,
+                LastName = register.LastName,
+                SAPID = register.SAPID,
+                Active = register.Active,
                 Warehouse = warehouse,
                 Department = department,
             };
 
-            var result = await _userManager.CreateAsync(user, model.Password);
+            var result = await _userManager.CreateAsync(user, register.Password);
 
             if (result.Succeeded) {
 
                 await _userManager.AddToRoleAsync(user, Role.Name);
 
-                foreach (string Permission in model.PermissionsExtra) {
+                foreach (string Permission in register.PermissionsExtra) {
                     await _userManager.AddClaimAsync(user, new Claim(CustomClaimTypes.Permission, Permission));
                 }
 
@@ -133,6 +142,7 @@ namespace SAP_API.Controllers {
             return BadRequest(stringBuilder.ToString());
         }
 
+        // Generate Identification Token
         private async Task<object> GenerateJwtToken(string email, User user) {
 
             var role = await _userManager.GetRolesAsync(user);
