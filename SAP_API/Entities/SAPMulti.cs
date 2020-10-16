@@ -1,14 +1,16 @@
 ﻿
 using SAP_API.Models;
 using System;
+using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace SAP_API.Entities {
     public class SAPMulti {
 
         private SAPContext[] SAPContextList;
         private byte CurrentInstance = 0;
-        private const byte InstancesCount = 1;
+        private const byte InstancesCount = 5;
 
         public SAPMulti() {
             Console.WriteLine($"Arreglo de Instancias Inicializado");
@@ -40,24 +42,32 @@ namespace SAP_API.Entities {
 
             StringBuilder Errors = new StringBuilder();
 
+            List<Task> tasks = new List<Task>();
+
             for (int i = 0; i < SAPContextList.Length; i++) {
                 
                 if (SAPContextList[i].oCompany.Connected) {
                     continue;
                 }
 
-                Console.WriteLine($"No. Instancia {i} Conectando...");
-                int ResultCode = SAPContextList[i].oCompany.Connect();
-                
-                if (ResultCode != 0) {
-                    string error = SAPContextList[i].oCompany.GetLastErrorDescription();
-                    Console.WriteLine($"Error en Instancia {i} Al Intentar Conectar:");
-                    Console.WriteLine($"Code: {ResultCode}. Error: {error}");
-                    Errors.AppendLine($"Code: {ResultCode}. Error: {error}");
-                } else {
-                    Console.WriteLine($"Instancia {i} Conectada Correctamente");
-                }
+                var index = i;
+                var task = Task.Run(() => {
+                    Console.WriteLine($"No. Instancia {index} Conectando...");
+                    int ResultCode = SAPContextList[index].oCompany.Connect();
+
+                    if (ResultCode != 0) {
+                        string error = SAPContextList[index].oCompany.GetLastErrorDescription();
+                        Console.WriteLine($"Error en Instancia {index} Al Intentar Conectar:");
+                        Console.WriteLine($"Code: {ResultCode}. Error: {error}");
+                        Errors.AppendLine($"Code: {ResultCode}. Error: {error}");
+                    } else {
+                        Console.WriteLine($"Instancia {index} Conectada Correctamente");
+                    }
+                });
+                tasks.Add(task);
             }
+
+            Task.WaitAll(tasks.ToArray());
 
             SAPConnectResult Result = new SAPConnectResult {
                 Result = (Errors.Length == 0),
