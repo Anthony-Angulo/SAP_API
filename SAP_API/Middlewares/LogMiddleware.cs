@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
+using EntityFramework.Audit;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Internal;
@@ -48,17 +47,18 @@ namespace SAP_API.Middlewares {
                         responseBodyStream.Seek(0, SeekOrigin.Begin);
                         responseBody = new StreamReader(responseBodyStream).ReadToEnd();
 
-                        Console.WriteLine("-------------------------------------------------------------------------------------------------");
-                        Console.WriteLine($"To: {context.Request.Host.Host}");
-                        Console.WriteLine($"Route: {context.Request.Path}");
-                        Console.WriteLine($"From: {context.Connection.RemoteIpAddress.MapToIPv4().ToString()}");
-                        Console.WriteLine($"Request Body: {requestBodyText}");
-                        Console.WriteLine($"Status Code: {context.Response.StatusCode}");
-                        Console.WriteLine($"Response Body: {responseBody}");
-                        Console.WriteLine($"Date Begin: {timeRequest}");
-                        Console.WriteLine($"Date Finish: {DateTime.Now}");
-                        Console.WriteLine($"Time: {watch.Elapsed.TotalMilliseconds} ms");
-
+                        Console.WriteLine(
+                            "-------------------------------------------------------------------------------------------------\r\n" +
+                            $"To: {context.Request.Host.Host}\r\n" +
+                            $"Route: {context.Request.Path}\r\n" +
+                            $"From: {context.Connection.RemoteIpAddress.MapToIPv4().ToString()}\r\n" +
+                            $"Request Body: {requestBodyText}\r\n" +
+                            $"Status Code: {context.Response.StatusCode}\r\n" +
+                            $"Response Body: {responseBody}\r\n" +
+                            $"Date Begin: {timeRequest}\r\n" +
+                            $"Date Finish: {DateTime.Now}\r\n" +
+                            $"Time: {watch.Elapsed.TotalMilliseconds} ms");
+                        
                         responseBodyStream.Seek(0, SeekOrigin.Begin);
 
                         await responseBodyStream.CopyToAsync(originalResponseBody);

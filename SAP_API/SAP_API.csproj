@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <PackageReference Include="BarcodeLib.Core" Version="1.0.9" />
+    <PackageReference Include="EntityFramework.Extended" Version="6.1.0.168" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.1.2" PrivateAssets="All" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.1.10" />
@@ -47,9 +48,7 @@
 
   <ItemGroup>
     <Reference Include="SAPBusinessOneSDK">
-      <HintPath>..\..\..\..\Desktop\SAP Business One SDK\Lib\SAPBusinessOneSDK.dll</HintPath>
-      <Private>true</Private>
-      <EmbedInteropTypes>false</EmbedInteropTypes>
+      <HintPath>..\..\..\..\Desktop\Compartido\SAP Business One SDK\Lib\SAPBusinessOneSDK.dll</HintPath>
     </Reference>
     <Reference Include="System.Web.Extensions">
       <HintPath>..\..\..\..\..\..\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Web.Extensions.dll</HintPath>

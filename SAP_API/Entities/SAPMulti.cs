@@ -10,7 +10,8 @@ namespace SAP_API.Entities {
 
         private SAPContext[] SAPContextList;
         private byte CurrentInstance = 0;
-        private const byte InstancesCount = 5;
+        private const byte InstancesCount = 10;
+        private bool Connecting = false;
 
         public SAPMulti() {
             Console.WriteLine($"Arreglo de Instancias Inicializado");
@@ -37,8 +38,9 @@ namespace SAP_API.Entities {
             return SAPContextList[CurrentInstance++];
         }
 
-        //  Note: This could be Asynchronous
         public SAPConnectResult ConnectAll() {
+
+            Connecting = true;
 
             StringBuilder Errors = new StringBuilder();
 
@@ -50,6 +52,7 @@ namespace SAP_API.Entities {
                     continue;
                 }
 
+                
                 var index = i;
                 var task = Task.Run(() => {
                     Console.WriteLine($"No. Instancia {index} Conectando...");
@@ -74,8 +77,23 @@ namespace SAP_API.Entities {
                 Errors = Errors.ToString()
             };
 
+            Connecting = false;
+
             return Result;
 
+        }
+
+        public bool IsConnecting() {
+            return Connecting;
+        }
+
+        public bool AllInstanceHaveConnection() {
+            for (int i = 0; i < SAPContextList.Length; i++) {
+                if (!SAPContextList[i].oCompany.Connected) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         public class SAPConnectResult {

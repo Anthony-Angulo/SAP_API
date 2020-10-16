@@ -21,6 +21,7 @@ using Newtonsoft.Json.Serialization;
 using SAP_API.Entities;
 using SAP_API.Models;
 using SAP_API.Middlewares;
+using System.Threading.Tasks;
 
 namespace SAP_API {
     public class Startup {
@@ -160,17 +161,29 @@ namespace SAP_API {
             SAPMulti SAPMultiInstance = app.ApplicationServices.GetService(typeof(SAPMulti)) as SAPMulti;
 
             SAPMultiInstance.Init();
+            SAPMultiInstance.ConnectAll();
 
             app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action => {
                 action.Use(async (context, next) => {
-                    var Result = SAPMultiInstance.ConnectAll();
-                    if (!Result.Result) {
-                        var result = JsonConvert.SerializeObject(new { error = Result.Errors });
-                        context.Response.ContentType = "application/json";
-                        context.Response.StatusCode = 400;
-                        await context.Response.WriteAsync(result);
-                        return;
+
+                    while (SAPMultiInstance.IsConnecting()) {
+                        await Task.Delay(25);
                     }
+
+                    if (!SAPMultiInstance.AllInstanceHaveConnection()) {
+
+                        var Result = SAPMultiInstance.ConnectAll();
+
+                        if (!Result.Result) {
+                            var result = JsonConvert.SerializeObject(new { error = Result.Errors });
+                            context.Response.ContentType = "application/json";
+                            context.Response.StatusCode = 400;
+                            await context.Response.WriteAsync(result);
+                            return;
+                        }
+                        
+                    }
+
                     await next();
                 });
             });
