@@ -59,7 +59,8 @@ namespace SAP_API.Controllers {
             
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            oRecSet.DoQuery(@"Select ""ListName"", ""ListNum"" From OPLN;");
+            oRecSet.DoQuery("Select \"ListName\", \"ListNum\" From OPLN");
+            oRecSet.MoveFirst();
             JToken temp = context.XMLTOJSON(oRecSet.GetAsXML())["OPLN"];
             List<PriceListOutput> output = temp.ToObject<List<PriceListOutput>>();
             return Ok(output);

@@ -24,7 +24,7 @@ namespace SAP_API.Controllers {
         /// <response code="200">OrderSearchResponse(SearchResponse)</response>
         // POST: api/Order/Search
         [ProducesResponseType(typeof(OrderSearchResponse), StatusCodes.Status200OK)]
-        [HttpPost("Search")]
+        [HttpPost("Search")] 
         public async Task<IActionResult> Search([FromBody] SearchRequest request) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
@@ -574,6 +574,7 @@ namespace SAP_API.Controllers {
             public string CardCode { get; set; }
             public List<OrderDeliveryOutputLine> Lines { get; set; }
         }
+
         /// <summary>
         /// Get Order Detail to WMS App Delivery. This route return header and lines
         /// document, plus BarCodes and Uoms Detail.
@@ -583,12 +584,13 @@ namespace SAP_API.Controllers {
         /// <response code="200">Returns Order</response>
         /// <response code="204">No Order Found</response>
         /// <response code="400">Order Document Found, Document Close</response>
-        // GET: api/Order/Delivery/:DocNum
+        // GET: api/Order/DeliverySAP/:DocNum
         [ProducesResponseType(typeof(OrderDeliveryOutput), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [HttpGet("Delivery/{DocNum}")]
-        public async Task<IActionResult> GetOrderToDelivery(uint DocNum) {
+        [HttpGet("DeliverySAP/{DocNum}")]
+        public async Task<IActionResult> GetOrderToDeliverySAP(uint DocNum)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -602,13 +604,15 @@ namespace SAP_API.Controllers {
                     ""CardCode""
                 From ORDR WHERE ""DocNum"" = {DocNum};");
 
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return NoContent();
             }
 
             JToken order = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"][0];
 
-            if (order["DocStatus"].ToString() != "O") {
+            if (order["DocStatus"].ToString() != "O")
+            {
                 return BadRequest("Documento Cerrado");
             }
 
@@ -638,7 +642,8 @@ namespace SAP_API.Controllers {
 
             order["Lines"] = context.XMLTOJSON(oRecSet.GetAsXML())["RDR1"];
 
-            foreach (var line in order["Lines"]) {
+            foreach (var line in order["Lines"])
+            {
 
                 oRecSet.DoQuery($@"
                     Select ""BcdCode""
@@ -664,6 +669,94 @@ namespace SAP_API.Controllers {
 
             var output = order.ToObject<OrderDeliveryOutput>();
             return Ok(output);
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+        // GET: api/Order/Delivery/5
+        // Orden Con informacion extra para la entrega
+        [HttpGet("Delivery/{id}")]
+        public async Task<IActionResult> GetReception(int id)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery(@"
+                Select
+                    ""DocEntry"",
+                    ""DocNum"",
+                    ""DocStatus"",
+                    ""CardName"",
+                    ""CardCode""
+                From ORDR WHERE ""DocNum"" = " + id);
+
+            int rc = oRecSet.RecordCount;
+            if (rc == 0)
+            {
+                return NotFound();
+            }
+
+            JToken order = context.XMLTOJSON(oRecSet.GetAsXML());
+            order["AdmInfo"]?.Parent.Remove();
+            order["ORDR"] = order["ORDR"][0];
+
+            if (order["ORDR"]["DocStatus"].ToString() != "O")
+            {
+                return BadRequest("Documento Cerrado");
+            }
+
+            oRecSet.DoQuery(@"
+                Select
+                    ""LineStatus"",
+                    ""LineNum"",
+                    ""ItemCode"",
+                    ""Dscription"",
+                    ""UomEntry"",
+                    ""WhsCode"",
+                    ""UomCode"",
+                    ""OpenInvQty"",
+                    ""OpenQty""
+                From RDR1 WHERE ""DocEntry"" = " + order["ORDR"]["DocEntry"]);
+
+            order["RDR1"] = context.XMLTOJSON(oRecSet.GetAsXML())["RDR1"];
+
+            foreach (var pro in order["RDR1"])
+            {
+                oRecSet.DoQuery(@"
+                    Select
+                        ""ItemCode"",
+                        ""ItemName"",
+                        ""QryGroup7"",
+                        ""QryGroup41"",
+                        ""QryGroup42"",
+                        ""QryGroup43"",
+                        ""QryGroup44"",
+                        ""QryGroup45"",
+                        ""ManBtchNum"",
+                        ""U_IL_PesMax"",
+                        ""U_IL_PesMin"",
+                        ""U_IL_PesProm"",
+                        ""U_IL_TipPes"",
+                        ""NumInSale"",
+                        ""NumInBuy""
+                    From OITM Where ""ItemCode"" = '" + pro["ItemCode"] + "'");
+                oRecSet.MoveFirst();
+                pro["Detail"] = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+                oRecSet.DoQuery(@"
+                    Select
+                        ""BcdEntry"",
+                        ""BcdCode"",
+                        ""BcdName"",
+                        ""ItemCode"",
+                        ""UomEntry""
+                    From OBCD Where ""ItemCode"" = '" + pro["ItemCode"] + "'");
+                oRecSet.MoveFirst();
+                pro["CodeBars"] = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
+            }
+            return Ok(order);
         }
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1027,25 +1120,34 @@ namespace SAP_API.Controllers {
 
             SAPMulti SAPMultiInstance = HttpContext.RequestServices.GetService(typeof(SAPMulti)) as SAPMulti;
 
+            //SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+
             SAPContext context = SAPMultiInstance.GetCurrentInstance();
 
-            if (context == null) {
+            if (context == null)
+            {
                 return UnprocessableEntity("Servicio saturado. Favor de reintentar en un minuto.");
             }
 
             context.oCompany.StartTransaction();
 
-            if (value.auth == 0 && value.payment != 19) {
+            if (value.auth == 0 && value.payment != 19)
+            {
                 List<JToken> resultAuth = new List<JToken>();
-                if (value.payment == 8) {
+                if (value.payment == 8)
+                {
                     resultAuth.Add(facturasPendientes(value.cardcode, value.series, context));
-                    if (resultAuth[0]["RESULT"].ToString() == "True") {
+                    if (resultAuth[0]["RESULT"].ToString() == "True")
+                    {
                         context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                         return Conflict(resultAuth);
                     }
-                } else {
+                }
+                else
+                {
                     resultAuth = auth(value.cardcode, value.series, context);
-                    if (resultAuth[0]["RESULT"].ToString() == "True" || resultAuth[1]["RESULT"].ToString() == "True") {
+                    if (resultAuth[0]["RESULT"].ToString() == "True" || resultAuth[1]["RESULT"].ToString() == "True")
+                    {
                         context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                         return Conflict(resultAuth);
                     }

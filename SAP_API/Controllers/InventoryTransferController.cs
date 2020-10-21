@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
 
@@ -219,15 +220,18 @@ namespace SAP_API.Controllers
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(string), StatusCodes.Status409Conflict)]
-        [HttpPost]
-        public async Task<IActionResult> Post([FromBody] Transfer value) {
-            
+        //[Authorize]
+        [HttpPost("SAP")]
+        public async Task<IActionResult> InventoryTransferPost([FromBody] Transfer value)
+        {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.StockTransfer transferRequest = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
             SAPbobsCOM.StockTransfer transfer = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oStockTransfer);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
-            if (!transferRequest.GetByKey(value.DocEntry)) {
+            if (!transferRequest.GetByKey(value.DocEntry))
+            {
                 return NoContent();
             }
 
@@ -243,7 +247,8 @@ namespace SAP_API.Controllers
                 JOIN NNM1 serie2 ON serie1.""SeriesName"" = serie2.""SeriesName""
                 Where serie1.""ObjectCode"" = 67 AND serie2.""Series"" = '{transferRequest.Series}';");
 
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return BadRequest("Error En Sucursal.");
             }
 
@@ -254,18 +259,21 @@ namespace SAP_API.Controllers
             transfer.DocDate = DateTime.Now;
             transfer.Series = Serie;
 
-            for (int i = 0; i < value.TransferRows.Count; i++) {
+            for (int i = 0; i < value.TransferRows.Count; i++)
+            {
 
                 transfer.Lines.BaseEntry = transferRequest.DocEntry;
                 transfer.Lines.BaseLine = value.TransferRows[i].LineNum;
                 transfer.Lines.Quantity = value.TransferRows[i].Count;
                 transfer.Lines.BaseType = SAPbobsCOM.InvBaseDocTypeEnum.InventoryTransferRequest;
 
-                if (value.TransferRows[i].Pallet != String.Empty && value.TransferRows[i].Pallet != null) {
+                if (value.TransferRows[i].Pallet != String.Empty && value.TransferRows[i].Pallet != null)
+                {
                     transfer.Lines.UserFields.Fields.Item("U_Tarima").Value = value.TransferRows[i].Pallet;
                 }
 
-                for (int k = 0; k < value.TransferRows[i].BatchList.Count; k++) {
+                for (int k = 0; k < value.TransferRows[i].BatchList.Count; k++)
+                {
 
                     transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].Code;
                     transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList[k].Quantity;
@@ -277,17 +285,20 @@ namespace SAP_API.Controllers
 
 
             StringBuilder Errors = new StringBuilder();
-            if (transfer.Add() != 0) {
+            if (transfer.Add() != 0)
+            {
                 Errors.AppendLine($"Documento Transferencia: ");
                 Errors.AppendLine(context.oCompany.GetLastErrorDescription());
             }
 
-            if (Errors.Length != 0) {
+            if (Errors.Length != 0)
+            {
                 string error = Errors.ToString();
                 return BadRequest(error);
             }
 
-            if (transferRequest.Lines.FromWarehouseCode != transferRequest.FromWarehouse) {
+            if (transferRequest.Lines.FromWarehouseCode != transferRequest.FromWarehouse)
+            {
                 return Ok();
             }
 
@@ -300,8 +311,9 @@ namespace SAP_API.Controllers
             newRequest.Series = transferRequest.Series;
             newRequest.UserFields.Fields.Item("U_SO1_02NUMRECEPCION").Value = transferRequest.DocNum.ToString();
 
-            for (int j = 0; j < transfer.Lines.Count; j++) {
-                    
+            for (int j = 0; j < transfer.Lines.Count; j++)
+            {
+
                 transfer.Lines.SetCurrentLine(j);
                 transferRequest.Lines.SetCurrentLine(transfer.Lines.BaseLine);
 
@@ -315,17 +327,156 @@ namespace SAP_API.Controllers
             }
 
             Errors = new StringBuilder();
-            if (newRequest.Add() != 0) {
+            if (newRequest.Add() != 0)
+            {
                 Errors.AppendLine($"Documento Copia: ");
                 Errors.AppendLine(context.oCompany.GetLastErrorDescription());
             }
 
-            if (Errors.Length != 0) {
+            if (Errors.Length != 0)
+            {
                 string error = Errors.ToString();
                 return Conflict(error);
             }
 
             return Ok();
+        }
+
+        // POST: api/InventoryTransfer
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody] TransferOld value)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.StockTransfer request = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
+            SAPbobsCOM.StockTransfer transfer = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oStockTransfer);
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            if (request.GetByKey(value.order))
+            {
+
+                transfer.DocDate = DateTime.Now;
+
+                oRecSet.DoQuery(@"
+                    Select
+                        serie1.""SeriesName"",
+                        serie1.""Series"",
+                        serie1.""ObjectCode"",
+                        serie2.""SeriesName""as s1,
+                        serie2.""Series"" as s2,
+                        serie2.""ObjectCode"" as s3
+                    From NNM1 serie1
+                    JOIN NNM1 serie2 ON serie1.""SeriesName"" = serie2.""SeriesName""
+                    Where serie1.""ObjectCode"" = 67 AND serie2.""Series"" = '" + request.Series + "'");
+                oRecSet.MoveFirst();
+                transfer.Series = context.XMLTOJSON(oRecSet.GetAsXML())["NNM1"][0]["Series"].ToObject<int>();
+
+                for (int i = 0; i < value.products.Count; i++)
+                {
+                    //transfer.Lines.ItemCode = value.products[i].ItemCode;
+                    //transfer.Lines.Quantity = value.products[i].Count;
+                    //transfer.Lines.UoMEntry = value.products[i].UoMEntry;
+                    //transfer.Lines.FromWarehouseCode = "S01";
+                    // transfer.Lines.WarehouseCode = value.products[i].WarehouseCode;
+                    transfer.Lines.BaseEntry = request.DocEntry;
+                    transfer.Lines.BaseLine = value.products[i].Line;
+                    transfer.Lines.Quantity = value.products[i].Count;
+                    transfer.Lines.BaseType = SAPbobsCOM.InvBaseDocTypeEnum.InventoryTransferRequest;
+                    transfer.Lines.UserFields.Fields.Item("U_Tarima").Value = value.products[i].Pallet;
+
+                    for (int j = 0; j < value.products[i].batch.Count; j++)
+                    {
+                        //transfer.Lines.BatchNumbers.BaseLineNumber = transfer.Lines.LineNum;
+                        transfer.Lines.BatchNumbers.BatchNumber = value.products[i].batch[j].name;
+                        transfer.Lines.BatchNumbers.Quantity = value.products[i].batch[j].quantity;
+                        transfer.Lines.BatchNumbers.Add();
+                    }
+
+                    transfer.Lines.Add();
+                }
+
+                int result = transfer.Add();
+                if (result == 0)
+                {
+                    if (request.Lines.FromWarehouseCode == request.FromWarehouse)
+                    {
+                        request.GetByKey(value.order);
+
+                        //for (int i = 0; i < request.Lines.Count; i++)
+                        //{
+                        //    request.Lines.SetCurrentLine(i);
+                        //    if (request.Lines.RemainingOpenQuantity != 0) {
+                        //        request.Lines.Quantity = request.Lines.Quantity - request.Lines.RemainingOpenQuantity;
+                        //    }
+                        //}
+
+                        //int result3 = request.Update();
+                        //if (result3 != 0)
+                        //{
+                        //    string error = context.oCompany.GetLastErrorDescription();
+                        //    return BadRequest(new {id = 1,  error });
+                        //}
+
+                        try
+                        {
+
+                            SAPbobsCOM.StockTransfer newRequest = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
+
+                            newRequest.FromWarehouse = request.FromWarehouse;
+                            newRequest.ToWarehouse = request.ToWarehouse;
+                            newRequest.Series = request.Series;
+
+                            newRequest.UserFields.Fields.Item("U_SO1_02NUMRECEPCION").Value = request.DocNum.ToString();
+
+                            for (int i = 0; i < value.products.Count; i++)
+                            {
+                                //request.Lines.SetCurrentLine(value.products[i].Line);
+
+                                newRequest.Lines.ItemCode = value.products[i].ItemCode;
+
+                                //newRequest.Lines.UoMEntry = request.Lines.UoMEntry;
+
+                                newRequest.Lines.UoMEntry = value.products[i].UoMEntry;
+
+                                //newRequest.Lines.UseBaseUnits = request.Lines.UseBaseUnits;
+
+                                newRequest.Lines.UseBaseUnits = value.products[i].UseBaseUnits;
+
+                                newRequest.Lines.Quantity = value.products[i].Count;
+                                newRequest.Lines.FromWarehouseCode = request.Lines.WarehouseCode;
+                                newRequest.Lines.WarehouseCode = request.ToWarehouse;
+                                newRequest.Lines.Add();
+                            }
+                            int result2 = newRequest.Add();
+                            if (result2 != 0)
+                            {
+                                string error = context.oCompany.GetLastErrorDescription();
+                                Console.WriteLine(2);
+                                Console.WriteLine(error);
+                                Console.WriteLine(value);
+                                Console.WriteLine(context.XMLTOJSON(newRequest.GetAsXML()));
+                                return BadRequest(new { id = 2, error, value, va = context.XMLTOJSON(newRequest.GetAsXML()) });
+                            }
+                            return Ok(context.oCompany.GetNewObjectKey());
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(6);
+                            Console.WriteLine(ex);
+                            Console.WriteLine(value);
+                            return BadRequest(new { id = 5, ex.Message, value });
+                        }
+                    }
+                }
+                else
+                {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new { id = 3, error });
+                }
+
+                return Ok(new { value });
+
+            }
+            return BadRequest(new { error = "No Existe Documento" });
         }
 
     }

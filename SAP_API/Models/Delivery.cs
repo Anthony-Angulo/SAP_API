@@ -8,9 +8,35 @@ namespace SAP_API.Models {
         public int DocEntry { set; get; }
         public List<DeliveryRow> DeliveryRows { set; get; }
     }
-    public class DeliveryRow {
+
+    public class DeliveryRow
+    {
         public int LineNum { set; get; }
         public List<DeliveryRowDetail> DeliveryRowDetailList { set; get; }
+    }
+
+    public class DeliveryOld
+    {
+        public int order { set; get; }
+        public List<DeliveryRowOld> products { set; get; }
+    }
+
+    public class DeliveryRowOld
+    {
+        public string ItemCode { set; get; }
+        public double Count { set; get; }
+        public int Line { set; get; }
+        public int UoMEntry { set; get; }
+        public string WarehouseCode { set; get; }
+        public string Pallet { set; get; }
+        public List<DeliveryRowBatchOld> batch { set; get; }
+    }
+
+    public class DeliveryRowBatchOld
+    {
+        public double quantity { set; get; }
+        public string name { set; get; }
+        public DateTime expirationDate { set; get; }
     }
 
     public class DeliveryRowDetail {

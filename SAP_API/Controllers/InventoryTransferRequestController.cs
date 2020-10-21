@@ -2,16 +2,19 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
+
 
 namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     public class InventoryTransferRequestController : ControllerBase {
+
 
         /// <summary>
         /// Get InvntoryTransferRequest List to WMS web Filter by DatatableParameters.
@@ -305,6 +308,7 @@ namespace SAP_API.Controllers
             public string Filler { get; set; }
             public List<TransferDeliveryOutputLine> Lines { get; set; }
         }
+
         /// <summary>
         /// Get TransferRequest Detail to WMS App Delivery. This route return header and lines
         /// document, plus BarCodes and Uoms Detail.
@@ -314,12 +318,15 @@ namespace SAP_API.Controllers
         /// <response code="200">Returns TransferRequest</response>
         /// <response code="204">No Order Found</response>
         /// <response code="400">Document Found, Document Close</response>
-        // GET: api/InventoryTransferRequest/Delivery/:DocNum
+        // GET: api/InventoryTransferRequest/DeliverySAP/:DocNum
         [ProducesResponseType(typeof(TransferDeliveryOutput), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [HttpGet("Delivery/{DocNum}")]
-        public async Task<IActionResult> GetReception(uint DocNum) {
+        //[Authorize]
+        [HttpGet("DeliverySAP/{DocNum}")]
+        public async Task<IActionResult> GetDeliveryTransferRequest(uint DocNum)
+        {
+           
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -333,13 +340,15 @@ namespace SAP_API.Controllers
                     ""Filler""
                 From OWTQ WHERE ""DocNum"" = {DocNum};");
 
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return NoContent();
             }
 
             JToken request = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"][0];
 
-            if (request["DocStatus"].ToString() != "O") {
+            if (request["DocStatus"].ToString() != "O")
+            {
                 return BadRequest("Documento Cerrado");
             }
 
@@ -369,7 +378,8 @@ namespace SAP_API.Controllers
 
             request["Lines"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTQ1"];
 
-            foreach (var line in request["Lines"]) {
+            foreach (var line in request["Lines"])
+            {
 
                 oRecSet.DoQuery($@"
                     Select ""BcdCode""
@@ -397,7 +407,111 @@ namespace SAP_API.Controllers
             return Ok(output);
         }
 
-        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // GET: api/InventoryTransferRequest/5
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(int id)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.StockTransfer request = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            if (request.GetByKey(id))
+            {
+                JToken temp = context.XMLTOJSON(request.GetAsXML());
+                temp["OWTQ"] = temp["OWTQ"][0];
+                temp["AdmInfo"]?.Parent.Remove();
+                temp["WTQ12"]?.Parent.Remove();
+                return Ok(temp);
+            }
+            return NotFound("No Existe Documento");
+        }
+
+        // DEPRECATED
+        // GET: api/InventoryTransferRequest/Reception/5
+        [HttpGet("Reception/{id}")]
+        public async Task<IActionResult> GetReception(int id)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery(@"
+                Select
+                    ""DocEntry"",
+                    ""DocNum"",
+                    ""DocStatus"",
+                    ""ToWhsCode"",
+                    ""Filler""
+                From OWTQ WHERE ""DocNum"" = " + id);
+
+            int rc = oRecSet.RecordCount;
+            if (rc == 0)
+            {
+                return NotFound();
+            }
+
+            JToken request = context.XMLTOJSON(oRecSet.GetAsXML());
+            request["AdmInfo"]?.Parent.Remove();
+            request["OWTQ"] = request["OWTQ"][0];
+
+            if (request["OWTQ"]["DocStatus"].ToString() != "O")
+            {
+                return BadRequest("Documento Cerrado");
+            }
+
+            oRecSet.DoQuery(@"
+                Select
+                    ""LineStatus"",
+                    ""LineNum"",
+                    ""ItemCode"",
+                    ""Dscription"",
+                    ""UseBaseUn"",
+                    ""UomEntry"",
+                    ""WhsCode"",
+                    ""UomCode"",
+                    ""FromWhsCod"",
+                    ""OpenInvQty"",
+                    ""OpenQty""
+                From WTQ1 WHERE ""DocEntry"" = " + request["OWTQ"]["DocEntry"]);
+
+            request["WTQ1"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTQ1"];
+
+            foreach (var pro in request["WTQ1"])
+            {
+                oRecSet.DoQuery(@"
+                    Select
+                        ""ItemCode"",
+                        ""ItemName"",
+                        ""QryGroup7"",
+                        ""QryGroup41"",
+                        ""QryGroup42"",
+                        ""QryGroup44"",
+                        ""QryGroup45"",
+                        ""ManBtchNum"",
+                        ""U_IL_PesMax"",
+                        ""U_IL_PesMin"",
+                        ""U_IL_PesProm"",
+                        ""U_IL_TipPes"",
+                        ""NumInSale"",
+                        ""NumInBuy""
+                    From OITM Where ""ItemCode"" = '" + pro["ItemCode"] + "'");
+                oRecSet.MoveFirst();
+                pro["Detail"] = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+                oRecSet.DoQuery(@"
+                    Select
+                        ""BcdEntry"",
+                        ""BcdCode"",
+                        ""BcdName"",
+                        ""ItemCode"",
+                        ""UomEntry""
+                    From OBCD Where ""ItemCode"" = '" + pro["ItemCode"] + "'");
+                oRecSet.MoveFirst();
+                pro["CodeBars"] = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
+            }
+
+            return Ok(request);
+        }
 
         // GET: api/InventoryTransferRequest/list
         [HttpGet("list/{date}")]
@@ -423,24 +537,6 @@ namespace SAP_API.Controllers
             JToken request = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"];
 
             return Ok(request);
-        }
-
-        // GET: api/InventoryTransferRequest/5
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Get(int id) {
-
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.StockTransfer request = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
-            if (request.GetByKey(id)) {
-                JToken temp = context.XMLTOJSON(request.GetAsXML());
-                temp["OWTQ"] = temp["OWTQ"][0];
-                temp["AdmInfo"]?.Parent.Remove();
-                temp["WTQ12"]?.Parent.Remove();
-                return Ok(temp);
-            }
-            return NotFound("No Existe Documento");
         }
 
         // GET: api/InventoryTransferRequest/Detail/5

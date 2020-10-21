@@ -54,6 +54,24 @@ namespace SAP_API.Models
         public int DocEntry { set; get; }
         public List<TransferRow> TransferRows { set; get; }
     }
+
+    public class TransferOld
+    {
+        public int order { set; get; }
+        public List<TransferRowOld> products { set; get; }
+    }
+
+    public class TransferRowOld
+    {
+        public string ItemCode { set; get; }
+        public double Count { set; get; }
+        public int Line { set; get; }
+        public int UoMEntry { set; get; }
+        public SAPbobsCOM.BoYesNoEnum UseBaseUnits { set; get; }
+        public string WarehouseCode { set; get; }
+        public string Pallet { set; get; }
+        public List<TranferRowBatchOld> batch { set; get; }
+    }
     public class TransferRow {
         public int LineNum { set; get; }
         public string Pallet { get; set; }
@@ -61,6 +79,13 @@ namespace SAP_API.Models
         public List<TransferRowBatch> BatchList { set; get; }
         
     }
+
+    public class TranferRowBatchOld
+    {
+        public double quantity { set; get; }
+        public string name { set; get; }
+    }
+
     public class TransferRowBatch {
         public double Quantity { set; get; }
         public string Code { set; get; }
