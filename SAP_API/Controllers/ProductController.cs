@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
@@ -1683,9 +1684,35 @@ namespace SAP_API.Controllers
             return Ok(temp);
         }
 
-        
+
+        // GET: api/Products/ConsumoInterno/5
+        [HttpGet("ConsumoInterno/{id}")]
+        [Authorize]
+        public async Task<IActionResult> GetDetailConumoInterno(string id)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery(@"
+                Select
+                    ""ItemCode"",
+                    ""ItemName"",
+                    ""QryGroup7""
+                From OITM Where ""ItemCode"" = '" + id + "'");
+
+            JToken Detail = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+
+            
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(Detail);
+        }
+
+
         // GET: api/Products/Detail/5
         [HttpGet("Detail/{id}")]
+        [Authorize]
         public async Task<IActionResult> GetDetail(string id) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;

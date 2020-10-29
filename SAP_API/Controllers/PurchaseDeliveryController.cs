@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
@@ -254,6 +255,7 @@ namespace SAP_API.Controllers
 
         // GET: api/PurchaseDelivery/Return/(DocEntry)
         [HttpGet("Return/{DocEntry}")]
+        [Authorize]
         public async Task<IActionResult> GetReturn(int DocEntry) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
@@ -365,6 +367,7 @@ namespace SAP_API.Controllers
 
         // POST: api/PurchaseDelivery
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> Post([FromBody] PurchaseOrderDelivery value) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;

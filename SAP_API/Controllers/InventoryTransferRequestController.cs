@@ -539,6 +539,141 @@ namespace SAP_API.Controllers
             return Ok(request);
         }
 
+        // GET: api/InventoryTransferRequest/WmsTransferLabels/5
+        // TODO: Change THIS to /Detail For wms WEB Authorization
+        [HttpGet("WmsTransferLabels/{id}/{doctype}")]
+        [Authorize]
+        public async Task<IActionResult> GetDetailForWmsTransferLabels(int id, string doctype)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            if (!doctype.Equals("DocEntry") && !doctype.Equals("DocNum"))
+            {
+                return BadRequest(new { error = "Doc Type to Search Invalid" });
+            }
+
+            oRecSet.DoQuery(@"
+                SELECT
+                    ""DocEntry"",
+                    ""DocNum"",
+                    ""CANCELED"",
+                    ""DocStatus"",
+                    ""DocDate"",
+                    ""Filler"",
+                    ""ToWhsCode""
+                From OWTQ WHERE """ + doctype + @""" = " + id);
+            if (oRecSet.RecordCount == 0)
+            {
+                return NotFound("No Existe Documento");
+            }
+
+            JToken transfer = JToken.Parse("{}");
+            transfer["OWTQ"] = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"][0];
+            int docentry = transfer["OWTQ"]["DocEntry"].ToObject<int>();
+            int docnum = transfer["OWTQ"]["DocNum"].ToObject<int>();
+
+            //oRecSet.DoQuery(@"
+            //    SELECT
+            //        *
+            //    From  IBT1 Where ""WhsCode"" = 'S01' AND ""ItemCode"" = 'A0305243'");
+
+            //transfer["IBT1"] = context.XMLTOJSON(oRecSet.GetAsXML())["IBT1"];
+
+            // Inventory Transfer Request Rows
+            //oRecSet.DoQuery(@"
+            //    SELECT
+            //        ""DocEntry"",
+            //        ""LineNum"",
+            //        ""LineStatus"",
+            //        ""ItemCode"",
+            //        ""Dscription"",
+            //        ""Quantity"",
+            //        ""OpenQty"",
+            //        ""WhsCode"",
+            //        ""UomCode""
+            //    FROM WTQ1 WHERE ""DocEntry"" = " + docentry);
+            oRecSet.DoQuery(@"
+                SELECT
+                    ""LineNum"",
+                    ""LineStatus"",
+                    ""ItemCode"",
+                    ""Dscription"",
+                    ""Quantity"",
+                    ""UomCode""
+                FROM WTQ1 WHERE ""DocEntry"" = " + docentry);
+            transfer["WTQ1"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTQ1"];
+
+            // Inventory Transfer
+            oRecSet.DoQuery(@"
+                SELECT
+                    ""DocEntry"",
+                    ""DocNum"",
+                    ""DocDate"",
+                    ""DocDueDate"",
+                    ""ToWhsCode"",
+                    ""Filler""
+                FROM OWTR 
+                WHERE ""DocEntry"" in (SELECT ""DocEntry"" FROM WTR1 WHERE ""BaseEntry"" = " + docentry + ")");
+
+            if (oRecSet.RecordCount != 0)
+            {
+                transfer["Transfers"] = context.XMLTOJSON(oRecSet.GetAsXML())["OWTR"];
+
+                oRecSet.DoQuery(@"
+                    SELECT
+                        ""DocEntry"",
+                        ""ItemCode"",
+                        ""Dscription"",
+                        ""Quantity"",
+                        ""UomCode""
+                    FROM WTR1
+                    WHERE ""BaseEntry"" = " + docentry);
+                transfer["TransfersDetail"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTR1"];
+
+                string docEntrys = "";
+                foreach (JToken transfers in transfer["Transfers"])
+                {
+                    docEntrys += transfers["DocEntry"] + ",";
+                }
+                docEntrys = docEntrys.Substring(0, docEntrys.Length - 1);
+                oRecSet.DoQuery(@"
+                    SELECT
+                        ""ItemCode"",
+                        ""BatchNum"",
+                        ""LineNum"",
+                        ""BaseEntry"",
+                        ""Quantity""
+                    From IBT1 WHERE ""BaseEntry"" in (" + docEntrys + @") AND ""WhsCode"" = '" + transfer["OWTQ"]["Filler"].ToString() + "'");
+                transfer["Codes"] = context.XMLTOJSON(oRecSet.GetAsXML())["IBT1"];
+
+                //foreach (JToken transferDetail in transfer["TransfersDetail"])
+                //{
+                //    oRecSet.DoQuery(@"SELECT * From IBT1 WHERE ""ItemCode"" = '" + transferDetail["ItemCode"] + @"' AND ""BaseEntry"" = " + transferDetail["DocEntry"] + @" AND ""WhsCode"" = '" + transferDetail["FromWhsCod"] + "'");
+                //    transferDetail["Codes"] = context.XMLTOJSON(oRecSet.GetAsXML())["IBT1"];
+                //}
+
+                oRecSet.DoQuery(@"SELECT ""DocNum"", ""DocEntry"", ""DocDate"" From OWTQ WHERE ""U_SO1_02NUMRECEPCION"" = " + docnum);
+
+                if (oRecSet.RecordCount != 0)
+                {
+                    transfer["Requests"] = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"];
+
+                    oRecSet.DoQuery(@"
+                        SELECT
+                            ""DocEntry"",
+                            ""ItemCode"",
+                            ""Quantity"",
+                            ""UomCode""
+                        FROM WTQ1 WHERE ""DocEntry"" in (SELECT ""DocEntry"" From OWTQ WHERE ""U_SO1_02NUMRECEPCION"" = " + docnum + ")");
+                    transfer["RequestsDetail"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTQ1"];
+                }
+            }
+
+            return Ok(transfer);
+        }
+
         // GET: api/InventoryTransferRequest/Detail/5
         [HttpGet("Detail/{id}/{doctype}")]
         public async Task<IActionResult> GetDetail(int id, string doctype) {

@@ -24,7 +24,7 @@ namespace SAP_API.Models {
             oCompany.DbUserName = "SYSTEM";
             oCompany.DbPassword = "B1AdminH2";
             oCompany.LicenseServer = "192.168.0.92:40000";
-            oCompany.language = SAPbobsCOM.BoSuppLangs.ln_English;
+            oCompany.language = SAPbobsCOM.BoSuppLangs.ln_Spanish;
         }
 
         static JToken WalkNode(JToken node) {

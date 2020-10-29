@@ -8,7 +8,7 @@
     },
     "iisExpress": {
       "applicationUrl": "https://localhost:5001",
-      "sslPort": 44374
+      "sslPort": 0
     }
   },
   "$schema": "http://json.schemastore.org/launchsettings.json",

@@ -92,10 +92,11 @@ namespace SAP_API.Controllers {
 
             // TODO: Change This.
             var user1 = _context.Users.Where(User => User.Id == id).Select(User => (new { Department = User.Department.Name, Warehouse = User.Warehouse.WhsName }));
-            
+
+
             User user = await _userManager.FindByIdAsync(id);
 
-            if (user != null) {
+            if (user == null) {
                 return NoContent();
             }
 

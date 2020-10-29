@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using Newtonsoft.Json.Linq;
 using SAP_API.Entities;
 using SAP_API.Models;
@@ -42,8 +43,9 @@ namespace SAP_API.Controllers {
         //      id. An Unsigned Integer that serve as Warehouse identifier.
         //
         // GET: api/Warehouse/:id
+        [Authorize]
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(uint id) {
+        public async Task<IActionResult> Get(int id) {
             Warehouse warehouse = _context.Warehouses.Find(id);
             if (warehouse != null) {
                 return Ok(warehouse);

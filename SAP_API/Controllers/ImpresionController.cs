@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using LPS;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MigraDoc.DocumentObjectModel;
@@ -24,6 +25,7 @@ namespace SAP_API.Controllers
 
         // GET: api/Impresion/
         [HttpGet("Impresoras")]
+        [Authorize]
         public async Task<IActionResult> GetImpresoras() {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
@@ -34,6 +36,7 @@ namespace SAP_API.Controllers
         }
 
         // GET: api/Impresion/
+        // TODO: Authorization CRM
         [HttpGet("Order/{DocEntries}")]
         public async Task<FileContentResult> GetOrder(string DocEntries) {
 
@@ -479,6 +482,15 @@ namespace SAP_API.Controllers
             //return File(new byte[] { }, "application/pdf");
         }
 
+        // POST: api/WmsTarima
+        // TODO: Change this to /Tarima for WMS WEB AUTHORIZATIOn
+        [HttpPost("WmsTarima")]
+        [Authorize]
+        public void PostWmsTarima([FromBody] TarimaPrint value)
+        {
+            etiquetaproduccion(value.IDPrinter, value.WHS, value.Pallet, value.Request, value.Transfer, value.RequestCopy, DateTime.Now.ToString());
+        }
+
         // POST: api/TarimaImp
         [HttpPost("Tarima")]
         public void Post([FromBody] TarimaPrint value) {
@@ -554,6 +566,7 @@ namespace SAP_API.Controllers
 
         // POST: api/Impresion/Carnes
         [HttpPost("Carnes")]
+        [Authorize]
         public void Carnes([FromBody] CarnesPrint value) {
 
             string txtProducto = value.ItemCode;

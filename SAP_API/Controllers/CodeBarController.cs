@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
+using Microsoft.AspNetCore.Authorization;
 using SAP_API.Models;
 
 namespace SAP_API.Controllers {
@@ -23,6 +24,7 @@ namespace SAP_API.Controllers {
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("{CodeBar}")]
+        [Authorize]
         public async Task<IActionResult> Get(string CodeBar) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
@@ -106,6 +108,7 @@ namespace SAP_API.Controllers {
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> Post([FromBody] Codebar codebar) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SAP_API.Models;
@@ -20,6 +21,7 @@ namespace SAP_API.Controllers
 
         // POST: api/PurchaseOrderDeliveryReturn
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> Post([FromBody] PurchaseOrderDeliveryReturn value) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;

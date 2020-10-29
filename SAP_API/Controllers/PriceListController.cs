@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
@@ -11,6 +12,29 @@ namespace SAP_API.Controllers {
     [Route("api/[controller]")]
     [ApiController]
     public class PriceListController : ControllerBase {
+
+
+        /// <summary>
+        /// Get PriceList Information with the SDK Object.
+        /// </summary>
+        /// <returns>PriceList</returns>
+        /// <response code="200">PriceList</response>
+        // GET: api/PriceList
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [HttpGet("WmsProducts")]
+        [Authorize]
+        public async Task<IActionResult> GetPriceListProductsWms()
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery("Select \"ListName\", \"ListNum\" From OPLN");
+            JToken pricelists = context.XMLTOJSON(oRecSet.GetAsXML())["OPLN"];
+            List<PriceListOutput> priceListOuput = pricelists.ToObject<List<PriceListOutput>>();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(priceListOuput);
+        }
 
         // TODO: Class To Serialize Output
         /// <summary>

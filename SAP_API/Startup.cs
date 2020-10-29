@@ -93,8 +93,8 @@ namespace SAP_API {
 
             services.Add(new ServiceDescriptor(typeof(SAPContext), new SAPContext()));
             services.Add(new ServiceDescriptor(typeof(SAPMulti), new SAPMulti()));
-            //services.Add(new ServiceDescriptor(typeof(SAPContext[]), new SAPContext[10]));
-            
+            services.Add(new ServiceDescriptor(typeof(SAPContext[]), new SAPContext[10]));
+
 
             services.AddSwaggerGen(c =>
             {
@@ -163,25 +163,30 @@ namespace SAP_API {
             SAPMultiInstance.Init();
             SAPMultiInstance.ConnectAll();
 
-            app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action => {
-                action.Use(async (context, next) => {
+            app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action =>
+            {
+                action.Use(async (context, next) =>
+                {
 
-                    while (SAPMultiInstance.IsConnecting()) {
+                    while (SAPMultiInstance.IsConnecting())
+                    {
                         await Task.Delay(25);
                     }
 
-                    if (!SAPMultiInstance.AllInstanceHaveConnection()) {
+                    if (!SAPMultiInstance.AllInstanceHaveConnection())
+                    {
 
                         var Result = SAPMultiInstance.ConnectAll();
 
-                        if (!Result.Result) {
+                        if (!Result.Result)
+                        {
                             var result = JsonConvert.SerializeObject(new { error = Result.Errors });
                             context.Response.ContentType = "application/json";
                             context.Response.StatusCode = 400;
                             await context.Response.WriteAsync(result);
                             return;
                         }
-                        
+
                     }
 
                     await next();

@@ -60,7 +60,7 @@ namespace SAP_API.Controllers {
             
             var Role = await _roleManager.FindByIdAsync(id);
 
-            if (Role != null) {
+            if (Role == null) {
                 return NoContent();
             }
 
