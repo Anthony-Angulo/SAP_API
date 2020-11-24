@@ -2,6 +2,7 @@
 using SAP_API.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,8 +11,9 @@ namespace SAP_API.Entities {
 
         private SAPContext[] SAPContextList;
         private byte CurrentInstance = 0;
-        private const byte InstancesCount = 10;
+        private const byte InstancesCount = 15;
         private bool Connecting = false;
+        private const byte CyclesCount = 1;
 
         public SAPMulti() {
             Console.WriteLine($"Arreglo de Instancias Inicializado");
@@ -25,17 +27,62 @@ namespace SAP_API.Entities {
             }
         }
 
+        public SAPContext IncrementInstance()
+        {
+
+            Stopwatch sw = new Stopwatch();
+
+            sw.Start();
+
+            int i = 0;
+            int j = 0;
+
+            while(i < CyclesCount)
+            {
+                j = 0;
+
+                while(j < SAPContextList.Length)
+                {
+                    
+                    CurrentInstance++;
+                    if(CurrentInstance >= InstancesCount)
+                    {
+                        CurrentInstance = 0;
+                    }
+
+                    if(!SAPContextList[CurrentInstance].oCompany.InTransaction)
+                    {
+                        sw.Stop();
+                        Console.WriteLine($"Instancia Numero: {CurrentInstance}");
+                        Console.WriteLine($"Tiempo de Recorrido Encontrando una instancia: {sw.Elapsed}");
+                        return SAPContextList[CurrentInstance];
+                    }
+
+                    j++;
+                }
+
+                
+                i++;
+            }
+
+            sw.Stop();
+            Console.WriteLine($"Tiempo de Recorrido sin encontrar instancia: {sw.Elapsed}");
+
+            return null;
+        }
+
         public SAPContext GetCurrentInstance() {
             if (CurrentInstance >= InstancesCount) {
                 CurrentInstance = 0;
             }
 
             if (SAPContextList[CurrentInstance].oCompany.InTransaction) {
+                Console.WriteLine($"No. de Instancia de falla: {CurrentInstance}");
                 return null;
             }
 
             Console.WriteLine($"No. de Instancia Inicio Uso: {CurrentInstance}");
-            return SAPContextList[CurrentInstance++];
+            return SAPContextList[CurrentInstance];
         }
 
         public SAPConnectResult ConnectAll() {

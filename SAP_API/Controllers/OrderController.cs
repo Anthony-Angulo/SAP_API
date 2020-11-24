@@ -590,7 +590,7 @@ namespace SAP_API.Controllers {
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("DeliverySAP/{DocNum}")]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> GetOrderToDeliverySAP(uint DocNum)
         {
 
@@ -795,6 +795,35 @@ namespace SAP_API.Controllers {
 
         // GET: api/Order/CRMList
         // Todas las Ordernes - Encabezado para lista CRM
+        [HttpGet("CRMAPPList/Sucursal/{id}")]
+        public async Task<IActionResult> GetCRMAPPSucursalList(string id)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                Select
+                    ord.""DocEntry"",
+                    ord.""DocNum"",
+                    ord.""DocDate"",
+                    ord.""DocStatus"",
+                    contact.""CardFName"",
+                    warehouse.""WhsName""
+                From ORDR ord
+                LEFT JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
+                LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OSLP person ON ord.""SlpCode"" = person.""SlpCode""
+                LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode""
+                Where warehouse.""WhsCode"" = '" + id + @"' AND ord.""DocStatus"" = 'O' AND ord.""DocDate"" >= add_days(CURRENT_DATE, -3)");
+            oRecSet.MoveFirst();
+            JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(orders);
+        }
+
+        // GET: api/Order/CRMList
+        // Todas las Ordernes - Encabezado para lista CRM
         [HttpGet("CRMList/Sucursal/{id}")]
         public async Task<IActionResult> GetCRMSucursalList(string id) {
 
@@ -888,60 +917,33 @@ namespace SAP_API.Controllers {
         }
 
         // GET: api/order/list
-        // Ordenes Filtradas por dia
-        [HttpGet("CRMAPP/list/{date}/{employee}")]
-        public async Task<IActionResult> GetCRMAPPList(string date, int employee) {
+        // Ordenes ultmos 3 dias Filtradas por empleado 
+        [HttpGet("CRMAPP/list/{employee}")]
+        public async Task<IActionResult> GetCRMAPPList(string id, int employee) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
             oRecSet.DoQuery(@"
-                Select
+                 Select
                     ord.""DocEntry"",
                     ord.""DocNum"",
-                    ord.""CardName"",
-                    ord.""PeyMethod"",
-                    ord.""DocCur"",
-
-                    to_char(to_date(SUBSTRING(ord.""DocDueDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDueDate"",
-
-                    (case when ord.""CANCELED"" = 'Y' then 'Cancelado'
-                    when ord.""DocStatus"" = 'O' then 'Abierto'
-                    when ord.""DocStatus"" = 'C' then 'Cerrado'
-                    else ord.""DocStatus"" end)  AS  ""DocStatus"",
-
-                    ord.""Address"",
-                    ord.""DocTotal"",
-                    ord.""DocTotalFC"",
-                    contact.""CardFName""
-                FROM ORDR ord
+                    ord.""DocDate"",
+                    ord.""DocStatus"",
+                    contact.""CardFName"",
+                    warehouse.""WhsName""
+                From ORDR ord
+                LEFT JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
+                LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OSLP person ON ord.""SlpCode"" = person.""SlpCode""
                 LEFT JOIN OCRD contact ON ord.""CardCode"" = contact.""CardCode""
-                WHERE ""DocDate"" = '" + date + "' AND ord.\"SlpCode\" = " + employee);
+                Where ord.""DocStatus"" = 'O' AND ord.""DocDate"" >= add_days(CURRENT_DATE, -3) AND ord.""SlpCode"" =" + employee);
+
             oRecSet.MoveFirst();
             JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"];
-            int rc = oRecSet.RecordCount;
-            if (rc == 0) {
-                return NotFound();
-            }
-
-            oRecSet.DoQuery(@"
-                Select 
-                    ""DocEntry"",
-                    ""ItemCode"",
-                    ""Dscription"",
-                    ""Price"",
-                    ""Currency"",
-                    ""Quantity"",
-                    ""UomCode"",
-                    ""InvQty"",
-                    ""UomCode2""
-                From RDR1
-                Where ""DocEntry"" in (Select ""DocEntry"" From ORDR Where ""DocDate"" = '" + date + "' AND \"SlpCode\" = " + employee + ")");
-            oRecSet.MoveFirst();
-            JToken rows = context.XMLTOJSON(oRecSet.GetAsXML())["RDR1"];
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            return Ok(new { orders, rows });
+            return Ok(orders);
         }
 
         // GET: api/Order/5
@@ -1115,33 +1117,367 @@ namespace SAP_API.Controllers {
             return result;
         }
 
+        // POST: api/Order/SeparateOrder
+        [HttpPost("SeparateOrder")]
+        public IActionResult OrderSeparation([FromBody] CreateOrder value)
+        {
+            List<JToken> ordersCreated = new List<JToken>();
+
+            // Only in CEDIS
+            var productsMeatMXN = new List<OrderRow>();
+            var productsMeatUSD = new List<OrderRow>();
+            var productsNonMeatUSD = new List<OrderRow>();
+            var productsNonMeatMXN = new List<OrderRow>();
+
+
+            // Rest of warehouse
+            var productsMXN = new List<OrderRow>();
+            var productsUSD = new List<OrderRow>();
+
+
+            if (value.series == 752)
+            {
+                foreach (var product in value.rows)
+                {
+                    if (product.currency == "USD" && product.meet == "Y")
+                    {
+                        productsMeatUSD.Add(product);
+
+                    }
+                    else if (product.currency == "USD" && product.meet != "Y")
+                    {
+                        productsNonMeatUSD.Add(product);
+
+                    }
+                    else if (product.currency == "MXN" && product.meet == "Y")
+                    {
+
+                        productsMeatMXN.Add(product);
+
+                    }
+                    else if (product.currency == "MXN" && product.meet != "Y")
+                    {
+                        productsNonMeatMXN.Add(product);
+                    }
+                }
+
+                if (productsMeatUSD.Count != 0)
+                {
+                    var OrderProdMeatUSD = new CreateOrder
+                    {
+                        cardcode = value.cardcode,
+                        currency = "USD",
+                        payment = value.payment,
+                        comments = value.comments,
+                        date = value.date,
+                        series = value.series,
+                        priceList = value.priceList,
+                        rows = productsMeatUSD
+                    };
+
+                    ordersCreated.Add(CreateOrderNew(OrderProdMeatUSD));
+
+                }
+
+                if (productsMeatMXN.Count != 0)
+                {
+                    var OrderProdMeatMXN = new CreateOrder
+                    {
+                        cardcode = value.cardcode,
+                        currency = "MXN",
+                        payment = value.payment,
+                        comments = value.comments,
+                        date = value.date,
+                        series = value.series,
+                        priceList = value.priceList,
+                        rows = productsMeatMXN
+                    };
+
+                    ordersCreated.Add(CreateOrderNew(OrderProdMeatMXN));
+
+                }
+
+                if (productsNonMeatUSD.Count != 0)
+                {
+                    var OrderProdNonMeatUSD = new CreateOrder
+                    {
+                        cardcode = value.cardcode,
+                        currency = "USD",
+                        payment = value.payment,
+                        comments = value.comments,
+                        date = value.date,
+                        series = value.series,
+                        priceList = value.priceList,
+                        rows = productsNonMeatUSD
+                    };
+
+                    ordersCreated.Add(CreateOrderNew(OrderProdNonMeatUSD));
+
+                }
+
+                if (productsNonMeatMXN.Count != 0)
+                {
+                    var OrderProdNonMeatMXN = new CreateOrder
+                    {
+                        cardcode = value.cardcode,
+                        currency = "MXN",
+                        payment = value.payment,
+                        comments = value.comments,
+                        date = value.date,
+                        series = value.series,
+                        priceList = value.priceList,
+                        rows = productsNonMeatMXN
+                    };
+
+                    ordersCreated.Add(CreateOrderNew(OrderProdNonMeatMXN));
+
+                }
+
+            } else
+            {
+                foreach (var product in value.rows)
+                {
+                    if(product.currency == "USD")
+                    {
+                        productsUSD.Add(product);
+                    } else
+                    {
+                        productsMXN.Add(product);
+                    }
+                }
+
+                if(productsUSD.Count != 0)
+                {
+                    var OrderProdUSD = new CreateOrder
+                    {
+                        cardcode = value.cardcode,
+                        currency = "USD",
+                        payment = value.payment,
+                        comments = value.comments,
+                        date = value.date,
+                        series = value.series,
+                        priceList = value.priceList,
+                        rows = productsUSD
+                    };
+
+                    ordersCreated.Add(CreateOrderNew(OrderProdUSD));
+
+                }
+
+                if(productsMXN.Count != 0)
+                {
+                    var OrderProdMXN = new CreateOrder
+                    {
+                        cardcode = value.cardcode,
+                        currency = "MXN",
+                        payment = value.payment,
+                        comments = value.comments,
+                        date = value.date,
+                        series = value.series,
+                        priceList = value.priceList,
+                        rows = productsMXN
+                    };
+
+                    ordersCreated.Add(CreateOrderNew(OrderProdMXN));
+
+                }
+
+            }
+
+            foreach(var order in ordersCreated)
+            {
+                if (order["RESULT"].ToString() == "False" && order["Status"].ToString() == "409")
+                {
+                    return Conflict(new { AUTH = order["Reason"] });
+
+                }
+                else if (order["RESULT"].ToString() == "False" && order["Status"].ToString() == "400")
+                {
+                    return BadRequest(new { error = order["Reason"] });
+
+                }
+            }
+
+            return Ok();
+
+        }
+
+        public JToken CreateOrderNew(CreateOrder value)
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+
+            if (value.auth == 0 && value.payment != 19)
+            {
+                List<JToken> resultAuth = new List<JToken>();
+
+                if (value.payment == 8)
+                {
+                    resultAuth.Add(facturasPendientes(value.cardcode, value.series, context));
+
+                    if (resultAuth[0]["RESULT"].ToString() == "True")
+                    {
+                        return JObject.Parse(@"{ RESULT: 'False', Status: '409', Reason: '" + resultAuth[0]["AUTH"].ToString() + "'}");
+                    }
+                } else
+                {
+                    resultAuth = auth(value.cardcode, value.series, context);
+
+                    if (resultAuth[0]["RESULT"].ToString() == "True" || resultAuth[1]["RESULT"].ToString() == "True")
+                    {
+                        return JObject.Parse(@"{ RESULT: 'False', Status: '409', Reason: '" + resultAuth[0]["AUTH"].ToString() + resultAuth[1]["AUTH"].ToString() + "'}");
+
+                    }
+                }
+            }
+
+            SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            SAPbobsCOM.BusinessPartners contact = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
+
+            oRecSet.DoQuery($@"
+                Select
+                    warehouse.""WhsCode"",
+                    warehouse.""WhsName"",
+                    serie.""Series""
+                From OWHS warehouse
+                LEFT JOIN NNM1 serie ON serie.""SeriesName"" = warehouse.""WhsCode""
+                Where serie.""ObjectCode"" = 17 AND serie.""Series"" = {value.series};");
+
+            if (oRecSet.RecordCount == 0)
+            {
+                return JObject.Parse(@"{ RESULT: 'False', Status: '400', Reason: 'Error en sucursal'}");
+            }
+
+            string warehouse = (string)oRecSet.Fields.Item("WhsCode").Value;
+
+            order.CardCode = value.cardcode;
+            order.Series = value.series;
+            order.DocCurrency = value.currency;
+            order.DocDueDate = value.date;
+            order.PaymentGroupCode = value.payment;
+
+            if (!contact.GetByKey(value.cardcode))
+            {
+                string error = context.oCompany.GetLastErrorDescription();
+                return JObject.Parse(@"{ RESULT: 'False', Status: '400', Reason: '" + error + "' }");
+            }
+
+            String temp = (String)contact.UserFields.Fields.Item("U_B1SYS_MainUsage").Value;
+            if (temp != String.Empty)
+            {
+                order.UserFields.Fields.Item("U_SO1_02USOCFDI").Value = temp;
+            }
+            temp = (String)contact.UserFields.Fields.Item("U_IL_MetPago").Value;
+            if (temp != String.Empty)
+            {
+                order.UserFields.Fields.Item("U_SO1_02METODOPAGO").Value = temp;
+            }
+            temp = (String)contact.UserFields.Fields.Item("U_IL_ForPago").Value;
+            if (temp != String.Empty)
+            {
+                order.UserFields.Fields.Item("U_SO1_02FORMAPAGO").Value = temp;
+            }
+
+            for (int i = 0; i < value.rows.Count; i++)
+            {
+
+                order.Lines.ItemCode = value.rows[i].code;
+                order.Lines.WarehouseCode = warehouse;
+
+                oRecSet.DoQuery($@"
+                    Select
+                        ""Currency"",
+                        ""Price""
+                    FROM ITM1
+                    WHERE ""ItemCode"" = '{value.rows[i].code}' 
+                    AND ""PriceList"" = {value.priceList};");
+
+                if (oRecSet.RecordCount == 0)
+                {
+                    return JObject.Parse(@"{ RESULT: 'False', Status: '400', Reason: 'Error en Lista de Precio'}");
+                }
+
+                double Price = (double)oRecSet.Fields.Item("Price").Value;
+                string Currency = (string)oRecSet.Fields.Item("Currency").Value;
+
+                if (value.rows[i].uom == -2)
+                {
+                    order.Lines.UnitPrice = Price;
+                }
+                else
+                {
+                    order.Lines.UnitPrice = Price * value.rows[i].equivalentePV;
+                }
+                order.Lines.Currency = Currency;
+
+                if (value.rows[i].uom == -2)
+                {
+                    order.Lines.UoMEntry = 185;
+                    order.Lines.UserFields.Fields.Item("U_CjsPsVr").Value = value.rows[i].quantity;
+                    order.Lines.Quantity = value.rows[i].quantity * value.rows[i].equivalentePV;
+                }
+                else
+                {
+                    order.Lines.Quantity = value.rows[i].quantity;
+                    order.Lines.UoMEntry = value.rows[i].uom;
+                }
+
+                order.Lines.Add();
+            }
+
+            order.Comments = value.comments;
+
+            if (order.Add() == 0)
+            {
+                return JObject.Parse(@"{ RESULT: 'True', Status: '200', Reason: ''}");
+            }
+            else
+            {
+                string error = context.oCompany.GetLastErrorDescription();
+                return JObject.Parse(@"{ RESULT: 'False', Status: '400', Reason: '" + error + "' }");
+            }
+        }
+
+
+
         // POST: api/Order
         // Creacion de Orden
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] CreateOrder value) {
 
-            SAPMulti SAPMultiInstance = HttpContext.RequestServices.GetService(typeof(SAPMulti)) as SAPMulti;
+            //SAPMulti SAPMultiInstance = HttpContext.RequestServices.GetService(typeof(SAPMulti)) as SAPMulti;
 
-            //SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-            SAPContext context = SAPMultiInstance.GetCurrentInstance();
+            //SAPContext context = SAPMultiInstance.GetCurrentInstance();
 
-            if (context == null)
-            {
-                return UnprocessableEntity("Servicio saturado. Favor de reintentar en un minuto.");
-            }
+            //SAPContext context;
 
-            context.oCompany.StartTransaction();
+            //do
+            //{
+            //    context = SAPMultiInstance.IncrementInstance();
+
+            //} while (context.oCompany.InTransaction);
+
+
+            //if (context == null)
+            //{
+            //    return UnprocessableEntity("Servicio saturado. Favor de reintentar en un minuto.");
+            //}
+
+           
+            //context.oCompany.StartTransaction();
 
             if (value.auth == 0 && value.payment != 19)
             {
                 List<JToken> resultAuth = new List<JToken>();
+
                 if (value.payment == 8)
                 {
                     resultAuth.Add(facturasPendientes(value.cardcode, value.series, context));
                     if (resultAuth[0]["RESULT"].ToString() == "True")
                     {
-                        context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                        //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                         return Conflict(resultAuth);
                     }
                 }
@@ -1150,7 +1486,7 @@ namespace SAP_API.Controllers {
                     resultAuth = auth(value.cardcode, value.series, context);
                     if (resultAuth[0]["RESULT"].ToString() == "True" || resultAuth[1]["RESULT"].ToString() == "True")
                     {
-                        context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                        //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                         return Conflict(resultAuth);
                     }
                 }
@@ -1170,7 +1506,7 @@ namespace SAP_API.Controllers {
                 Where serie.""ObjectCode"" = 17 AND serie.""Series"" = {value.series};");
 
             if (oRecSet.RecordCount == 0) {
-                context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                 return BadRequest(new { error = "Error en sucursal" });
             }
 
@@ -1184,7 +1520,7 @@ namespace SAP_API.Controllers {
 
             if (!contact.GetByKey(value.cardcode)) {
                 string error = context.oCompany.GetLastErrorDescription();
-                context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                 return BadRequest(new { error });
             }
 
@@ -1215,7 +1551,7 @@ namespace SAP_API.Controllers {
                     AND ""PriceList"" = {value.priceList};");
 
                 if(oRecSet.RecordCount == 0) {
-                    context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                    //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                     return BadRequest(new { error = "Error en Lista de Precio" });
                 }
 
@@ -1244,11 +1580,11 @@ namespace SAP_API.Controllers {
             order.Comments = value.comments;
 
             if (order.Add() == 0) {
-                context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
+                //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
                 return Ok();
             } else {
                 string error = context.oCompany.GetLastErrorDescription();
-                context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                 return BadRequest(new { error });
             }
         }

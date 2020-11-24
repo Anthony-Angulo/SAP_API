@@ -1204,7 +1204,7 @@ namespace SAP_API.Controllers
                 Where ""OnHand"" != 0 
                     AND ""Freezed"" = 'N'
                     AND ""Locked"" = 'N'
-                    AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S37', 'S47', 'S55', 'S59')
+                    AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62')
                     AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
@@ -1272,7 +1272,7 @@ namespace SAP_API.Controllers
             //string warehouses = context.XMLTOJSON(oRecSet.GetAsXML())["OSLP"][0]["Fax"].ToString();
             //warehouses = warehouses.Trim();
             //if (warehouses.Equals("")) { 
-            string warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S37', 'S47', 'S55', 'S59'";
+            string warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62'";
             //}
             //else {
             //    warehouses = warehouses.ToUpper();
@@ -1687,7 +1687,7 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/ConsumoInterno/5
         [HttpGet("ConsumoInterno/{id}")]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> GetDetailConumoInterno(string id)
         {
 
@@ -1712,7 +1712,7 @@ namespace SAP_API.Controllers
 
         // GET: api/Products/Detail/5
         [HttpGet("Detail/{id}")]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> GetDetail(string id) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;

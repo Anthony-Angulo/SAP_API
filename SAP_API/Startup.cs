@@ -92,8 +92,8 @@ namespace SAP_API {
             }).SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 
             services.Add(new ServiceDescriptor(typeof(SAPContext), new SAPContext()));
-            services.Add(new ServiceDescriptor(typeof(SAPMulti), new SAPMulti()));
-            services.Add(new ServiceDescriptor(typeof(SAPContext[]), new SAPContext[10]));
+            //services.Add(new ServiceDescriptor(typeof(SAPMulti), new SAPMulti()));
+            //services.Add(new ServiceDescriptor(typeof(SAPContext[]), new SAPContext[10]));
 
 
             services.AddSwaggerGen(c =>
@@ -158,40 +158,40 @@ namespace SAP_API {
             app.UseHttpsRedirection();
 
 
-            SAPMulti SAPMultiInstance = app.ApplicationServices.GetService(typeof(SAPMulti)) as SAPMulti;
+            //SAPMulti SAPMultiInstance = app.ApplicationServices.GetService(typeof(SAPMulti)) as SAPMulti;
 
-            SAPMultiInstance.Init();
-            SAPMultiInstance.ConnectAll();
+            //SAPMultiInstance.Init();
+            //SAPMultiInstance.ConnectAll();
 
-            app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action =>
-            {
-                action.Use(async (context, next) =>
-                {
+            //app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action =>
+            //{
+            //    action.Use(async (context, next) =>
+            //    {
 
-                    while (SAPMultiInstance.IsConnecting())
-                    {
-                        await Task.Delay(25);
-                    }
+            //        while (SAPMultiInstance.IsConnecting())
+            //        {
+            //            await Task.Delay(50);
+            //        }
 
-                    if (!SAPMultiInstance.AllInstanceHaveConnection())
-                    {
+            //        if (!SAPMultiInstance.AllInstanceHaveConnection())
+            //        {
 
-                        var Result = SAPMultiInstance.ConnectAll();
+            //            var Result = SAPMultiInstance.ConnectAll();
 
-                        if (!Result.Result)
-                        {
-                            var result = JsonConvert.SerializeObject(new { error = Result.Errors });
-                            context.Response.ContentType = "application/json";
-                            context.Response.StatusCode = 400;
-                            await context.Response.WriteAsync(result);
-                            return;
-                        }
+            //            if (!Result.Result)
+            //            {
+            //                var result = JsonConvert.SerializeObject(new { error = Result.Errors });
+            //                context.Response.ContentType = "application/json";
+            //                context.Response.StatusCode = 400;
+            //                await context.Response.WriteAsync(result);
+            //                return;
+            //            }
 
-                    }
+            //        }
 
-                    await next();
-                });
-            });
+            //        await next();
+            //    });
+            //});
 
             SAPContext SAPContext = app.ApplicationServices.GetService(typeof(SAPContext)) as SAPContext;
 

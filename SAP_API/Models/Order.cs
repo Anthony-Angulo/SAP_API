@@ -124,6 +124,8 @@ namespace SAP_API.Models {
         public string code { set; get; }
         public int uom { set; get; }
         public double equivalentePV { set; get; }
+        public string currency { set; get; }
+        public string meet { set; get; }
     }
 
     public class UpdateOrder {

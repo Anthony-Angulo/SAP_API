@@ -542,7 +542,7 @@ namespace SAP_API.Controllers
         // GET: api/InventoryTransferRequest/WmsTransferLabels/5
         // TODO: Change THIS to /Detail For wms WEB Authorization
         [HttpGet("WmsTransferLabels/{id}/{doctype}")]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> GetDetailForWmsTransferLabels(int id, string doctype)
         {
 

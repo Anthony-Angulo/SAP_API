@@ -342,7 +342,7 @@ namespace SAP_API.Controllers
         }
 
         [HttpGet("Receptions/{id}")]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> GetDetail(int id) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;

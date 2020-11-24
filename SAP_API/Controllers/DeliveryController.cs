@@ -233,7 +233,7 @@ namespace SAP_API.Controllers {
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpPost("SAP")]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> PostDelivery([FromBody] Delivery value)
         {
 

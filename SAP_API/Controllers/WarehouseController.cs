@@ -43,7 +43,7 @@ namespace SAP_API.Controllers {
         //      id. An Unsigned Integer that serve as Warehouse identifier.
         //
         // GET: api/Warehouse/:id
-        [Authorize]
+        //[Authorize]
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(int id) {
             Warehouse warehouse = _context.Warehouses.Find(id);
@@ -209,7 +209,7 @@ namespace SAP_API.Controllers {
                     serie.""Series""
                 From OWHS warehouse
                 LEFT JOIN NNM1 serie ON serie.""SeriesName"" = warehouse.""WhsCode""
-                Where serie.""ObjectCode"" = 17 AND warehouse.""WhsCode""  in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S37', 'S47', 'S55', 'S59') ");
+                Where serie.""ObjectCode"" = 17 AND warehouse.""WhsCode""  in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62') ");
             JToken warehouseList = context.XMLTOJSON(oRecSet.GetAsXML())["OWHS"];
             List<WarehouseWithSerie> warehouseWithSeries = warehouseList.ToObject<List<WarehouseWithSerie>>();
             oRecSet = null;
@@ -278,7 +278,7 @@ namespace SAP_API.Controllers {
                     serie.""Series""
                 From OWHS warehouse
                 LEFT JOIN NNM1 serie ON serie.""SeriesName"" = warehouse.""WhsCode""
-                Where serie.""ObjectCode"" = 17 AND warehouse.""WhsCode""  in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S37', 'S47', 'S55', 'S59') ");
+                Where serie.""ObjectCode"" = 17 AND warehouse.""WhsCode""  in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36','S47', 'S55', 'S59', 'S62') ");
             oRecSet.MoveFirst();
             JToken warehouseList = context.XMLTOJSON(oRecSet.GetAsXML())["OWHS"];
             return Ok(warehouseList);
@@ -297,7 +297,7 @@ namespace SAP_API.Controllers {
             string warehouses = context.XMLTOJSON(oRecSet.GetAsXML())["OSLP"][0]["Fax"].ToString();
             warehouses = warehouses.Trim();
             if (warehouses.Equals("")) {
-                warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S37', 'S47', 'S55', 'S59'";
+                warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62'";
             } else {
                 warehouses = warehouses.ToUpper();
                 warehouses = "'" + warehouses + "'";

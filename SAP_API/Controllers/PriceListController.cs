@@ -22,7 +22,7 @@ namespace SAP_API.Controllers {
         // GET: api/PriceList
         [ProducesResponseType(StatusCodes.Status200OK)]
         [HttpGet("WmsProducts")]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> GetPriceListProductsWms()
         {
 

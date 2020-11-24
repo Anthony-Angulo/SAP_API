@@ -21,7 +21,7 @@ namespace SAP_API.Controllers
 
         // POST: api/PurchaseOrderDeliveryReturn
         [HttpPost]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> Post([FromBody] PurchaseOrderDeliveryReturn value) {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
