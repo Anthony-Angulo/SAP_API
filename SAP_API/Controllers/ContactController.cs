@@ -351,9 +351,8 @@ namespace SAP_API.Controllers {
                     ""Country"",
                     ""Block"",
                     ""GroupNum"",
-                    ""ListNum"",
-                    ""salesPrson""
-                From OCRD Where ""CardType"" = 'C' AND ""CardCode"" NOT LIKE '%-D' LIMIT 1");
+                    ""ListNum""
+                    From OCRD Where ""CardType"" = 'C' AND ""CardCode"" NOT LIKE '%-D'");
             
             JToken contacts = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"];
             GC.Collect();
