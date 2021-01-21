@@ -25,7 +25,6 @@ namespace SAP_API.Controllers
 
         // GET: api/Impresion/
         [HttpGet("Impresoras")]
-        [Authorize]
         public async Task<IActionResult> GetImpresoras() {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
