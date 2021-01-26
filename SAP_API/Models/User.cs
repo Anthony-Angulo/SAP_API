@@ -26,5 +26,9 @@ namespace SAP_API.Models {
 
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public DateTime DateCreated { get; set; }
+
+        public string Active_Burn { get; set; }
+
+        public int Serie { get; set; }
     }
 }

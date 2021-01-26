@@ -16,11 +16,13 @@ using Microsoft.Net.Http.Headers;
 using SAP_API.Entities;
 using SAP_API.Models;
 
-namespace SAP_API.Controllers {
+namespace SAP_API.Controllers
+{
 
     [Route("api/[controller]")]
     [ApiController]
-    public class AccountController : ControllerBase {
+    public class AccountController : ControllerBase
+    {
 
         // Atributtes
         private readonly SignInManager<User> _signInManager;
@@ -35,7 +37,8 @@ namespace SAP_API.Controllers {
                                 IConfiguration configuration,
                                 ApplicationDbContext context,
                                 RoleManager<IdentityRole> roleManager
-                                ) {
+                                )
+        {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
@@ -50,7 +53,8 @@ namespace SAP_API.Controllers {
         // GET: api/Account
         [Authorize]
         [HttpGet("User")]
-        public async Task<IActionResult> UserLog() {
+        public async Task<IActionResult> UserLog()
+        {
             JwtSecurityTokenHandler handler = new JwtSecurityTokenHandler();
             string authHeader = Request.Headers[HeaderNames.Authorization];
             authHeader = authHeader.Replace("Bearer ", "");
@@ -60,7 +64,8 @@ namespace SAP_API.Controllers {
             return Redirect($"/api/User/{UserID}");
         }
 
-        class Token {
+        class Token
+        {
             public string token { get; set; }
         }
         /// <summary>
@@ -73,18 +78,42 @@ namespace SAP_API.Controllers {
         [ProducesResponseType(typeof(Token), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [HttpPost("Login")]
-        public async Task<object> Login([FromBody] LoginDto loginData) {
-            
+        public async Task<object> Login([FromBody] LoginDto loginData)
+        {
+
             var result = await _signInManager.PasswordSignInAsync(loginData.Email, loginData.Password, false, false);
 
-            if (result.Succeeded) {
+            if (result.Succeeded)
+            {
                 var appUser = _userManager.Users.SingleOrDefault(r => r.Email == loginData.Email);
+                var AppLogin = new AppUserLogin
+                {
+                    active = appUser.Active,
+                    Email = appUser.Email,
+                    id = appUser.Id,
+                    SAPID = appUser.SAPID,
+                    Name = appUser.Name,
+                    User = appUser.UserName,
+                    Active_Burn = appUser.Active_Burn,
+                    Serie = appUser.Serie
+
+                };
                 var token = await GenerateJwtToken(loginData.Email, appUser);
-                return Ok(new { token });
+                return Ok(new { token, AppLogin });
             }
             return BadRequest("Error al Intentar Iniciar Sesion");
         }
-
+        public class AppUserLogin
+        {
+            public Boolean active { get; set; }
+            public string Email { get; set; }
+            public string id { get; set; }
+            public string Name { get; set; }
+            public string User { get; set; }
+            public int SAPID { get; set; }
+            public string Active_Burn { get; set; }
+            public int Serie { get; set; }
+        }
         /// <summary>
         /// Register User.
         /// </summary>
@@ -96,23 +125,28 @@ namespace SAP_API.Controllers {
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [Authorize]
         [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto register) {
+        public async Task<IActionResult> Register([FromBody] RegisterDto register)
+        {
 
             Warehouse warehouse = _context.Warehouses.Find(register.Warehouse);
-            if (warehouse == null) {
+            if (warehouse == null)
+            {
                 return BadRequest("No Warehouse");
             }
             Department department = _context.Departments.Find(register.Department);
-            if (department == null) {
+            if (department == null)
+            {
                 return BadRequest("No Departamento");
             }
 
             IdentityRole Role = await _roleManager.FindByIdAsync(register.Role);
-            if (Role == null) {
+            if (Role == null)
+            {
                 return BadRequest("NO ROL");
             }
 
-            User user = new User {
+            User user = new User
+            {
                 UserName = register.Email,
                 Email = register.Email,
                 Name = register.Name,
@@ -125,25 +159,29 @@ namespace SAP_API.Controllers {
 
             var result = await _userManager.CreateAsync(user, register.Password);
 
-            if (result.Succeeded) {
+            if (result.Succeeded)
+            {
 
                 await _userManager.AddToRoleAsync(user, Role.Name);
 
-                foreach (string Permission in register.PermissionsExtra) {
+                foreach (string Permission in register.PermissionsExtra)
+                {
                     await _userManager.AddClaimAsync(user, new Claim(CustomClaimTypes.Permission, Permission));
                 }
 
                 return Ok();
             }
             StringBuilder stringBuilder = new StringBuilder();
-            foreach (IdentityError m in result.Errors.ToList()) {
+            foreach (IdentityError m in result.Errors.ToList())
+            {
                 stringBuilder.AppendFormat("Codigo: {0} Descripcion: {1}\n", m.Code, m.Description);
             }
             return BadRequest(stringBuilder.ToString());
         }
 
         // Generate Identification Token
-        private async Task<object> GenerateJwtToken(string email, User user) {
+        private async Task<object> GenerateJwtToken(string email, User user)
+        {
 
             var role = await _userManager.GetRolesAsync(user);
             IdentityOptions options = new IdentityOptions();
@@ -156,7 +194,8 @@ namespace SAP_API.Controllers {
              };
 
             string roles = role.FirstOrDefault();
-            if (roles != null) {
+            if (roles != null)
+            {
                 claims.Add(new Claim(options.ClaimsIdentity.RoleClaimType, role.FirstOrDefault()));
             }
 
@@ -164,7 +203,8 @@ namespace SAP_API.Controllers {
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var expires = DateTime.Now.AddDays(Convert.ToDouble(_configuration["JwtExpireDays"]));
 
-            var tokenDescriptor = new SecurityTokenDescriptor {
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
                 Subject = new ClaimsIdentity(claims),
                 Expires = expires,
                 SigningCredentials = creds
@@ -183,7 +223,8 @@ namespace SAP_API.Controllers {
             return tokenHandler.WriteToken(securityToken);
         }
 
-        public class LoginDto {
+        public class LoginDto
+        {
             [Required]
             public string Email { get; set; }
 
@@ -192,7 +233,8 @@ namespace SAP_API.Controllers {
 
         }
 
-        public class RegisterDto {
+        public class RegisterDto
+        {
             [Required]
             public string Email { get; set; }
 
@@ -210,7 +252,8 @@ namespace SAP_API.Controllers {
             public int SAPID { get; set; }
         }
 
-        public class EditDto {
+        public class EditDto
+        {
             [Required]
             public string Email { get; set; }
 
