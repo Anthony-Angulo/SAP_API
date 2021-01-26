@@ -21,11 +21,14 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
 
-    public class ImpresionController : ControllerBase {
+    public class ImpresionController : ControllerBase
+    {
 
         // GET: api/Impresion/
         [HttpGet("Impresoras")]
-        public async Task<IActionResult> GetImpresoras() {
+        [Authorize]
+        public async Task<IActionResult> GetImpresoras()
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -37,7 +40,8 @@ namespace SAP_API.Controllers
         // GET: api/Impresion/
         // TODO: Authorization CRM
         [HttpGet("Order/{DocEntries}")]
-        public async Task<FileContentResult> GetOrder(string DocEntries) {
+        public async Task<FileContentResult> GetOrder(string DocEntries)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -46,15 +50,18 @@ namespace SAP_API.Controllers
             PdfDocument outputDocument = new PdfDocument();
             outputDocument.Info.Title = "";
 
-            for (int i = 0; i < DocEntryList.Length; i++) {
+            for (int i = 0; i < DocEntryList.Length; i++)
+            {
                 pdfList.Add(GetOrderPDFDocument(Int32.Parse(DocEntryList[i])));
             }
 
-            for (int i = 0; i < pdfList.Count; i++){
+            for (int i = 0; i < pdfList.Count; i++)
+            {
                 PdfDocument inputDocument = PdfReader.Open(pdfList[i], PdfDocumentOpenMode.Import);
 
                 int count = inputDocument.PageCount;
-                for (int idx = 0; idx < count; idx++) {
+                for (int idx = 0; idx < count; idx++)
+                {
                     PdfPage page = inputDocument.Pages[idx];
                     outputDocument.AddPage(page);
                 }
@@ -70,14 +77,14 @@ namespace SAP_API.Controllers
             return File(bytes, "application/pdf");
         }
 
-        private MemoryStream GetOrderPDFDocument(int DocEntry) {
+        private MemoryStream GetOrderPDFDocument(int DocEntry)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             OrderDetail orderDetail;
             JToken order;
             string DocCur;
-
             oRecSet.DoQuery(@"
                 SELECT
                     ord.""DocEntry"",
@@ -128,24 +135,27 @@ namespace SAP_API.Controllers
 
             oRecSet.DoQuery(@"
                 Select
-                    ""ItemCode"",
-                    ""Dscription"",
-                    ""Price"",
-                    ""Currency"",
+                    orderrow.""ItemCode"",
+                    orderrow.""Dscription"",
+                    orderrow.""Price"",
+                    orderrow.""Currency"",
+                    product.""U_IL_PesProm"" AS ""U_IL_PesProm"",
 
                     (case when ""U_CjsPsVr"" != '0' then ""U_CjsPsVr""
                     else ""Quantity"" end)  AS  ""Quantity"",
 
-                    (case when ""U_CjsPsVr"" != '0' then 'CAJA'
+                    (case when orderrow.""U_CjsPsVr"" != '0' then 'CAJA'
                     else ""UomCode"" end)  AS  ""UomCode"",
 
-                    ""InvQty"",
-                    ""UomCode2"",
+                    orderrow.""InvQty"",
+                    orderrow.""UomCode2"",
 
                     (case when '" + DocCur + @"' = 'USD' then ""TotalFrgn""
                     else ""LineTotal"" end)  AS  ""Total""
 
-                From RDR1 Where ""DocEntry"" = '" + DocEntry + "'");
+                From RDR1 orderrow
+                JOIN OITM product ON product.""ItemCode"" = orderrow.""ItemCode""
+                Where orderrow.""DocEntry"" = '" + DocEntry + "'");
             oRecSet.MoveFirst();
             order["OrderRows"] = context.XMLTOJSON(oRecSet.GetAsXML())["RDR1"];
 
@@ -333,7 +343,7 @@ namespace SAP_API.Controllers
             paragraph = row.Cells[1].AddParagraph();
             paragraph.AddText("# pedido: " + orderDetail.DocNum);
             paragraph.AddLineBreak();
-            paragraph.AddText("Fecha de Creacion del Pedido: " + orderDetail.DocDate + " " + orderDetail.DocTime);
+            paragraph.AddText("Fecha de Creación del Pedido: " + orderDetail.DocDate + " " + orderDetail.DocTime);
             paragraph.AddLineBreak();
             paragraph.AddText("Fecha de Entrega Pedido: " + orderDetail.DocDueDate);
             paragraph.AddLineBreak();
@@ -367,7 +377,8 @@ namespace SAP_API.Controllers
             paragraph.AddText("Observaciones:");
             paragraph.AddLineBreak();
 
-            if (orderDetail.Comments != null) {
+            if (orderDetail.Comments != null)
+            {
                 paragraph.AddText(orderDetail.Comments);
             }
 
@@ -376,9 +387,9 @@ namespace SAP_API.Controllers
             paragraph.AddLineBreak();
             paragraph.AddText("Nombre: " + orderDetail.CardFName);
             paragraph.AddLineBreak();
-            paragraph.AddText("Codigo: " + orderDetail.CardCode);
+            paragraph.AddText("Codigó: " + orderDetail.CardCode);
             paragraph.AddLineBreak();
-            paragraph.AddText("Direccion: " + orderDetail.Address2);
+            paragraph.AddText("Dirección: " + orderDetail.Address2);
             table.AddRow();
 
             table = section.AddTable();
@@ -401,6 +412,8 @@ namespace SAP_API.Controllers
             column.Format.Alignment = ParagraphAlignment.Left;
             column = table.AddColumn("3.16cm");
             column.Format.Alignment = ParagraphAlignment.Left;
+            //        column = table.AddColumn("2.62cm");
+            //      column.Format.Alignment = ParagraphAlignment.Left;
 
             row = table.AddRow();
             row.HeadingFormat = true;
@@ -416,8 +429,11 @@ namespace SAP_API.Controllers
             row.Cells[3].Format.Alignment = ParagraphAlignment.Left;
             row.Cells[4].AddParagraph("Qty SU");
             row.Cells[4].Format.Alignment = ParagraphAlignment.Left;
-            row.Cells[5].AddParagraph("Total");
+            row.Cells[5].AddParagraph("*Cantidad");
             row.Cells[5].Format.Alignment = ParagraphAlignment.Left;
+            //          row.Cells[6].AddParagraph("Total");
+            //            row.Cells[6].Format.Alignment = ParagraphAlignment.Left;
+
             //table.SetEdge(0, 0, 6, 1, Edge.Box, BorderStyle.Single, 0.75, Color.Empty);
 
             double boxes = 0;
@@ -432,18 +448,38 @@ namespace SAP_API.Controllers
                 row.Cells[2].AddParagraph(orderDetail.OrderRows[i].Price + " " + orderDetail.OrderRows[i].Currency);
                 row.Cells[3].AddParagraph(orderDetail.OrderRows[i].Quantity + " " + orderDetail.OrderRows[i].UomCode);
                 row.Cells[4].AddParagraph(orderDetail.OrderRows[i].InvQty + " " + orderDetail.OrderRows[i].UomCode2);
-                row.Cells[5].AddParagraph(orderDetail.OrderRows[i].Total + " " + orderDetail.DocCur);
-                boxes += orderDetail.OrderRows[i].Quantity;
+
+                //row.Cells[6].AddParagraph(orderDetail.OrderRows[i].Total + " " + orderDetail.DocCur);
+                if (!orderDetail.OrderRows[i].UomCode.Contains("CAJA"))
+                {
+                    double pesopromedio = double.Parse(orderDetail.OrderRows[i].U_IL_PesProm);
+                    if (pesopromedio != 0 && orderDetail.OrderRows[i].UomCode.Equals("KG"))
+                    {
+                        boxes = Math.Ceiling(orderDetail.OrderRows[i].Quantity / pesopromedio);
+                        string cajas = boxes > 1 ? " CAJAS" : " CAJA";
+                        row.Cells[5].AddParagraph(boxes + cajas);
+                    }
+                    else
+                    {
+                        row.Cells[5].AddParagraph(orderDetail.OrderRows[i].Quantity + " " + orderDetail.OrderRows[i].UomCode);
+                    }
+                }
+                else
+                {
+                    string cajas = orderDetail.OrderRows[i].Quantity > 1 ? " CAJAS" : " CAJA";
+                    row.Cells[5].AddParagraph(orderDetail.OrderRows[i].Quantity + cajas);
+                }
+
             }
 
-            row = table.AddRow();
-            row.Cells[0].Borders.Visible = false;
-            row.Cells[1].Borders.Visible = false;
-            row.Cells[2].Borders.Visible = false;
-            row.Cells[3].AddParagraph(boxes + " CAJAS");
-            row.Cells[3].Format.Alignment = ParagraphAlignment.Right;
-            row.Cells[4].Borders.Visible = false;
-            row.Cells[5].AddParagraph(orderDetail.Total + " " + orderDetail.DocCur);
+            //row = table.AddRow();
+            //row.Cells[0].Borders.Visible = false;
+            //row.Cells[1].Borders.Visible = false;
+            //row.Cells[2].Borders.Visible = false;
+            //row.Cells[3].AddParagraph(boxes + " CAJAS");
+            //row.Cells[3].Format.Alignment = ParagraphAlignment.Right;
+            //row.Cells[4].Borders.Visible = false;
+            //row.Cells[5].AddParagraph(orderDetail.Total + " " + orderDetail.DocCur);
 
             //table.SetEdge(5, table.Rows.Count - 4, 1, 4, Edge.Box, BorderStyle.Single, 1);
 
@@ -451,7 +487,9 @@ namespace SAP_API.Controllers
             paragraph.Format.SpaceBefore = "1cm";
             paragraph.AddText(@"Elaborado Por: " + orderDetail.SlpName);
             paragraph.AddLineBreak();
-            paragraph.AddText(@"Hora de Impresion: " + DateTime.Now.ToString("HH:mm"));
+            paragraph.AddText(@"Hora de Impresión: " + DateTime.Now.ToString("HH:mm"));
+            paragraph.AddLineBreak();
+            paragraph.AddFormattedText(@"*La cantidad de cajas es un aproximado en base al peso promedio por caja del producto", TextFormat.Bold);
 
             paragraph = new Paragraph();
             paragraph.AddText("Page ");
@@ -492,11 +530,13 @@ namespace SAP_API.Controllers
 
         // POST: api/TarimaImp
         [HttpPost("Tarima")]
-        public void Post([FromBody] TarimaPrint value) {
+        public void Post([FromBody] TarimaPrint value)
+        {
             etiquetaproduccion(value.IDPrinter, value.WHS, value.Pallet, value.Request, value.Transfer, value.RequestCopy, DateTime.Now.ToString());
         }
 
-        private void etiquetaproduccion(string IDPrinter, string WHS, string NumeroTarima, string SolicitudTraslado, string Transferencia, string Recepcion, string Fecha) {
+        private void etiquetaproduccion(string IDPrinter, string WHS, string NumeroTarima, string SolicitudTraslado, string Transferencia, string Recepcion, string Fecha)
+        {
 
             //string s = "^XA\n";
             //s += "^FW\n";
@@ -554,19 +594,13 @@ namespace SAP_API.Controllers
             RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\" + IDPrinter, bytes, bytes.Length);
         }
 
-        public class CarnesPrint {
-            public string ItemCode { set; get; }
-            public string ItemName { set; get; }
-            public string Batch { set; get; }
-            public string ExpirationDate { set; get; }
-            public string Count { set; get; }
-            public string IDPrinter { set; get; }
-        }
+
 
         // POST: api/Impresion/Carnes
         [HttpPost("Carnes")]
         [Authorize]
-        public void Carnes([FromBody] CarnesPrint value) {
+        public void Carnes([FromBody] CarnesPrint value)
+        {
 
             string txtProducto = value.ItemCode;
             string txtDescripcion = value.ItemName;
@@ -624,8 +658,9 @@ namespace SAP_API.Controllers
 
         // POST: api/Impresion/Consumo
         [HttpPost("Consumo")]
-        public void Consumo([FromBody] CarnesPrint value) {
-            
+        public void Consumo([FromBody] CarnesPrint value)
+        {
+
             string txtProducto = value.ItemCode;
             string txtDescripcion = value.ItemName;
             string txtLote = value.Batch;
@@ -685,17 +720,11 @@ namespace SAP_API.Controllers
             RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\" + value.IDPrinter, bytes, bytes.Length);
         }
 
-        public class MDomicilioPrint {
-            public string Room { set; get; }
-            public string Zone { set; get; }
-            public string Pasillo { set; get; }
-            public string Rack { set; get; }
-            public string IDPrinter { set; get; }
-        }
 
         // POST: api/Impresion/MasterDomicilio
         [HttpPost("MasterDomicilio")]
-        public void MasterDomicilio([FromBody] MDomicilioPrint value) {
+        public void MasterDomicilio([FromBody] MDomicilioPrint value)
+        {
 
             string txtCuarto = value.Room;
             string txtZona = value.Zone;
@@ -739,19 +768,12 @@ namespace SAP_API.Controllers
             RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\" + value.IDPrinter, bytes, bytes.Length);
         }
 
-        public class DomicilioPrint {
-            public string Room { set; get; }
-            public string Zone { set; get; }
-            public string Pasillo { set; get; }
-            public string Position { set; get; }
-            public string Section { set; get; }
-            public string Nivel { set; get; }
-            public string IDPrinter { set; get; }
-        }
+
 
         // POST: api/Impresion/MasterDomicilio
         [HttpPost("Domicilio")]
-        public void Domicilio([FromBody] DomicilioPrint value) {
+        public void Domicilio([FromBody] DomicilioPrint value)
+        {
 
             string txtCuarto = value.Room;
             string txtZona = value.Zone;
@@ -794,5 +816,34 @@ namespace SAP_API.Controllers
             var bytes = Encoding.ASCII.GetBytes(s);
             RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\" + value.IDPrinter, bytes, bytes.Length);
         }
+        public class CarnesPrint
+        {
+            public string ItemCode { set; get; }
+            public string ItemName { set; get; }
+            public string Batch { set; get; }
+            public string ExpirationDate { set; get; }
+            public string Count { set; get; }
+            public string IDPrinter { set; get; }
+        }
+        public class DomicilioPrint
+        {
+            public string Room { set; get; }
+            public string Zone { set; get; }
+            public string Pasillo { set; get; }
+            public string Position { set; get; }
+            public string Section { set; get; }
+            public string Nivel { set; get; }
+            public string IDPrinter { set; get; }
+        }
+        public class MDomicilioPrint
+        {
+            public string Room { set; get; }
+            public string Zone { set; get; }
+            public string Pasillo { set; get; }
+            public string Rack { set; get; }
+            public string IDPrinter { set; get; }
+        }
     }
+
+
 }
