@@ -26,7 +26,7 @@ namespace SAP_API.Controllers
 
         // GET: api/Impresion/
         [HttpGet("Impresoras")]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> GetImpresoras()
         {
 
