@@ -103,6 +103,7 @@ namespace SAP_API.Models {
         public string comments { set; get; }
         public int series { set; get; }
         public int payment { set; get; }
+        public string type { get; set; }
         //public double currencyRate { set; get; }
         public int priceList { set; get; }
         public int auth { set; get; }
