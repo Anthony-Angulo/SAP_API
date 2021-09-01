@@ -14,6 +14,7 @@ namespace SAP_API.Controllers {
     //[Authorize]
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class WarehouseController : ControllerBase {
 
         // Attributes

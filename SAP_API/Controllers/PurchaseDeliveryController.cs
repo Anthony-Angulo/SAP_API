@@ -11,6 +11,7 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class PurchaseDeliveryController : ControllerBase {
 
         [HttpPost("search")]

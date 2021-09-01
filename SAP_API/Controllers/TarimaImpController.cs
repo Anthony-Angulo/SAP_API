@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Text;
 using LPS;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class TarimaImpController : ControllerBase {
 
         public class TarimaPrintTransfer {

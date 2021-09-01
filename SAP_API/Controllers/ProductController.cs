@@ -11,6 +11,7 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class ProductsController : ControllerBase {
 
         // GET: api/Products/5
@@ -171,7 +172,84 @@ namespace SAP_API.Controllers
             GC.WaitForPendingFinalizers();
             return Ok(respose);
         }
+        [HttpGet("GetGrouped")]
+        public IActionResult GetGroupedByProduct()
+        {
+               SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+                SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            List<ProductoParaCliente> Productos = new List<ProductoParaCliente>();
 
+            string query = $@"SELECT
+T0.""ItemCode"",
+
+T0.""ItemName"",
+
+T1.""ItmsGrpCod"" AS ""Cód.Grupo"",
+
+T0.""U_IL_SubGrupo"",
+
+CASE
+
+WHEN T0.""QryGroup5"" = 'Y' THEN '05'
+
+WHEN T0.""QryGroup6"" = 'Y' THEN '06'
+
+WHEN T0.""QryGroup7"" = 'Y' THEN '07'
+
+WHEN T0.""QryGroup8"" = 'Y' THEN '08'
+
+WHEN T0.""QryGroup9"" = 'Y' THEN '09'
+
+WHEN T0.""QryGroup10"" = 'Y' THEN '10'
+
+WHEN T0.""QryGroup11"" = 'Y' THEN '11'
+
+WHEN T0.""QryGroup12"" = 'Y' THEN '12'
+
+WHEN T0.""QryGroup13"" = 'Y' THEN '13'
+
+WHEN T0.""QryGroup14"" = 'Y' THEN '14'
+
+WHEN T0.""QryGroup15"" = 'Y' THEN '15'
+
+END AS ""Cód.Categoría"",
+
+CASE
+
+WHEN T0.""QryGroup5"" = 'Y' THEN 'ABARROTES'
+
+WHEN T0.""QryGroup6"" = 'Y' THEN 'LACTEOS'
+
+WHEN T0.""QryGroup7"" = 'Y' THEN 'CARNES'
+
+WHEN T0.""QryGroup8"" = 'Y' THEN 'FRUTAS Y VERDURAS'
+
+WHEN T0.""QryGroup9"" = 'Y' THEN 'OTROS SERVICIOS'
+
+WHEN T0.""QryGroup10"" = 'Y' THEN 'MERCANCIAS GENERALES'
+
+WHEN T0.""QryGroup11"" = 'Y' THEN 'PANADERIA Y TORTILLERIA'
+
+WHEN T0.""QryGroup12"" = 'Y' THEN 'DONATIVOS CRIT'
+
+WHEN T0.""QryGroup13"" = 'Y' THEN 'FARMACIA'
+
+WHEN T0.""QryGroup14"" = 'Y' THEN 'ALIMENTOS PREPARADOS'
+
+WHEN T0.""QryGroup15"" = 'Y' THEN 'PRODUCTOS EMPACADOS'
+
+END AS ""ItmsGrpNam""
+
+FROM OITM T0 INNER JOIN OITB T1 ON T0.""ItmsGrpCod"" = T1.""ItmsGrpCod""
+WHERE ""QryGroup3"" = 'Y'
+ORDER BY ""ItmsGrpNam""
+";
+                oRecSet.DoQuery(query);
+                oRecSet.MoveFirst();
+                Productos = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"].ToObject<List<ProductoParaCliente>>();
+            return Ok(Productos);
+
+        }
         [HttpPost("Search/ToSellWithStockRetail/{warehouse}")]
         public async Task<IActionResult> GetSearchToSellWithStockRetail(string warehouse, [FromBody] SearchRequest request) {
 

@@ -13,6 +13,7 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class InventoryTransferController : ControllerBase {
 
         /// <summary>
@@ -297,14 +298,19 @@ namespace SAP_API.Controllers
                 return BadRequest(error);
             }
 
-            if (transferRequest.Lines.FromWarehouseCode != transferRequest.FromWarehouse)
+            
+            /*
+            if (transferRequest.Lines.FromWarehouseCode != transferRequest.Lines.WarehouseCode)
             {
                 return Ok();
             }
-
+            */
             //Get Document Updated.
             transferRequest.GetByKey(value.DocEntry);
-
+            if (transferRequest.Lines.FromWarehouseCode.Contains(transferRequest.Lines.WarehouseCode))
+            {
+                return Ok();
+            }
             SAPbobsCOM.StockTransfer newRequest = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
             newRequest.FromWarehouse = transferRequest.FromWarehouse;
             newRequest.ToWarehouse = transferRequest.ToWarehouse;
@@ -339,7 +345,7 @@ namespace SAP_API.Controllers
                 return Conflict(error);
             }
 
-            return Ok();
+            return Ok(newRequest);
         }
 
         // POST: api/InventoryTransfer
@@ -478,6 +484,67 @@ namespace SAP_API.Controllers
             }
             return BadRequest(new { error = "No Existe Documento" });
         }
+        [HttpGet("ProteusInventory/{WHS}/{InitialDate}/{EndDate}")]
+        public async Task<IActionResult> GetInventoryTransferProtheus(string WHS, string InitialDate, string EndDate)
+        {
 
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery($@"
+               SELECT
+  RIGHT(T1.""WhsCode"",2) AS ""1"",
+  CASE
+    WHEN T1.""Quantity"" > 0 THEN
+      CASE
+        WHEN T1.""Quantity"" * T1.""LineTotal"" > 0 THEN
+          '003'
+        ELSE
+          '002'
+      END
+    ELSE
+      CASE
+        WHEN T1.""Quantity"" * T1.""LineTotal"" < 0 THEN
+          '601'
+        ELSE
+          '501'
+      END
+  END AS ""2"",
+  RIGHT(T1.""ItemCode"", 7) AS ""3"",
+  T1.""Quantity"" * T4.""NumInSale"" AS ""4"",
+  '01' AS ""5"",
+  CONCAT(T2.""DocNum"", LPAD(T1.""LineNum"", 2, '00')) AS ""6"",
+  TO_VARCHAR(T2.""DocDate"", 'DD/MM/YYYY') as ""7"",
+  T1.""LineTotal"" * IFNULL(NULLIF(T1.""Rate"", 0), 1) AS ""11"",
+  'Transferencia SAP' AS ""12""
+  FROM
+    WTR1 T1 INNER JOIN
+    OWTR T2
+      ON T1.""DocEntry"" = T2.""DocEntry"" INNER JOIN
+    NNM1 T3
+      ON T2.""Series"" = T3.""Series"" INNER JOIN
+    OITM T4
+      ON T4.""ItemCode"" = T1.""ItemCode""
+  WHERE
+  --  T3.""SeriesName"" IN('S02', 'S03', 'S04', 'S08', 'S09', 'S11', 'S14', 'S21', 'S23', 'S24', 'S28', 'S32', 'S34', 'S38', 'S44', 'S46', 'S51', 'S52', 'S57', 'S61') AND – Esta linea es solo poner en comentarios
+    T3.""SeriesName"" = '{WHS}' AND
+    T2.""DocDate"" >= '{InitialDate}' AND
+    T2.""DocDate"" <= '{EndDate}'
+  ORDER BY
+    T3.""SeriesName""");
+
+            if (oRecSet.RecordCount == 0)
+            {
+                return NoContent();
+            }
+
+            JToken Transferencia = context.XMLTOJSON(oRecSet.GetAsXML())["WTR1"];
+
+            //Force Garbage Collector. Recommendation by InterLatin Dude. SDK Problem with memory.
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
+            return Ok(Transferencia);
+        }
     }
 }

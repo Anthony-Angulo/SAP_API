@@ -14,6 +14,7 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class PurchaseOrderController : ControllerBase {
 
         [HttpPost("search")]
@@ -120,6 +121,146 @@ namespace SAP_API.Controllers
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OPOR"][0]["COUNT"].ToObject<int>();
 
             PurchaseOrderSearchResponse respose = new PurchaseOrderSearchResponse {
+                data = orders,
+                draw = request.Draw,
+                recordsFiltered = COUNT,
+                recordsTotal = COUNT,
+            };
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(respose);
+        }
+        [HttpPost("Search/{WhsCode}")]
+        public async Task<IActionResult> SearchWarehouseFilter(string WhsCode, [FromBody] SearchRequest request)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            List<string> where = new List<string>();
+            where.Add($"warehouse.\"WhsCode\" = '{WhsCode}'");
+
+            if (request.columns[0].search.value != String.Empty)
+            {
+                where.Add($"LOWER(purchaseOrder.\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
+            }
+            if (request.columns[1].search.value != String.Empty)
+            {
+                where.Add($"LOWER(contact.\"CardFName\") Like LOWER('%{request.columns[1].search.value}%')");
+            }
+            if (request.columns[2].search.value != String.Empty)
+            {
+                where.Add($"LOWER(contact.\"CardName\") Like LOWER('%{request.columns[2].search.value}%')");
+            }
+            if (request.columns[3].search.value != String.Empty)
+            {
+                where.Add($"LOWER(warehouse.\"WhsName\") Like LOWER('%{request.columns[3].search.value}%')");
+            }
+            if (request.columns[4].search.value != String.Empty)
+            {
+                List<string> whereOR = new List<string>();
+                if ("Abierto".Contains(request.columns[4].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    whereOR.Add(@"purchaseOrder.""DocStatus"" = 'O' ");
+                }
+                if ("Cerrado".Contains(request.columns[4].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    whereOR.Add(@"purchaseOrder.""DocStatus"" = 'C' ");
+                }
+                if ("Cancelado".Contains(request.columns[4].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    whereOR.Add(@"purchaseOrder.""CANCELED"" = 'Y' ");
+                }
+
+                string whereORClause = "(" + String.Join(" OR ", whereOR) + ")";
+                where.Add(whereORClause);
+            }
+            if (request.columns[5].search.value != String.Empty)
+            {
+                where.Add($"to_char(to_date(SUBSTRING(purchaseOrder.\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[5].search.value}%'");
+            }
+
+            string orderby = "";
+            if (request.order[0].column == 0)
+            {
+                orderby = $" ORDER BY purchaseOrder.\"DocNum\" {request.order[0].dir}";
+            }
+            else if (request.order[0].column == 1)
+            {
+                orderby = $" ORDER BY contact.\"CardFName\" {request.order[0].dir}";
+            }
+            else if (request.order[0].column == 2)
+            {
+                orderby = $" ORDER BY contact.\"CardName\" {request.order[0].dir}";
+            }
+            else if (request.order[0].column == 3)
+            {
+                orderby = $" ORDER BY warehouse.\"WhsName\" {request.order[0].dir}";
+            }
+            else if (request.order[0].column == 4)
+            {
+                orderby = $" ORDER BY purchaseOrder.\"DocStatus\" {request.order[0].dir}";
+            }
+            else if (request.order[0].column == 5)
+            {
+                orderby = $" ORDER BY purchaseOrder.\"DocDate\" {request.order[0].dir}";
+            }
+            else
+            {
+                orderby = $" ORDER BY purchaseOrder.\"DocNum\" DESC";
+            }
+
+            string whereClause = String.Join(" AND ", where);
+
+            string query = @"
+                Select
+                    purchaseOrder.""DocEntry"",
+                    purchaseOrder.""DocNum"",
+
+                    to_char(to_date(SUBSTRING(purchaseOrder.""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDate"",
+
+                    (case when purchaseOrder.""CANCELED"" = 'Y' then 'Cancelado'
+                    when purchaseOrder.""DocStatus"" = 'O' then 'Abierto'
+                    when purchaseOrder.""DocStatus"" = 'C' then 'Cerrado'
+                    else purchaseOrder.""DocStatus"" end)  AS  ""DocStatus"",
+
+                    purchaseOrder.""CardName"",
+                    contact.""CardFName"",
+                    warehouse.""WhsName""
+                From OPOR purchaseOrder
+                LEFT JOIN NNM1 serie ON purchaseOrder.""Series"" = serie.""Series""
+                LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OCRD contact ON purchaseOrder.""CardCode"" = contact.""CardCode"" ";
+
+            if (where.Count != 0)
+            {
+                query += "Where " + whereClause;
+            }
+
+            query += orderby;
+
+            query += " LIMIT " + request.length + " OFFSET " + request.start + "";
+
+            oRecSet.DoQuery(query);
+            List<PurchaseOrderSearchDetail> orders = context.XMLTOJSON(oRecSet.GetAsXML())["OPOR"].ToObject<List<PurchaseOrderSearchDetail>>();
+
+            string queryCount = @"
+                Select
+                    Count (*) as COUNT
+                From OPOR purchaseOrder
+                LEFT JOIN NNM1 serie ON purchaseOrder.""Series"" = serie.""Series""
+                LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+                LEFT JOIN OCRD contact ON purchaseOrder.""CardCode"" = contact.""CardCode"" ";
+
+            if (where.Count != 0)
+            {
+                queryCount += "Where " + whereClause;
+            }
+            oRecSet.DoQuery(queryCount);
+            oRecSet.MoveFirst();
+            int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OPOR"][0]["COUNT"].ToObject<int>();
+
+            PurchaseOrderSearchResponse respose = new PurchaseOrderSearchResponse
+            {
                 data = orders,
                 draw = request.Draw,
                 recordsFiltered = COUNT,

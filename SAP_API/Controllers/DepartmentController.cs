@@ -9,9 +9,9 @@ using SAP_API.Models;
 
 namespace SAP_API.Controllers {
 
-    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class DepartmentController : ControllerBase {
 
         // Atributtes

@@ -211,9 +211,7 @@ namespace SAP_API {
                     await next();
                 });
             });
-
             app.UseLogMiddleware();
-
             app.UseAuthentication();
             app.UseMvc();
 

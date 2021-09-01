@@ -12,7 +12,6 @@ using SAP_API.Models;
 
 namespace SAP_API.Controllers {
 
-    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class RoleController : ControllerBase {

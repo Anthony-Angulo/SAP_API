@@ -5,7 +5,8 @@ using System.Threading.Tasks;
 
 namespace SAP_API.Models
 {
-    public class ProductDetail {
+    public class ProductDetail
+    {
         public string ItemName { get; set; }
         public string ItemCode { get; set; }
         public string Meet { get; set; }
@@ -21,7 +22,8 @@ namespace SAP_API.Models
         public List<UOMDetail> UOMList { get; set; }
     }
 
-    public class ProductPriceListDetail : SearchDetail {
+    public class ProductPriceListDetail : SearchDetail
+    {
         public string ItemName { get; set; }
         public string ItemCode { get; set; }
         public double Price { get; set; }
@@ -33,21 +35,49 @@ namespace SAP_API.Models
 
     public class ProductPriceListSearchResponse : SearchResponse<ProductPriceListDetail> { }
 
-    public class ProductSearchDetail : SearchDetail {
+    public class ProductSearchDetail : SearchDetail
+    {
         public string ItemName { get; set; }
         public string ItemCode { get; set; }
     }
 
     public class ProductSearchResponse : SearchResponse<ProductSearchDetail> { }
 
-    public class ProductWithStockSearchDetail : SearchDetail {
+    public class ProductWithStockSearchDetail : SearchDetail
+    {
         public string ItemName { get; set; }
         public string ItemCode { get; set; }
         public double OnHand { get; set; }
     }
+    public class ProductoAgrupado
+    {
+        public string ItmsGrpNam { get; set; }
+
+        public string ItmsGrpCod { get; set; }
+
+        public List<ProductoParaCliente> Productos { get; set; }
+    }
+    public class ProductoParaCliente
+    {
+        public int idClientes_Productos { get; set; }
+
+        public string label { get; set; }
+
+        public string value { get; set; }
+
+        public string ItemCode { get; set; }
+
+        public string ItemName { get; set; }
+
+        public string ItmsGrpNam { get; set; }
+
+        public int status { get; set; }
+    }
+
     public class ProductWithStockSearchResponse : SearchResponse<ProductWithStockSearchDetail> { }
 
-    public class ProductToTransferDetail {
+    public class ProductToTransferDetail
+    {
         public string ItemName { get; set; }
         public string ItemCode { get; set; }
         public double PesProm { get; set; }
@@ -55,7 +85,8 @@ namespace SAP_API.Models
         public List<UOMDetail> UOMList { get; set; }
     }
 
-    public class UOMDetail {
+    public class UOMDetail
+    {
         public int BaseUom { get; set; }
         public string BaseCode { get; set; }
         public int UomEntry { get; set; }
@@ -63,12 +94,14 @@ namespace SAP_API.Models
         public double BaseQty { get; set; }
     }
 
-    public class Property {
+    public class Property
+    {
         public string ItmsGrpNam { get; set; }
         public int ItmsTypCod { get; set; }
     }
 
-    public class ProductLastSellPriceWMS {
+    public class ProductLastSellPriceWMS
+    {
         public string Currency { get; set; }
         public int IUoMEntry { get; set; }
         public string ItemCode { get; set; }
@@ -83,4 +116,5 @@ namespace SAP_API.Models
         public int SUoMEntry { get; set; }
         public double U_IL_PesProm { get; set; }
     }
+
 }

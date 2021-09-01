@@ -15,12 +15,14 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using SAP_API.Entities;
 using SAP_API.Models;
+using static SAP_API.Controllers.UserController;
 
 namespace SAP_API.Controllers
 {
 
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class AccountController : ControllerBase
     {
 
@@ -51,7 +53,6 @@ namespace SAP_API.Controllers
         /// </summary>
         /// <returns>A Route Redirect</returns>
         // GET: api/Account
-        [Authorize]
         [HttpGet("User")]
         public async Task<IActionResult> UserLog()
         {
@@ -77,12 +78,13 @@ namespace SAP_API.Controllers
         /// <response code="400">Login Failed</response>
         [ProducesResponseType(typeof(Token), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [AllowAnonymous]
         [HttpPost("Login")]
         public async Task<object> Login([FromBody] LoginDto loginData)
         {
 
             var result = await _signInManager.PasswordSignInAsync(loginData.Email, loginData.Password, false, false);
-
+            
             if (result.Succeeded)
             {
                 var appUser = _userManager.Users.SingleOrDefault(r => r.Email == loginData.Email);
@@ -99,10 +101,16 @@ namespace SAP_API.Controllers
 
                 };
                 var token = await GenerateJwtToken(loginData.Email, appUser);
-                return Ok(new { token, AppLogin });
-            }
+                appUser.Warehouse = _context.Warehouses.Find(appUser.WarehouseID);
+                //UserDetailOutput Roles = Redirect($"/api/User/{appUser.Id}");
+                UserController userController = new UserController(_context, _userManager, _roleManager);
+                 var Roles =  (ObjectResult) userController.Get(appUser.Id).Result;
+                UserDetailOutput userDetail = (UserDetailOutput)Roles.Value;
+                //Task<IActionResult> RolList = new RoleController(_context,_roleManager).Get(Roles.RoleId);
+                return Ok(new { token, AppLogin, warehouseCode= appUser.Warehouse.WhsCode,userDetail.RolePermissions});
+            }  
             return BadRequest("Error al Intentar Iniciar Sesion");
-        }
+        }        
         public class AppUserLogin
         {
             public Boolean active { get; set; }
@@ -123,7 +131,6 @@ namespace SAP_API.Controllers
         /// <response code="400">Register Failed</response>
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        [Authorize]
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto register)
         {
@@ -156,28 +163,28 @@ namespace SAP_API.Controllers
                 Warehouse = warehouse,
                 Department = department,
             };
+            
+                var result = await _userManager.CreateAsync(user, register.Password);
 
-            var result = await _userManager.CreateAsync(user, register.Password);
-
-            if (result.Succeeded)
-            {
-
-                await _userManager.AddToRoleAsync(user, Role.Name);
-
-                foreach (string Permission in register.PermissionsExtra)
+                if (result.Succeeded)
                 {
-                    await _userManager.AddClaimAsync(user, new Claim(CustomClaimTypes.Permission, Permission));
-                }
 
-                return Ok();
+                    await _userManager.AddToRoleAsync(user, Role.Name);
+
+                    foreach (string Permission in register.PermissionsExtra)
+                    {
+                        await _userManager.AddClaimAsync(user, new Claim(CustomClaimTypes.Permission, Permission));
+                    }
+
+                    return Ok();
+                }
+                StringBuilder stringBuilder = new StringBuilder();
+                foreach (IdentityError m in result.Errors.ToList())
+                {
+                    stringBuilder.AppendFormat("Codigo: {0} Descripcion: {1}\n", m.Code, m.Description);
+                }
+                return BadRequest(stringBuilder.ToString());
             }
-            StringBuilder stringBuilder = new StringBuilder();
-            foreach (IdentityError m in result.Errors.ToList())
-            {
-                stringBuilder.AppendFormat("Codigo: {0} Descripcion: {1}\n", m.Code, m.Description);
-            }
-            return BadRequest(stringBuilder.ToString());
-        }
 
         // Generate Identification Token
         private async Task<object> GenerateJwtToken(string email, User user)

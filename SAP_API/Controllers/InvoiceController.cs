@@ -9,10 +9,10 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class InvoiceController : ControllerBase
     {
 
-        [Authorize]
         // GET api/<InvoiceController>/5
         [HttpGet("{DocEntry}")]
         public IActionResult GetInvoice(string DocEntry)
@@ -47,7 +47,6 @@ namespace SAP_API.Controllers
 
             return Ok(invoice);
         }
-        [Authorize]
         // GET api/<InvoiceController>/5
         [HttpGet("Code/{Codebar}")]
         public IActionResult GetInvoiceCodeBar(string Codebar)

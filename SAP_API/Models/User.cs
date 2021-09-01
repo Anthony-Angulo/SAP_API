@@ -30,5 +30,7 @@ namespace SAP_API.Models {
         public string Active_Burn { get; set; }
 
         public int Serie { get; set; }
-    }
+
+        public int WarehouseID { get; set; }
+        }
 }

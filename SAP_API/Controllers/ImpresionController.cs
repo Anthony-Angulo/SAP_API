@@ -522,7 +522,6 @@ namespace SAP_API.Controllers
         // POST: api/WmsTarima
         // TODO: Change this to /Tarima for WMS WEB AUTHORIZATIOn
         [HttpPost("WmsTarima")]
-        [Authorize]
         public void PostWmsTarima([FromBody] TarimaPrint value)
         {
             etiquetaproduccion(value.IDPrinter, value.WHS, value.Pallet, value.Request, value.Transfer, value.RequestCopy, DateTime.Now.ToString());
@@ -598,7 +597,6 @@ namespace SAP_API.Controllers
 
         // POST: api/Impresion/Carnes
         [HttpPost("Carnes")]
-        [Authorize]
         public void Carnes([FromBody] CarnesPrint value)
         {
 

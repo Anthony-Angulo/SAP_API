@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
@@ -10,6 +11,7 @@ namespace SAP_API.Controllers {
 
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class GoodsReceiptController : ControllerBase {
 
         /// <summary>

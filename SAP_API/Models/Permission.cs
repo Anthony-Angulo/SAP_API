@@ -32,6 +32,13 @@ namespace SAP_API.Models
             public const string Create = "Permissions.Users.Create";
             public const string Edit = "Permissions.Users.Edit";
         }
+        public static class Autorizar
+        {
+            public const string Label = "Autorizar";
+            public const string View = "Permissions.Autorizar.View";
+            public const string Create = "Permissions.Autorizar.Create";
+            public const string Edit = "Permissions.Autorizar.Edit";
+        }
 
         public static List<PermissionsOutput> Get()
         {

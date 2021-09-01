@@ -15,6 +15,7 @@ namespace SAP_API.Controllers {
 
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class OrderController : ControllerBase {
 
         /// <summary>
@@ -31,6 +32,8 @@ namespace SAP_API.Controllers {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             List<string> where = new List<string>();
+            where.Add(@"ord.""U_SO1_01RETAILONE"" = 'N'");
+
             if (request.columns[0].search.value != String.Empty) {
                 where.Add($"LOWER(ord.\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
             }
@@ -323,7 +326,8 @@ namespace SAP_API.Controllers {
             return Ok(respose);
         }
 
-        // GET: api/Order/WMSDetail/5
+        // GET: api/Order/WMSDetail/5]
+        [Authorize]
         [HttpGet("WMSDetail/{DocEntry}")]
         public async Task<IActionResult> GetWMSDetail(int DocEntry) {
 
@@ -945,7 +949,71 @@ namespace SAP_API.Controllers {
             GC.WaitForPendingFinalizers();
             return Ok(orders);
         }
+        [HttpGet("CRMAPP/listTag/{employee}")]
+        public async Task<IActionResult> GetCRMAPPListTag(string employee)
+        {
 
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery($@"
+                SELECT
+  ord.""DocEntry"",
+  ord.""DocNum"",
+  ord.""DocDate"",
+  ord.""DocStatus"",
+  ord.""CANCELED"",
+  CASE
+    WHEN --Cancelado
+      ord.""CANCELED"" = 'Y' THEN 'X'
+    WHEN --Cerrado
+      ord.""DocStatus"" = 'C' THEN 'C'
+    WHEN
+      ord.""DocStatus"" = 'O' THEN
+        CASE
+          WHEN --Cerrado aunque esté abierto, porque ya se entregó todo
+            SUM(product.""OpenQty"") = 0 THEN 'C'
+          WHEN --Parcialmente entregado
+            SUM(product.""Quantity"") > SUM(product.""OpenQty"") THEN 'P'
+          ELSE
+            'O'
+        END
+  END AS ""Estatus"",
+  contact.""CardName"",
+  contact.""CardFName"",
+  warehouse.""WhsName""
+  FROM
+    ORDR ord LEFT JOIN
+    NNM1 serie ON
+      ord.""Series"" = serie.""Series"" LEFT JOIN
+    OWHS warehouse ON
+      serie.""SeriesName"" = warehouse.""WhsCode"" LEFT JOIN
+    OSLP person ON
+      ord.""SlpCode"" = person.""SlpCode"" LEFT JOIN
+    OCRD contact ON
+      ord.""CardCode"" = contact.""CardCode"" INNER JOIN
+    RDR1 product ON
+      ord.""DocEntry"" = product.""DocEntry""
+  WHERE
+    ord.""DocDate"" >= add_days(CURRENT_DATE, -3) AND
+    ord.""U_nwr_Tag"" LIKE '{employee}'
+  GROUP BY
+    ord.""DocEntry"",
+    ord.""DocNum"",
+    ord.""DocDate"",
+    ord.""DocStatus"",
+    ord.""CANCELED"",
+    contact.""CardName"",
+    contact.""CardFName"",
+    warehouse.""WhsName""
+  ORDER BY ""DocEntry"" DESC");
+
+            oRecSet.MoveFirst();
+            JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(orders);
+        }
         // GET: api/Order/5
         // Orden Detalle
         [HttpGet("{id}")]
@@ -955,35 +1023,85 @@ namespace SAP_API.Controllers {
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
             oRecSet.DoQuery(@"
-                SELECT
-                    ord.""DocStatus"",
-                    ord.""DocEntry"",
-                    ord.""DocNum"",
-                    ord.""DocDate"",
-                    ord.""DocTime"",
-                    ord.""DocDueDate"",
-                    ord.""CancelDate"",
-                    ord.""Address"",
-                    ord.""Address2"",
-                    ord.""DocCur"",
-                    ord.""Comments"",
-                    ord.""DocTotal"",
-                    ord.""DocTotalFC"",
-                    ord.""DocRate"",
-                    payment.""PymntGroup"",
-                    contact.""CardName"",
-                    contact.""CardCode"",
-                    contact.""CardFName"",
-                    employee.""SlpCode"",
-                    employee.""SlpName"",
-                    warehouse.""WhsName""
-                FROM ORDR ord
-                LEFT JOIN NNM1 series ON series.""Series"" = ord.""Series""
-                LEFT JOIN OWHS warehouse ON warehouse.""WhsCode"" = series.""SeriesName""
-                LEFT JOIN OSLP employee ON employee.""SlpCode"" = ord.""SlpCode""
-                LEFT JOIN OCTG payment ON payment.""GroupNum"" = ord.""GroupNum""
-                LEFT JOIN OCRD contact ON contact.""CardCode"" = ord.""CardCode""
-                WHERE ord.""DocEntry"" = '" + id + "' ");
+SELECT
+  ord.""DocStatus"",
+  ord.""DocEntry"",
+  ord.""DocNum"",
+  ord.""DocDate"",
+  ord.""DocTime"",
+  ord.""DocDueDate"",
+  ord.""CancelDate"",
+  ord.""Address"",
+  ord.""Address2"",
+  ord.""DocCur"",
+  ord.""Comments"",
+  ord.""DocTotal"",
+  ord.""DocTotalFC"",
+  ord.""DocRate"",
+  CASE
+    WHEN--Cancelado
+      ord.""CANCELED"" = 'Y' THEN 'X'
+    WHEN--Cerrado
+      ord.""DocStatus"" = 'C' THEN 'C'
+    WHEN
+      ord.""DocStatus"" = 'O' THEN
+        CASE
+          WHEN--Cerrado aunque esté abierto, porque ya se entregó todo
+            SUM(product.""OpenQty"") = 0 THEN 'C'
+          WHEN--Parcialmente entregado
+            SUM(product.""Quantity"") > SUM(product.""OpenQty"") THEN 'P'
+          ELSE
+            'O'
+        END
+  END AS ""Estatus"",
+  --SUM(product.""Quantity""),
+  --SUM(product.""OpenQty""),
+  payment.""PymntGroup"",
+  contact.""CardName"",
+  contact.""CardCode"",
+  contact.""CardFName"",
+  employee.""SlpCode"",
+  employee.""SlpName"",
+  warehouse.""WhsName""
+  FROM
+    ORDR ord LEFT JOIN
+    NNM1 series ON
+      series.""Series"" = ord.""Series"" LEFT JOIN
+    OWHS warehouse ON
+      warehouse.""WhsCode"" = series.""SeriesName"" LEFT JOIN
+    OSLP employee ON
+      employee.""SlpCode"" = ord.""SlpCode"" LEFT JOIN
+    OCTG payment ON
+      payment.""GroupNum"" = ord.""GroupNum"" LEFT JOIN
+    OCRD contact ON
+      contact.""CardCode"" = ord.""CardCode"" INNER JOIN
+    RDR1 product ON
+      ord.""DocEntry"" = product.""DocEntry""
+  WHERE
+    ord.""DocEntry"" = '"+ id +@"'
+  GROUP BY
+    ord.""DocStatus"",
+    ord.""DocEntry"",
+    ord.""DocNum"",
+    ord.""DocDate"",
+    ord.""DocTime"",
+    ord.""DocDueDate"",
+    ord.""CancelDate"",
+    ord.""Address"",
+    ord.""Address2"",
+    ord.""DocCur"",
+    ord.""Comments"",
+    ord.""DocTotal"",
+    ord.""DocTotalFC"",
+    ord.""DocRate"",
+    ord.""CANCELED"",
+    payment.""PymntGroup"",
+    contact.""CardName"",
+    contact.""CardCode"",
+    contact.""CardFName"",
+    employee.""SlpCode"",
+    employee.""SlpName"",
+    warehouse.""WhsName""");
 
             JToken temp = context.XMLTOJSON(oRecSet.GetAsXML());
             temp["ORDR"] = temp["ORDR"][0];
@@ -996,6 +1114,7 @@ namespace SAP_API.Controllers {
                     ""Price"",
                     ""Currency"",
                     ""Quantity"",
+                    ""OpenQty"",
                     ""UomCode"",
                     ""InvQty"",
                     ""UomCode2"",
@@ -1171,6 +1290,7 @@ namespace SAP_API.Controllers {
                         payment = value.payment,
                         comments = value.comments,
                         date = value.date,
+                        auth = value.auth,
                         series = value.series,
                         priceList = value.priceList,
                         rows = productsMeatUSD
@@ -1189,6 +1309,7 @@ namespace SAP_API.Controllers {
                         payment = value.payment,
                         comments = value.comments,
                         date = value.date,
+                        auth = value.auth,
                         series = value.series,
                         priceList = value.priceList,
                         rows = productsMeatMXN
@@ -1204,6 +1325,7 @@ namespace SAP_API.Controllers {
                     {
                         cardcode = value.cardcode,
                         currency = "USD",
+                        auth = value.auth,
                         payment = value.payment,
                         type = "Orden de producto en dolares",
                         comments = value.comments,
@@ -1221,6 +1343,7 @@ namespace SAP_API.Controllers {
                     {
                         cardcode = value.cardcode,
                         currency = "MXN",
+                        auth = value.auth,
                         type = "Orden de producto en pesos",
                         payment = value.payment,
                         comments = value.comments,
@@ -1253,6 +1376,7 @@ namespace SAP_API.Controllers {
                     {
                         cardcode = value.cardcode,
                         currency = "USD",
+                        auth = value.auth,
                         type = "Orden en dolares",
                         payment = value.payment,
                         comments = value.comments,
@@ -1270,6 +1394,7 @@ namespace SAP_API.Controllers {
                     {
                         cardcode = value.cardcode,
                         currency = "MXN",
+                        auth=value.auth,
                         type = "Orden en pesos",
                         payment = value.payment,
                         comments = value.comments,
@@ -1331,7 +1456,7 @@ namespace SAP_API.Controllers {
             //    }
             //}
         }
-
+        [NonAction]
         public JToken CreateOrderNew(CreateOrder value)
         {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
@@ -1474,9 +1599,7 @@ namespace SAP_API.Controllers {
         // Creacion de Orden
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] CreateOrder value) {
-
             //SAPMulti SAPMultiInstance = HttpContext.RequestServices.GetService(typeof(SAPMulti)) as SAPMulti;
-
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
             //SAPContext context = SAPMultiInstance.GetCurrentInstance();
@@ -1489,12 +1612,10 @@ namespace SAP_API.Controllers {
 
             //} while (context.oCompany.InTransaction);
 
-
             //if (context == null)
             //{
             //    return UnprocessableEntity("Servicio saturado. Favor de reintentar en un minuto.");
             //}
-
            
             //context.oCompany.StartTransaction();
 
@@ -1547,13 +1668,15 @@ namespace SAP_API.Controllers {
             order.DocCurrency = value.currency;
             order.DocDueDate = value.date;
             order.PaymentGroupCode = value.payment;
+            if(value.idUsuario!=null)
+            order.UserFields.Fields.Item("U_nwr_Tag").Value = value.idUsuario.ToString();
 
             if (!contact.GetByKey(value.cardcode)) {
                 string error = context.oCompany.GetLastErrorDescription();
                 //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                 return BadRequest(new { error });
             }
-
+                
             String temp = (String)contact.UserFields.Fields.Item("U_B1SYS_MainUsage").Value;
             if (temp != String.Empty) {
                 order.UserFields.Fields.Item("U_SO1_02USOCFDI").Value = temp;
@@ -1587,7 +1710,7 @@ namespace SAP_API.Controllers {
 
                 double Price = (double)oRecSet.Fields.Item("Price").Value;
                 string Currency = (string)oRecSet.Fields.Item("Currency").Value;
-
+                
                 if (value.rows[i].uom == -2) {
                     order.Lines.UnitPrice = Price ;
                 } else {
@@ -1610,7 +1733,7 @@ namespace SAP_API.Controllers {
             order.Comments = value.comments;
 
             if (order.Add() == 0) {
-                //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
+                                //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
                 return Ok();
             } else {
                 string error = context.oCompany.GetLastErrorDescription();
@@ -1647,8 +1770,7 @@ namespace SAP_API.Controllers {
             order.DocDueDate = value.date;
             order.Address = value.address;
             order.Address2 = "";
-
-            for (int i = 0; i < value.rows.Count; i++) {
+              for (int i = 0; i < value.rows.Count; i++) {
                 order.Lines.ItemCode = value.rows[i].code;
                 order.Lines.WarehouseCode = warehouse;
 

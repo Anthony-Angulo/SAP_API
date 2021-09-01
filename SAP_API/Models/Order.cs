@@ -109,6 +109,8 @@ namespace SAP_API.Models {
         public int auth { set; get; }
         public DateTime date { set; get; }
         public List<OrderRow> rows { set; get; }
+
+        public string idUsuario { get; set; }
     }
 
     public class CreateOrderRetail {

@@ -13,6 +13,7 @@ namespace SAP_API.Controllers {
 
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class DeliveryController : ControllerBase {
 
         // Note: Use OrderSearchResponse because the answer is composed of the same attributes.

@@ -64,7 +64,7 @@ namespace SAP_API.Controllers {
             return Ok(output);
         }
 
-        class UserDetailOutput {
+       public class UserDetailOutput {
             public string Id { get; set; }
             public string Email { get; set; }
             public string Name { get; set; }

@@ -17,13 +17,14 @@ namespace SAP_API.Entities {
         public DbSet<OrderAuth> OrderAuths { get; set; }
         public DbSet<OrderAuthRow> OrderAuthRows { get; set; }
         public DbSet<CodeBarDetail> CodeBarDetails { get; set; }
+        public DbSet<ClientsProducts> Clientes_Productos { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
             optionsBuilder.UseMySql(GetConnectionString());
         }
 
         private static string GetConnectionString() {
-            const string databaseName = "CCFN";
+            const string databaseName = "CCFNPROD";
             const string databaseUser = "remote";
             const string databasePass = "Ch1v@s.2019@CCFN.2X5B8M";
 

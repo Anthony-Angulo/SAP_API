@@ -13,6 +13,7 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class InventoryTransferRequestController : ControllerBase {
 
 
@@ -902,6 +903,5 @@ namespace SAP_API.Controllers
 
             return BadRequest(new { error = "No Existe Documento" });
         }
-
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
@@ -9,6 +10,7 @@ namespace SAP_API.Controllers {
 
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class CurrencyRateController : ControllerBase {
 
         // Class To Serialize CurrencyRate Query Result 
