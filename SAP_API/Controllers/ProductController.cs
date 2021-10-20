@@ -1307,6 +1307,75 @@ ORDER BY ""ItmsGrpNam""
             return Ok(returnValue);
         }
 
+        [HttpGet("APPCRM/{CardCode}")]
+        public async Task<IActionResult> GetCRMS(String CardCode)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery($@"
+                Select 
+                    ""ItemName"",
+                    ""ItemCode"",
+                    ""QryGroup7"" as ""Meet"",
+                    RTRIM(RTRIM(""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm"",
+                    ""U_IL_TipPes"" AS ""U_IL_TipPes"",
+""QryGroup1"" AS ""Nacional"",
+""U_IL_Giro"",
+                    ""QryGroup2"" AS ""Extranjero""
+                From OITM
+                Where ""SellItem"" = 'Y'
+                AND ""QryGroup3"" = 'Y'
+                AND ""Canceled"" = 'N'
+                AND ""validFor"" = 'Y'
+                AND ""ItemCode""='{CardCode}' ");
+            oRecSet.MoveFirst();
+            JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
+            oRecSet.DoQuery($@"
+                Select 
+                    ""PriceList"",
+                    ""ItemCode"",
+                    ""Currency"",
+                    RTRIM(RTRIM(""Price"", '0'), '.') AS ""Price"",
+                    ""UomEntry""
+                From ITM1
+                Where   ""PriceList"" in ('26','27','28','29','30','31','32','33')
+                AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y' AND ""ItemCode""='{CardCode}' )");
+            oRecSet.MoveFirst();// in (19, 13, 14, 15, 16)
+            JToken priceList = context.XMLTOJSON(oRecSet.GetAsXML())["ITM1"];
+            oRecSet.DoQuery($@"
+                Select 
+                    ""ItemCode"",
+                    ""WhsCode"",
+                    RTRIM(RTRIM(""OnHand"", '0'), '.') AS ""OnHand""
+                From OITW
+                Where ""OnHand"" != 0 
+                    AND ""Freezed"" = 'N'
+                    AND ""Locked"" = 'N'
+                    AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62','S63')
+                    AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y' AND ""ItemCode""='{CardCode}' )");
+            oRecSet.MoveFirst();
+            JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
+            oRecSet.DoQuery($@"
+                Select 
+                    header.""UgpCode"",
+                    header.""BaseUom"",
+                    baseUOM.""UomCode"" as baseUOM,
+                    detail.""UomEntry"",
+                    UOM.""UomCode"",
+                    RTRIM(RTRIM(detail.""BaseQty"", '0'), '.') AS ""BaseQty""
+                From OUGP header
+                JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                Where header.""UgpCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y' AND ""ItemCode""='{CardCode}' )");
+            oRecSet.MoveFirst();
+            JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            var returnValue = new { products, priceList, stock, uom };
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(returnValue);
+        }
         // CON NUEVA VERSION APP NO PUBLICADA
         // GET: api/Products/APPCRM/200
         [HttpGet("APPCRM/{id}")]

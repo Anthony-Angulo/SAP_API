@@ -18,6 +18,7 @@ namespace SAP_API.Entities {
         public DbSet<OrderAuthRow> OrderAuthRows { get; set; }
         public DbSet<CodeBarDetail> CodeBarDetails { get; set; }
         public DbSet<ClientsProducts> Clientes_Productos { get; set; }
+        public DbSet<LogFacturacion> LogFacturacion { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
             optionsBuilder.UseMySql(GetConnectionString());

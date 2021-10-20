@@ -298,13 +298,17 @@ namespace SAP_API.Controllers
                 return BadRequest(error);
             }
 
-            
+
             /*
             if (transferRequest.Lines.FromWarehouseCode != transferRequest.Lines.WarehouseCode)
             {
                 return Ok();
             }
             */
+            /*if (transferRequest.ToWarehouse == "TSR")
+            {
+                return Ok();
+            }*/
             //Get Document Updated.
             transferRequest.GetByKey(value.DocEntry);
             if (transferRequest.Lines.FromWarehouseCode.Contains(transferRequest.Lines.WarehouseCode))
@@ -484,14 +488,13 @@ namespace SAP_API.Controllers
             }
             return BadRequest(new { error = "No Existe Documento" });
         }
-        [HttpGet("ProteusInventory/{WHS}/{InitialDate}/{EndDate}")]
-        public async Task<IActionResult> GetInventoryTransferProtheus(string WHS, string InitialDate, string EndDate)
+        [HttpGet("ProteusInventory/{Transfer}")]
+        public async Task<IActionResult> GetInventoryTransferProtheus(string Transfer)
         {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
-            oRecSet.DoQuery($@"
+            String Query = $@"
                SELECT
   RIGHT(T1.""WhsCode"",2) AS ""1"",
   CASE
@@ -527,11 +530,10 @@ namespace SAP_API.Controllers
       ON T4.""ItemCode"" = T1.""ItemCode""
   WHERE
   --  T3.""SeriesName"" IN('S02', 'S03', 'S04', 'S08', 'S09', 'S11', 'S14', 'S21', 'S23', 'S24', 'S28', 'S32', 'S34', 'S38', 'S44', 'S46', 'S51', 'S52', 'S57', 'S61') AND – Esta linea es solo poner en comentarios
-    T3.""SeriesName"" = '{WHS}' AND
-    T2.""DocDate"" >= '{InitialDate}' AND
-    T2.""DocDate"" <= '{EndDate}'
+    T2.""DocNum""='{Transfer}'
   ORDER BY
-    T3.""SeriesName""");
+    T3.""SeriesName""";
+            oRecSet.DoQuery(Query);
 
             if (oRecSet.RecordCount == 0)
             {

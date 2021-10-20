@@ -538,7 +538,7 @@ namespace SAP_API.Controllers {
             GC.WaitForPendingFinalizers();
             return Ok(new { CountAll, CountToday });
         }
-
+        
         class OrderDeliveryOutputLineUom {
             public uint BaseEntry { get; set; }
             public string BaseUom { get; set; }

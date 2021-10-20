@@ -23,7 +23,7 @@ namespace SAP_API.Controllers
 
     public class ImpresionController : ControllerBase
     {
-
+       
         // GET: api/Impresion/
         [HttpGet("Impresoras")]
         //[Authorize]
@@ -533,7 +533,26 @@ namespace SAP_API.Controllers
         {
             etiquetaproduccion(value.IDPrinter, value.WHS, value.Pallet, value.Request, value.Transfer, value.RequestCopy, DateTime.Now.ToString());
         }
+        [HttpPost("QR")]
+        public void PostQR([FromBody] TarimaPrint value)
+        {
+         
+            String szPrinterName = $@"\\DESKTOP-7GCOH0Q\bixolon";
 
+
+            string s = "^XA\n";
+            s += "^FO20,20^BQ,2,10^FDQA,0123456789ABCD 2D code^FS";
+            s += "^XZ";
+
+
+            var bytes = Encoding.ASCII.GetBytes(s);
+            // Send a printer-specific to the printer.
+            RawPrinterHelper.SendBytesToPrinter(szPrinterName, bytes, bytes.Length);
+
+
+
+        }
+        
         private void etiquetaproduccion(string IDPrinter, string WHS, string NumeroTarima, string SolicitudTraslado, string Transferencia, string Recepcion, string Fecha)
         {
 
