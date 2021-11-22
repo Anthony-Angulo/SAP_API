@@ -674,6 +674,7 @@ ORDER BY ""ItmsGrpNam""
         }
 
 
+        [AllowAnonymous]
         // GET: api/Products/CRMToSell/5
         [HttpGet("CRMToSell/{id}/{priceList}/{warehouse}")]
         public async Task<IActionResult> GetCRMToSell(string id, int priceList, string warehouse) {
@@ -802,7 +803,8 @@ ORDER BY ""ItmsGrpNam""
                     product.""ItemName"",
                     product.""ItemCode"",
                     product.""U_IL_PesProm"",
-                    warehouse.""OnHand""
+                    warehouse.""OnHand"",
+                    product.""validFor""
                 From OITM product
                 LEFT JOIN OITW warehouse ON warehouse.""ItemCode"" = product.""ItemCode"" 
                 Where product.""ItemCode"" = '" + itemcode + @"'
@@ -1282,7 +1284,7 @@ ORDER BY ""ItmsGrpNam""
                 Where ""OnHand"" != 0 
                     AND ""Freezed"" = 'N'
                     AND ""Locked"" = 'N'
-                    AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62','S63')
+                    AND ""WhsCode"" in ('S01', 'S06', 'S07','S17', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62','S63')
                     AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
@@ -1352,7 +1354,7 @@ ORDER BY ""ItmsGrpNam""
                 Where ""OnHand"" != 0 
                     AND ""Freezed"" = 'N'
                     AND ""Locked"" = 'N'
-                    AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62','S63')
+                    AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13','S17', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62','S63')
                     AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y' AND ""ItemCode""='{CardCode}' )");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
@@ -1419,7 +1421,7 @@ ORDER BY ""ItmsGrpNam""
             //string warehouses = context.XMLTOJSON(oRecSet.GetAsXML())["OSLP"][0]["Fax"].ToString();
             //warehouses = warehouses.Trim();
             //if (warehouses.Equals("")) { 
-            string warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62','S63'";
+            string warehouses = "'S01', 'S06','S17', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62','S63'";
             //}
             //else {
             //    warehouses = warehouses.ToUpper();
@@ -1576,7 +1578,7 @@ ORDER BY ""ItmsGrpNam""
                     ""WhsCode"",
                     RTRIM(RTRIM(""OnHand"", '0'), '.') AS ""OnHand""
                 From OITW
-                WHERE ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S37', 'S47', 'S55', 'S59')
+                WHERE ""WhsCode"" in ('S01', 'S06', 'S07', 'S10','S17', 'S12', 'S13', 'S15', 'S24', 'S36', 'S37', 'S47', 'S55', 'S59')
                 AND ""ItemCode"" = '" + id + "'");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
@@ -1634,7 +1636,7 @@ ORDER BY ""ItmsGrpNam""
                     ""WhsCode"",
                     RTRIM(RTRIM(""OnHand"", '0'), '.') AS ""OnHand""
                 From OITW
-                WHERE ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S37', 'S47', 'S55', 'S59')
+                WHERE ""WhsCode"" in ('S01', 'S06', 'S07', 'S10','S17', 'S12', 'S13', 'S15', 'S24', 'S36', 'S37', 'S47', 'S55', 'S59')
                 AND ""ItemCode"" = '" + id + "'");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];

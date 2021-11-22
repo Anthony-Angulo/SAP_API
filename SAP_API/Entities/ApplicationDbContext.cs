@@ -12,6 +12,7 @@ namespace SAP_API.Entities {
         public DbSet<InventoryProduct> InventoryProducts { get; set; }
         public DbSet<InventoryProductDetail> InventoryProductDetails { get; set; }
         public DbSet<InventoryProductBatch> InventoryProductBatches { get; set; }
+
         public DbSet<InventoryType> InventoryTypes { get; set; }
         public DbSet<Log> Logs { get; set; }
         public DbSet<OrderAuth> OrderAuths { get; set; }
@@ -19,13 +20,13 @@ namespace SAP_API.Entities {
         public DbSet<CodeBarDetail> CodeBarDetails { get; set; }
         public DbSet<ClientsProducts> Clientes_Productos { get; set; }
         public DbSet<LogFacturacion> LogFacturacion { get; set; }
-
+        public DbSet<AutorizacionRequest> AutorizacionRequest { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
             optionsBuilder.UseMySql(GetConnectionString());
         }
 
         private static string GetConnectionString() {
-            const string databaseName = "CCFNPROD";
+            const string databaseName = "CCFN";
             const string databaseUser = "remote";
             const string databasePass = "Ch1v@s.2019@CCFN.2X5B8M";
 

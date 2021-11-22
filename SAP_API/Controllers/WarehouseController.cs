@@ -298,7 +298,7 @@ namespace SAP_API.Controllers {
             string warehouses = context.XMLTOJSON(oRecSet.GetAsXML())["OSLP"][0]["Fax"].ToString();
             warehouses = warehouses.Trim();
             if (warehouses.Equals("")) {
-                warehouses = "'S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62','S63'";
+                warehouses = "'S01', 'S06','S17' 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62','S63'";
             } else {
                 warehouses = warehouses.ToUpper();
                 warehouses = "'" + warehouses + "'";

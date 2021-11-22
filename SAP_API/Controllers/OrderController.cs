@@ -949,6 +949,71 @@ namespace SAP_API.Controllers {
             GC.WaitForPendingFinalizers();
             return Ok(orders);
         }
+        [HttpGet("CRMAPP/Mayoreos/Order/{CardCode}")]
+        public async Task<IActionResult> GetMayoresOrdersApp(string CardCode)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery($@"
+                SELECT
+  ord.""DocEntry"",
+  ord.""DocNum"",
+  ord.""DocDate"",
+  ord.""DocStatus"",
+  ord.""CANCELED"",
+  CASE
+    WHEN --Cancelado
+      ord.""CANCELED"" = 'Y' THEN 'X'
+    WHEN --Cerrado
+      ord.""DocStatus"" = 'C' THEN 'C'
+    WHEN
+      ord.""DocStatus"" = 'O' THEN
+        CASE
+          WHEN --Cerrado aunque esté abierto, porque ya se entregó todo
+            SUM(product.""OpenQty"") = 0 THEN 'C'
+          WHEN --Parcialmente entregado
+            SUM(product.""Quantity"") > SUM(product.""OpenQty"") THEN 'P'
+          ELSE
+            'O'
+        END
+  END AS ""Estatus"",
+  contact.""CardName"",
+  contact.""CardFName"",
+  warehouse.""WhsName""
+  FROM
+    ORDR ord LEFT JOIN
+    NNM1 serie ON
+      ord.""Series"" = serie.""Series"" LEFT JOIN
+    OWHS warehouse ON
+      serie.""SeriesName"" = warehouse.""WhsCode"" LEFT JOIN
+    OSLP person ON
+      ord.""SlpCode"" = person.""SlpCode"" LEFT JOIN
+    OCRD contact ON
+      ord.""CardCode"" = contact.""CardCode"" INNER JOIN
+    RDR1 product ON
+      ord.""DocEntry"" = product.""DocEntry""
+  WHERE
+    ord.""DocDate"" >= add_days(CURRENT_DATE, -3) AND
+    ord.""CardCode"" LIKE '{CardCode}'
+  GROUP BY
+    ord.""DocEntry"",
+    ord.""DocNum"",
+    ord.""DocDate"",
+    ord.""DocStatus"",
+    ord.""CANCELED"",
+    contact.""CardName"",
+    contact.""CardFName"",
+    warehouse.""WhsName""
+  ORDER BY ""DocEntry"" DESC");
+
+            oRecSet.MoveFirst();
+            JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"];
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(orders);
+        }
         [HttpGet("CRMAPP/listTag/{employee}")]
         public async Task<IActionResult> GetCRMAPPListTag(string employee)
         {

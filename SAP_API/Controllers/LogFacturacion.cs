@@ -45,7 +45,7 @@ namespace SAP_API.Controllers
         [HttpGet("SendMail")]
         public IActionResult SendMail()
         {
-            string to = _configuration["cuentaenvio"];
+            string to = "gustavo.carreno@superchivas.com.mx";//_configuration["cuentaenvio"];
             MailMessage message = new MailMessage(_configuration["cuentacorreo"], to);
             message.Subject = "Bitácora de precios de venta fuera del intervalo autorizado";
             message.Body = @"";
@@ -53,24 +53,24 @@ namespace SAP_API.Controllers
             {
                 Port = 587,
                 Credentials = new NetworkCredential(_configuration["cuentacorreo"], _configuration["passcorreo"]),
-                EnableSsl = true,
+                EnableSsl = true
             };
             var csv = new StringBuilder();
             DateTime FechaInicial = DateTime.Now;
             DateTime FechaFinal = DateTime.Now;
           FechaInicial= FechaInicial.AddDays(-1);
-          List<LogFacturacion> logFacturacions = _context.LogFacturacion.Where(x=>x.fecha>=FechaInicial).OrderBy(x=>x.fecha).ToList();
-            csv.Append(string.Format("id,Fecha,Usuario,Producto,Cantidad base,Precio base,Moneda base,Tipo Cambio,Precio introducido,Moneda introducida,Serie,Almacen") + Environment.NewLine);
+            csv.Append("sep=;"+Environment.NewLine);
+            //List<LogFacturacion> logFacturacions = _context.LogFacturacion.Where(x=>x.fecha>=FechaInicial).OrderBy(x=>x.fecha).ToList();
+            List<LogFacturacion> logFacturacions = _context.LogFacturacion.ToList();
+
+            csv.Append(string.Format("Fecha;Usuario;Producto;Precio base;Moneda base;Tipo Cambio;Precio introducido;Moneda introducida;Serie;Almacen") + Environment.NewLine);
 
             foreach (var item in logFacturacions)
             {
-                csv.Append(string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}", 
-                    item.id, 
-                    item.fecha,
-                    item.user,
+                csv.Append(string.Format("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9}", 
+                    item.fecha,item.user,
                     item.Productdsc,
-                    item.CantidadBase,
-                    item.PrecioBase,
+                    (double.Parse(item.CantidadBase)*double.Parse(item.PrecioBase)).ToString(),
                     item.MonedaBase, 
                     item.TipoCambio,
                     item.PrecioIntroducido,
