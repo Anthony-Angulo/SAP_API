@@ -26,7 +26,7 @@ namespace SAP_API.Entities {
         }
 
         private static string GetConnectionString() {
-            const string databaseName = "CCFN";
+            const string databaseName = "CCFNPROD";
             const string databaseUser = "remote";
             const string databasePass = "Ch1v@s.2019@CCFN.2X5B8M";
 

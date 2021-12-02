@@ -533,24 +533,26 @@ namespace SAP_API.Controllers
         {
             etiquetaproduccion(value.IDPrinter, value.WHS, value.Pallet, value.Request, value.Transfer, value.RequestCopy, DateTime.Now.ToString());
         }
+       public class QRPrint
+        {
+            public String Codigo { get; set; }
+            public String IDPrinter { get; set; }
+        } 
         [HttpPost("QR")]
-        public void PostQR([FromBody] TarimaPrint value)
+        public void PostQR([FromBody] QRPrint qR)
         {
          
-            String szPrinterName = $@"\\DESKTOP-7GCOH0Q\bixolon";
+            String szPrinterName = $@"\\192.168.101.103\ZEBRA";
 
 
             string s = "^XA\n";
-            s += "^FO20,20^BQ,2,10^FDQA,0123456789ABCD 2D code^FS";
+            s += $"^FO20,20^BQ,2,10^FDQA, {qR.Codigo} ^FS";
             s += "^XZ";
 
 
             var bytes = Encoding.ASCII.GetBytes(s);
             // Send a printer-specific to the printer.
-            RawPrinterHelper.SendBytesToPrinter(szPrinterName, bytes, bytes.Length);
-
-
-
+            RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\" + qR.IDPrinter, bytes, bytes.Length);
         }
         
         private void etiquetaproduccion(string IDPrinter, string WHS, string NumeroTarima, string SolicitudTraslado, string Transferencia, string Recepcion, string Fecha)

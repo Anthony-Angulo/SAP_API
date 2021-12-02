@@ -28,7 +28,7 @@ namespace SAP_API.Controllers
             _configuration = configuration;
 
         }
-        [HttpPost("TwilioAutorizacion")]
+      /*  [HttpPost("TwilioAutorizacion")]
         public async Task<IActionResult> SendTwilioAsync()
         {
             TwilioClient.Init("AC325fc690a873079a3b6f77f3512cc872", "25f7b22387f439b5937c4874f1e87ee3");
@@ -41,10 +41,10 @@ namespace SAP_API.Controllers
                 from: new Twilio.Types.PhoneNumber("whatsapp:+14155238886"),
                 to: new Twilio.Types.PhoneNumber("whatsapp:+5216864259059")
             );
-            var messages = MessageResource.Read(to: new Twilio.Types.PhoneNumber("whatsapp:+5216864259059"));
-            return Ok(messages);
+            //var messages = MessageResource.Read(to: new Twilio.Types.PhoneNumber("whatsapp:+5216864259059"));
+            return Ok();
         }
-        [HttpPost("RequestAutorizacion")]
+        */[HttpPost("RequestAutorizacion")]
         public async Task<IActionResult> SendMailAsync([FromBody] AutorizacionRequest request)
         {
            if (!ModelState.IsValid)
@@ -62,8 +62,7 @@ namespace SAP_API.Controllers
 
                 return BadRequest(ex.InnerException);
             }
-            request = _context.AutorizacionRequest.Where(x => x.id == 1).FirstOrDefault();
-            TwilioClient.Init("AC325fc690a873079a3b6f77f3512cc872", "25f7b22387f439b5937c4874f1e87ee3");
+           /* TwilioClient.Init("AC325fc690a873079a3b6f77f3512cc872", "25f7b22387f439b5937c4874f1e87ee3");
             double preciobase = double.Parse(request.PrecioBase) * double.Parse(request.CantidadBase);
 
             String Body = $@"El usuario {request.Usuario} de la sucursal {request.Sucursal} solicita autorización para vender un producto a precio diferente al autorizado.{Environment.NewLine}Cliente:{request.Cliente}.{Environment.NewLine}Producto:{request.Producto}.{Environment.NewLine}Cantidad:{request.Cantidad}.{Environment.NewLine}Precio base:{preciobase} {request.Currency}.{Environment.NewLine}Precio introducido:{request.PrecioSolicitado.Substring(4)} {request.PrecioSolicitado.Substring(0, 4)}.{Environment.NewLine} Si desea aprobarlo escriba:{request.id}";
@@ -75,7 +74,8 @@ namespace SAP_API.Controllers
             );
             
             return Ok();
-            /*
+            */
+           
             string to = _configuration["cuentarecibeAutorizacion"];
             MailMessage message = new MailMessage(_configuration["CuentaAutorizacion"], to);
             string to1 = _configuration["cuentaRecibeAutorizacion2"];
@@ -129,7 +129,7 @@ namespace SAP_API.Controllers
             {
                 return BadRequest(ex.ToString());
 
-            }*/
+            }
         }
         [HttpGet("{id}")]
         public IActionResult AutorizarSolicitud([FromRoute] int id)
@@ -142,13 +142,17 @@ namespace SAP_API.Controllers
                 {
                     return NotFound();
                 }
+                /*else if (autorizacion.Autorizado == 1)
+                {
+                    return Ok("Autorizacion ya aprobada");
+                }*/
                 autorizacion.Autorizado = 1;
                 _context.SaveChanges();
 
             }
             catch (Exception ex)
             {
-                return BadRequest();
+                return BadRequest(ex.Message);
             }
             try
             {
@@ -195,10 +199,10 @@ namespace SAP_API.Controllers
             }
             catch (Exception ex)
             {
-
+                return BadRequest(ex.Message);
             }
-            DateTime FechaInicial = DateTime.Now.AddMinutes(-10);
-            DateTime FechaFinal = FechaInicial.AddMinutes(60);
+            DateTime FechaInicial = DateTime.Now;
+            DateTime FechaFinal = FechaInicial.AddDays(1);
             try
             {
                 SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;

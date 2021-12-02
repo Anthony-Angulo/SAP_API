@@ -514,8 +514,9 @@ namespace SAP_API.Controllers
       END
   END AS ""2"",
   RIGHT(T1.""ItemCode"", 7) AS ""3"",
-  T1.""Quantity"" * T4.""NumInSale"" AS ""4"",
-  '01' AS ""5"",
+ -- T1.""Quantity"" * T4.""NumInSale"" AS ""4"",
+     T1.""Quantity"" * T1.""NumPerMsr"" AS ""4"", 
+'01' AS ""5"",
   CONCAT(T2.""DocNum"", LPAD(T1.""LineNum"", 2, '00')) AS ""6"",
   TO_VARCHAR(T2.""DocDate"", 'DD/MM/YYYY') as ""7"",
   T1.""LineTotal"" * IFNULL(NULLIF(T1.""Rate"", 0), 1) AS ""11"",
