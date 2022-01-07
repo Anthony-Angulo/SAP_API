@@ -23,7 +23,7 @@ namespace SAP_API.Controllers
 
     public class ImpresionController : ControllerBase
     {
-       
+
         // GET: api/Impresion/
         [HttpGet("Impresoras")]
         //[Authorize]
@@ -533,15 +533,15 @@ namespace SAP_API.Controllers
         {
             etiquetaproduccion(value.IDPrinter, value.WHS, value.Pallet, value.Request, value.Transfer, value.RequestCopy, DateTime.Now.ToString());
         }
-       public class QRPrint
+        public class QRPrint
         {
             public String Codigo { get; set; }
             public String IDPrinter { get; set; }
-        } 
+        }
         [HttpPost("QR")]
         public void PostQR([FromBody] QRPrint qR)
         {
-         
+
             String szPrinterName = $@"\\192.168.101.103\ZEBRA";
 
 
@@ -554,7 +554,71 @@ namespace SAP_API.Controllers
             // Send a printer-specific to the printer.
             RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\" + qR.IDPrinter, bytes, bytes.Length);
         }
-        
+        public class CodigoGondola
+        {
+           public string ItemCode { get; set; }
+            public string ItemName { get; set; }
+
+            public string price { get; set; }
+            public string printer { get; set; }
+        }
+
+        [HttpPost("BIXOLON")]
+        public void PostQ([FromBody] CodigoGondola CodG)
+        {
+
+            String szPrinterName = $@"\\192.168.101.103\Bixo";
+
+            string Producto = "^FO420,50^FD";
+            int Contador = 0;
+            int Carro = 75;
+            int letras = 0;
+            foreach (var item in CodG.ItemName)
+            {
+                if (Contador == 27)
+                {
+                    Producto += $"^FS^FO420,{Carro.ToString()}^FD{item}";
+                    letras += 1;
+
+                    Contador = 0;
+                    Carro += 25;
+
+                }
+                else
+                {
+                    Producto += item;
+
+                    if (letras== CodG.ItemName.Length-1)
+                    {
+                        Producto += "^FS";
+                    }
+                    Contador += 1;
+                    letras += 1;
+
+                }
+            }
+            string s = $@"^XA
+^CF0,30
+^FO150,40^BY2^BCN,50,,,,A^FDA0602C37^FS
+^CF0,20
+{Producto}
+^CF0,70
+^FO400,120 
+
+^FD$^FS
+^FO450,120 
+
+^FD{CodG.price}^FS
+^CF0,20
+^FO550,180 
+
+^FDfi.11/12/21
+^FS
+^XZ";
+            var bytes = Encoding.ASCII.GetBytes(s);
+            // Send a printer-specific to the printer.
+            RawPrinterHelper.SendBytesToPrinter(szPrinterName, bytes, bytes.Length);
+        }
         private void etiquetaproduccion(string IDPrinter, string WHS, string NumeroTarima, string SolicitudTraslado, string Transferencia, string Recepcion, string Fecha)
         {
 

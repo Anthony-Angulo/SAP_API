@@ -76,6 +76,10 @@ namespace SAP_API.Models
         public int LineNum { set; get; }
         public string Pallet { get; set; }
         public double Count { get; set; }
+                public string ItemCode { get; set; }
+        public string ItemName { get; set; }
+        public string UomCode { get; set; }
+
         public List<TransferRowBatch> BatchList { set; get; }
         
     }

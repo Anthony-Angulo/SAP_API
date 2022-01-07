@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using SAP_API.Controllers;
 using SAP_API.Models;
 
 namespace SAP_API.Entities {
@@ -21,6 +22,8 @@ namespace SAP_API.Entities {
         public DbSet<ClientsProducts> Clientes_Productos { get; set; }
         public DbSet<LogFacturacion> LogFacturacion { get; set; }
         public DbSet<AutorizacionRequest> AutorizacionRequest { get; set; }
+
+        public DbSet<VentaInfo> VentaInfo { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
             optionsBuilder.UseMySql(GetConnectionString());
         }

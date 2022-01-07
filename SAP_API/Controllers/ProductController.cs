@@ -734,6 +734,72 @@ ORDER BY ""ItmsGrpNam""
                 return BadRequest(ex.Message);
             }
         }
+        [AllowAnonymous]
+        // GET: api/Products/CRMToSell/5
+        [HttpGet("VerifiPrice/{id}/{priceList}/{warehouse}")]
+        public async Task<IActionResult> GetVerifyPrice(string id, int priceList, string warehouse)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            try
+            {
+
+                SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+                JToken product;
+                ProductDetail productDetail;
+
+                oRecSet.DoQuery(@"
+                    Select
+                        product.""ItemName"",
+                        product.""ItemCode"",
+                        product.""U_IL_PesProm"" AS ""PesProm"",
+                        product.""SUoMEntry"",
+                        product.""QryGroup7"" as ""Meet"",
+                        priceList.""PriceList"",
+                        priceList.""Currency"",
+                        priceList.""Price"",
+                        priceList.""UomEntry"",
+                        priceList.""PriceType"",
+                        stock.""WhsCode"",
+                        product.""TaxCodeAR"",
+                        stock.""OnHand""
+                    From OITM product
+                    JOIN ITM1 priceList ON priceList.""ItemCode"" = product.""ItemCode""
+                    JOIN OITW stock ON stock.""ItemCode"" = product.""ItemCode""
+                    Where product.""ItemCode"" = '" + id + @"'
+                    AND stock.""WhsCode"" = '" + warehouse + @"'
+                    AND priceList.""PriceList"" = " + priceList);
+                product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+
+                oRecSet.DoQuery(@"
+                Select 
+                    header.""UgpCode"",
+                    header.""BaseUom"",
+                    baseUOM.""UomCode"" as ""BaseCode"",
+                    detail.""UomEntry"",
+                    UOM.""UomCode"",
+                    detail.""BaseQty""
+                From OUGP header
+                JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                Where header.""UgpCode"" = '" + id + @"'");
+                
+                //AND detail.""UomEntry"" in (Select ""UomEntry"" FROM ITM4 Where ""UomType"" = 'S' AND ""ItemCode"" = '" + id + "')");
+                product["UOMList"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+                oRecSet.DoQuery($@"SELECT
+                 ""Rate"" FROM OSTC WHERE ""Code""='{product["TaxCodeAR"]}'");
+                product["Rate"] = context.XMLTOJSON(oRecSet.GetAsXML())["OSTC"][0]["Rate"];
+                oRecSet = null;
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                return Ok(product);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
         // GET: api/Products/Properties
         [HttpGet("Properties")]
@@ -804,7 +870,8 @@ ORDER BY ""ItmsGrpNam""
                     product.""ItemCode"",
                     product.""U_IL_PesProm"",
                     warehouse.""OnHand"",
-                    product.""validFor""
+                    product.""validFor"",
+  product.""UgpEntry""
                 From OITM product
                 LEFT JOIN OITW warehouse ON warehouse.""ItemCode"" = product.""ItemCode"" 
                 Where product.""ItemCode"" = '" + itemcode + @"'
@@ -846,7 +913,7 @@ ORDER BY ""ItmsGrpNam""
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpCode"" = '" + itemcode + "'");
+                Where header.""UgpEntry"" = '" + product["UgpEntry"] + "'");
             product["uom"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             //product["UOMList"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             //productDetail = product.ToObject<ProductToTransferDetail>();

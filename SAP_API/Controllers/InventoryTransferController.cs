@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
+using System.Net.Mail;
+using System.Net;
+using Microsoft.Extensions.Configuration;
 
 namespace SAP_API.Controllers
 {
@@ -15,7 +18,13 @@ namespace SAP_API.Controllers
     [ApiController]
     [Authorize]
     public class InventoryTransferController : ControllerBase {
+        private readonly IConfiguration _configuration;
 
+        public InventoryTransferController( IConfiguration configuration)
+        {
+            _configuration = configuration;
+
+        }
         /// <summary>
         /// Get Transfer List to WMS web Filter by DatatableParameters.
         /// </summary>
@@ -180,6 +189,42 @@ namespace SAP_API.Controllers
 
             return Ok(tranferList);
         }
+        [HttpGet("lastUOM/{ItemCode}")]
+        public async Task<IActionResult> GetLastUom(string ItemCode)
+        {
+            try
+            {
+                SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery($@"
+                   Select
+                   top 1  ""UomEntry"" 
+                   from ""WTR1""
+                   where ""ItemCode"" = '{ItemCode}'
+                   order by ""DocDate"" desc");
+            
+            int rc = oRecSet.RecordCount;
+            if (rc == 0)
+            {
+                return NotFound();
+            }
+
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+
+                JToken LastUom = context.XMLTOJSON(oRecSet.GetAsXML())["WTR1"][0]["UomEntry"];
+
+                return Ok(LastUom);
+            }
+            catch (Exception)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+
+                return Ok("");
+            }
+        }
 
         // GET: api/InventoryTransfer/5
         [HttpGet("{id}")]
@@ -267,7 +312,7 @@ namespace SAP_API.Controllers
                 transfer.Lines.BaseLine = value.TransferRows[i].LineNum;
                 transfer.Lines.Quantity = value.TransferRows[i].Count;
                 transfer.Lines.BaseType = SAPbobsCOM.InvBaseDocTypeEnum.InventoryTransferRequest;
-
+                
                 if (value.TransferRows[i].Pallet != String.Empty && value.TransferRows[i].Pallet != null)
                 {
                     transfer.Lines.UserFields.Fields.Item("U_Tarima").Value = value.TransferRows[i].Pallet;
@@ -298,7 +343,7 @@ namespace SAP_API.Controllers
                 return BadRequest(error);
             }
 
-
+                        sendMail(value,transfer,transferRequest);
             /*
             if (transferRequest.Lines.FromWarehouseCode != transferRequest.Lines.WarehouseCode)
             {
@@ -350,6 +395,66 @@ namespace SAP_API.Controllers
             }
 
             return Ok(newRequest);
+        }
+        [NonAction]
+            public void sendMail(Transfer transferPOST,SAPbobsCOM.StockTransfer transferencia,SAPbobsCOM.StockTransfer transferrequest)
+        {
+            MailMessage message = new MailMessage(_configuration["CuentaAutorizacion"], $@"{transferrequest.ToWarehouse}-Pedidos@superchivas.com.mx")
+            {
+                Subject = "Transferencia en proceso",
+                IsBodyHtml = true
+            };
+            Console.WriteLine($@"{transferrequest.ToWarehouse}-Pedidos@superchivas.com.mx");
+            string Cabecera = $@"
+<html>
+<body>
+<p>Solicitud: {transferrequest.DocNum}</p>
+<p>Sucursal origen: {transferrequest.FromWarehouse}</p>
+<p>Sucursal destino: {transferrequest.ToWarehouse}</p>
+<p>Fecha y hora de creación: {transferencia.DocDate}</p>
+<p>Productos enviados:</p>
+<table style=""border-collapse: collapse; width: 100 %;"" border=""1"">
+    <tbody>
+    <tr>
+    <td style = ""width: 25%;""> Código </td>
+     <td style = ""width: 32.5284%;"" > Producto </td>
+      <td style = ""width: 17.4716%;"" > Cantidad PU </td>
+                </tr>
+                ";
+            foreach (var item in transferPOST.TransferRows)
+            {
+                Cabecera += $@"
+                    <tr>
+                    <td style = ""width: 25%;""> {item.ItemCode}</td>
+                    <td style = ""width: 32.5284%;"" > {item.ItemName}</td>
+                    <td style = ""width: 17.4716%;"" >{item.Count} {item.UomCode}</td>
+                    </tr> ";
+            }
+            Cabecera += "" +
+                "</tbody>" +
+                "</table>" +
+                "</body>" +
+                "</html>";
+            message.Body = Cabecera;
+            var smtpClient = new SmtpClient(_configuration["smtpserver"])
+            {
+                Port = 587,
+                Credentials = new NetworkCredential(_configuration["CuentaAutorizacion"], _configuration["PassAutorizacion"]),
+                EnableSsl = true,
+            };
+            // Credentials are necessary if the server requires the client
+            // to authenticate before it will send email on the client's behalf.
+
+            try
+            {
+                smtpClient.Send(message);
+                return ;
+            }
+            catch (Exception ex)
+            {
+                return;
+
+            }
         }
 
         // POST: api/InventoryTransfer
@@ -495,7 +600,7 @@ namespace SAP_API.Controllers
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             String Query = $@"
-               SELECT
+             SELECT
   RIGHT(T1.""WhsCode"",2) AS ""1"",
   CASE
     WHEN T1.""Quantity"" > 0 THEN
@@ -513,13 +618,14 @@ namespace SAP_API.Controllers
           '501'
       END
   END AS ""2"",
-  RIGHT(T1.""ItemCode"", 7) AS ""3"",
- -- T1.""Quantity"" * T4.""NumInSale"" AS ""4"",
-     T1.""Quantity"" * T1.""NumPerMsr"" AS ""4"", 
-'01' AS ""5"",
+ RIGHT(T1.""ItemCode"", 7) AS ""3"",
+
+T1.""Quantity"" * T1.""NumPerMsr"" AS ""4"",
+  '01' AS ""5"",
   CONCAT(T2.""DocNum"", LPAD(T1.""LineNum"", 2, '00')) AS ""6"",
-  TO_VARCHAR(T2.""DocDate"", 'DD/MM/YYYY') as ""7"",
-  T1.""LineTotal"" * IFNULL(NULLIF(T1.""Rate"", 0), 1) AS ""11"",
+    TO_VARCHAR(T2.""DocDate"", 'DD/MM/YYYY') as ""7"",
+ (T1.""StockPrice"" * IFNULL(NULLIF(T1.""Rate"", 0), 1) * (T1.""Quantity"" * T1.""NumPerMsr"")) AS ""11"",
+  --T1.""LineTotal"" * IFNULL(NULLIF(T1.""Rate"", 0), 1) AS ""11"",
   'Transferencia SAP' AS ""12""
   FROM
     WTR1 T1 INNER JOIN
@@ -530,8 +636,7 @@ namespace SAP_API.Controllers
     OITM T4
       ON T4.""ItemCode"" = T1.""ItemCode""
   WHERE
-  --  T3.""SeriesName"" IN('S02', 'S03', 'S04', 'S08', 'S09', 'S11', 'S14', 'S21', 'S23', 'S24', 'S28', 'S32', 'S34', 'S38', 'S44', 'S46', 'S51', 'S52', 'S57', 'S61') AND – Esta linea es solo poner en comentarios
-    T2.""DocNum""='{Transfer}'
+     T2.""DocNum""='{Transfer}'
   ORDER BY
     T3.""SeriesName""";
             oRecSet.DoQuery(Query);
