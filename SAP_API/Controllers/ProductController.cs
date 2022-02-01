@@ -699,7 +699,8 @@ ORDER BY ""ItmsGrpNam""
                         priceList.""UomEntry"",
                         priceList.""PriceType"",
                         stock.""WhsCode"",
-                        stock.""OnHand""
+                        stock.""OnHand"",
+  product.""UgpEntry""
                     From OITM product
                     JOIN ITM1 priceList ON priceList.""ItemCode"" = product.""ItemCode""
                     JOIN OITW stock ON stock.""ItemCode"" = product.""ItemCode""
@@ -720,7 +721,7 @@ ORDER BY ""ItmsGrpNam""
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpCode"" = '" + id + @"'");
+                Where header.""UgpEntry"" = '" + product["UgpEntry"] + @"'");
                 //AND detail.""UomEntry"" in (Select ""UomEntry"" FROM ITM4 Where ""UomType"" = 'S' AND ""ItemCode"" = '" + id + "')");
                 product["UOMList"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
                 productDetail = product.ToObject<ProductDetail>();
@@ -746,11 +747,11 @@ ORDER BY ""ItmsGrpNam""
 
                 SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
                 JToken product;
-                ProductDetail productDetail;
 
                 oRecSet.DoQuery(@"
                     Select
                         product.""ItemName"",
+                        product.""FrgnName"",
                         product.""ItemCode"",
                         product.""U_IL_PesProm"" AS ""PesProm"",
                         product.""SUoMEntry"",
@@ -1317,6 +1318,7 @@ ORDER BY ""ItmsGrpNam""
             oRecSet.DoQuery(@"
                 Select 
                     ""ItemName"",
+                    ""UgpEntry"",
                     ""ItemCode"",
                     ""QryGroup7"" as ""Meet"",
                     RTRIM(RTRIM(""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm""
@@ -1355,19 +1357,24 @@ ORDER BY ""ItmsGrpNam""
                     AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
+            //SE hizo chicanada para resolver el producto fecula de maiz, situacion temporal regresarlo a como estaba
             oRecSet.DoQuery(@"
                 Select 
-                    header.""UgpCode"",
+                   CASE WHEN header.""UgpCode""='A0103176U' then 'A0103176'
+                   WHEN header.""UgpCode""='A0305877UM' then 'A0103176'
+                   ELSE header.""UgpCode""
+                   END as ""UgpCode"",
                     header.""BaseUom"",
                     baseUOM.""UomCode"" as baseUOM,
                     detail.""UomEntry"",
+header.""UgpEntry"",
                     UOM.""UomCode"",
                     RTRIM(RTRIM(detail.""BaseQty"", '0'), '.') AS ""BaseQty""
                 From OUGP header
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
+                Where header.""UgpEntry"" in (Select ""UgpEntry"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.MoveFirst();
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             var returnValue = new { products, priceList, stock, uom };

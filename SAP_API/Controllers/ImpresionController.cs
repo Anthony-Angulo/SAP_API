@@ -567,7 +567,7 @@ namespace SAP_API.Controllers
         public void PostQ([FromBody] CodigoGondola CodG)
         {
 
-            String szPrinterName = $@"\\192.168.101.103\Bixo";
+            String szPrinterName = $@"\\192.168.115.171\Bixo";
 
             string Producto = "^FO420,50^FD";
             int Contador = 0;

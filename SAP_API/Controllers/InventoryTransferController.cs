@@ -624,7 +624,7 @@ T1.""Quantity"" * T1.""NumPerMsr"" AS ""4"",
   '01' AS ""5"",
   CONCAT(T2.""DocNum"", LPAD(T1.""LineNum"", 2, '00')) AS ""6"",
     TO_VARCHAR(T2.""DocDate"", 'DD/MM/YYYY') as ""7"",
- (T1.""StockPrice"" * IFNULL(NULLIF(T1.""Rate"", 0), 1) * (T1.""Quantity"" * T1.""NumPerMsr"")) AS ""11"",
+ (T1.""StockPrice"" * (T1.""Quantity"" * T1.""NumPerMsr"")) AS ""11"",
   --T1.""LineTotal"" * IFNULL(NULLIF(T1.""Rate"", 0), 1) AS ""11"",
   'Transferencia SAP' AS ""12""
   FROM
