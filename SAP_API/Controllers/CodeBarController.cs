@@ -48,6 +48,7 @@ namespace SAP_API.Controllers {
             oRecSet.DoQuery($@"
                 Select
                     ""ItemCode"",
+""UgpEntry"",
                     ""ItemName"",
                     ""QryGroup7"",
                     ""QryGroup41"",
@@ -84,7 +85,7 @@ namespace SAP_API.Controllers {
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpCode"" = '{ItemCode}';");
+                Where header.""UgpEntry"" = '{Detail["UgpEntry"]}';");
             oRecSet.MoveFirst();
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
 

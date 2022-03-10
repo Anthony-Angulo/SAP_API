@@ -759,6 +759,7 @@ ORDER BY ""ItmsGrpNam""
                         priceList.""PriceList"",
                         priceList.""Currency"",
                         priceList.""Price"",
+  product.""UgpEntry"",
                         priceList.""UomEntry"",
                         priceList.""PriceType"",
                         stock.""WhsCode"",
@@ -784,7 +785,7 @@ ORDER BY ""ItmsGrpNam""
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpCode"" = '" + id + @"'");
+                 Where header.""UgpEntry"" = '" + product["UgpEntry"] + @"'");
                 
                 //AND detail.""UomEntry"" in (Select ""UomEntry"" FROM ITM4 Where ""UomType"" = 'S' AND ""ItemCode"" = '" + id + "')");
                 product["UOMList"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
@@ -828,6 +829,7 @@ ORDER BY ""ItmsGrpNam""
             oRecSet.DoQuery(@"
                 Select 
                     product.""ItemName"", 
+product.""UgpEntry"",
                     product.""ItemCode"", 
                     RTRIM(RTRIM(product.""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm"",
                     product.""SUoMEntry""
@@ -835,7 +837,7 @@ ORDER BY ""ItmsGrpNam""
                 Where product.""ItemCode"" = '" + id + @"'");
             oRecSet.MoveFirst();
             JToken product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
-            oRecSet.DoQuery(@"
+            oRecSet.DoQuery(@$"
                 Select 
                     header.""UgpCode"",
                     header.""BaseUom"",
@@ -847,7 +849,7 @@ ORDER BY ""ItmsGrpNam""
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpCode"" = '" + id + @"'");
+                Where header.""UgpEntry"" = '" + product["UgpEntry"] + @"'");
             //AND detail.""UomEntry"" in (Select ""UomEntry"" FROM ITM4 Where ""UomType"" = 'S' AND ""ItemCode"" = '" + id + "')");
             oRecSet.MoveFirst();
             product["uom"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
@@ -1048,6 +1050,7 @@ ORDER BY ""ItmsGrpNam""
                 Select
                     product.""ItemCode"",
                     product.""ItemName"",
+product.""UgpEntry"",
                     product.""QryGroup7"",
                     product.""QryGroup41"",
                     product.""ManBtchNum"",
@@ -1075,7 +1078,7 @@ ORDER BY ""ItmsGrpNam""
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpCode"" = '" + id + "'");
+                Where header.""UgpEntry"" = '" + Detail["UgpEntry"] + "'");
             oRecSet.MoveFirst();
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             GC.Collect();
@@ -1357,13 +1360,9 @@ ORDER BY ""ItmsGrpNam""
                     AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
-            //SE hizo chicanada para resolver el producto fecula de maiz, situacion temporal regresarlo a como estaba
             oRecSet.DoQuery(@"
                 Select 
-                   CASE WHEN header.""UgpCode""='A0103176U' then 'A0103176'
-                   WHEN header.""UgpCode""='A0305877UM' then 'A0103176'
-                   ELSE header.""UgpCode""
-                   END as ""UgpCode"",
+                   header.""UgpCode"",
                     header.""BaseUom"",
                     baseUOM.""UomCode"" as baseUOM,
                     detail.""UomEntry"",
@@ -1444,7 +1443,7 @@ header.""UgpEntry"",
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y' AND ""ItemCode""='{CardCode}' )");
+                Where header.""UgpEntry"" in (Select ""UgpEntry"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y' AND ""ItemCode""='{CardCode}' )");
             oRecSet.MoveFirst();
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             var returnValue = new { products, priceList, stock, uom };
@@ -1528,7 +1527,7 @@ header.""UgpEntry"",
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
+                Where header.""UgpEntry"" in (Select ""UgpEntry"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
             oRecSet.MoveFirst();
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             GC.Collect();
@@ -1536,89 +1535,7 @@ header.""UgpEntry"",
             return Ok(new { products, priceList, stock, uom });
         }
 
-        //// COMP
-        //// GET: api/Products/APPCRM
-        //[HttpGet("APPCRM")]
-        //public async Task<IActionResult> GetCRMS()
-        //{
-        //    SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
-        //    if (!context.oCompany.Connected) {
-        //        int code = context.oCompany.Connect();
-        //        if (code != 0) {
-        //            string error = context.oCompany.GetLastErrorDescription();
-        //            return BadRequest(new { error });
-        //        }
-        //    }
-
-        //    SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-        //    SAPbobsCOM.Recordset oRecSet1 = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-        //    SAPbobsCOM.Recordset oRecSet2 = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-        //    SAPbobsCOM.Recordset oRecSet3 = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-        //    Task<List<List<object>>> pro = Task.Run(() => {
-        //        oRecSet.DoQuery("Select \"ItemName\", \"ItemCode\", \"U_IL_PesProm\" From OITM Where \"SellItem\" = 'Y' AND \"QryGroup3\" = 'Y' AND \"Canceled\" = 'N'");
-        //        oRecSet.MoveFirst();
-        //        JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
-        //        return context.comp(products, 2);
-        //    });
-
-        //    Task<List<List<object>>> pl = Task.Run(() => {
-        //        oRecSet1.DoQuery(@"
-        //            Select
-        //                ""PriceList"",
-        //                ""ItemCode"",
-        //                ""Currency"",
-        //                ""Price"",
-        //                ""UomEntry""
-        //            From ITM1
-        //            Where ""PriceList"" = '2'
-        //                AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N')");
-        //        oRecSet1.MoveFirst();
-        //        JToken priceList = context.XMLTOJSON(oRecSet1.GetAsXML())["ITM1"];
-        //        return context.comp(priceList, 2);
-        //    });
-
-        //    Task<List<List<object>>> sto = Task.Run(() => {
-        //        oRecSet2.DoQuery(@"
-        //            Select 
-        //                ""ItemCode"",
-        //                ""WhsCode"",
-        //                ""OnHand""
-        //            From OITW
-        //            Where ""Freezed"" = 'N'
-        //                AND ""Locked"" = 'N'
-        //                AND ""WhsCode"" in ('S01', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S55')
-        //                AND ""ItemCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N')");
-        //        oRecSet2.MoveFirst();
-        //        JToken stock = context.XMLTOJSON(oRecSet2.GetAsXML())["OITW"];
-        //        return context.comp(stock, 1);
-        //    });
-
-        //    Task<List<List<object>>> um = Task.Run(() => {
-        //        oRecSet3.DoQuery(@"
-        //            Select 
-        //                header.""UgpCode"",
-        //                header.""BaseUom"",
-        //                baseUOM.""UomCode"" as baseUOM,
-        //                detail.""UomEntry"",
-        //                UOM.""UomCode"",
-        //                detail.""BaseQty""
-        //            From OUGP header
-        //            JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
-        //            JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
-        //            JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-        //            Where header.""UgpCode"" in (Select ""ItemCode"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N')");
-        //        oRecSet3.MoveFirst();
-        //        JToken uom = context.XMLTOJSON(oRecSet3.GetAsXML())["OUGP"];
-        //        return context.comp(uom, 2);
-        //    });
-
-        //    GC.Collect();
-        //    GC.WaitForPendingFinalizers();
-        //    await Task.WhenAll(pro, pl, sto, um);
-        //    return Ok(new { products = pro.Result, priceList = pl.Result, stock = sto.Result, uom = um.Result });
-        //}
-
+       
         // GET: api/Products/CRM/5
         [HttpGet("CRM/{id}")]
         public async Task<IActionResult> GetCRM(string id) {
@@ -1628,6 +1545,7 @@ header.""UgpEntry"",
             oRecSet.DoQuery(@"
                 Select 
                     ""ItemName"", 
+""UgpEntry"",
                     ""ItemCode"", 
                     ""ItmsGrpCod"",
                     RTRIM(RTRIM(""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm"",
@@ -1668,7 +1586,7 @@ header.""UgpEntry"",
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpCode"" = '" + id + "'");
+                Where header.""UgpEntry"" = '" + products["UgpEntry"] + "'");
             oRecSet.MoveFirst();
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             GC.Collect();
@@ -1686,7 +1604,8 @@ header.""UgpEntry"",
             oRecSet.DoQuery(@"
                 Select 
                     ""ItemName"", 
-                    ""ItemCode"", 
+                    ""ItemCode"",
+""UgpEntry"",
                     ""ItmsGrpCod"",
                     RTRIM(RTRIM(""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm"",
                     ""SUoMEntry""
@@ -1716,8 +1635,6 @@ header.""UgpEntry"",
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
             oRecSet.DoQuery(@"
                 Select 
-                    header.""UgpCode"",
-                    header.""BaseUom"",
                     baseUOM.""UomCode"" as baseUOM,
                     detail.""UomEntry"",
                     UOM.""UomCode"",
@@ -1726,7 +1643,7 @@ header.""UgpEntry"",
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpCode"" = '" + id + "'");
+                Where header.""UgpEntry"" = '" + products["UgpEntry"] + "'");
             oRecSet.MoveFirst();
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             GC.Collect();
@@ -1952,13 +1869,14 @@ header.""UgpEntry"",
                     ""U_IL_PesMax"",
                     ""U_IL_PesMin"",
                     ""U_IL_PesProm"",
+""UgpEntry"",
                     ""U_IL_TipPes"",
                     ""NumInSale"",
                     ""NumInBuy""
                 From OITM Where ""ItemCode"" = '" + id + "'");
             JToken Detail = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
-
-            oRecSet.DoQuery(@"
+          
+            oRecSet.DoQuery($@"
                 Select 
                     header.""UgpCode"",
                     header.""BaseUom"",
@@ -1970,7 +1888,8 @@ header.""UgpEntry"",
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpCode"" = '" + id + "'");
+                Where header.""UgpEntry"" = '" + Detail["UgpEntry"] + "'");
+
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
 
             GC.Collect();

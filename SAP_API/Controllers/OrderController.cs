@@ -641,7 +641,8 @@ namespace SAP_API.Controllers {
                     ""U_IL_PesMin"",
                     ""U_IL_PesProm"",
                     ""U_IL_TipPes"",
-                    ""NumInSale""
+                    ""NumInSale"",
+Detail.""UgpEntry""
                 From RDR1 as Line
                 JOIN OITM as Detail on Detail.""ItemCode"" = Line.""ItemCode""
                 WHERE Line.""DocEntry"" = {order["DocEntry"]};");
@@ -669,7 +670,7 @@ namespace SAP_API.Controllers {
                     JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                     JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                     JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                    Where header.""UgpCode"" = '{line["ItemCode"]}';");
+                    Where header.""UgpEntry"" = '{line["UgpEntry"]}';");
                 line["Uoms"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             }
 

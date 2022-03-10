@@ -546,13 +546,13 @@ namespace SAP_API.Controllers
 
 
             string s = "^XA\n";
-            s += $"^FO20,20^BQ,2,10^FDQA, {qR.Codigo} ^FS";
+            s += $"^FO120,50^BQ,2,10^FDQA, {qR.Codigo} ^FS";
             s += "^XZ";
 
 
             var bytes = Encoding.ASCII.GetBytes(s);
             // Send a printer-specific to the printer.
-            RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\" + qR.IDPrinter, bytes, bytes.Length);
+            RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\Tarima", bytes, bytes.Length);
         }
         public class CodigoGondola
         {

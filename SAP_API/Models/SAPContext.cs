@@ -17,8 +17,8 @@ namespace SAP_API.Models {
             //oCompany.CompanyDB = "CCFN_PRODUCCCION"; 
             //oCompany.CompanyDB = "CCFN_PROD";
             //oCompany.CompanyDB = "CCFN_CORPORATIVO";
-            //oCompany.CompanyDB = "CCFN_B1CORP";
-            oCompany.CompanyDB = "CCFN_BASECORP";
+            oCompany.CompanyDB = "CCFN_B1CORP";
+            //oCompany.CompanyDB = "CCFN_BASECORP";
             //oCompany.CompanyDB = "CCFN_DEV";
 
             oCompany.UserName = "SISTEMAS04";
@@ -60,7 +60,7 @@ namespace SAP_API.Models {
 
             return node;
         }
-
+   
         public JToken XMLTOJSON(string XML) {
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(XML);
@@ -69,6 +69,28 @@ namespace SAP_API.Models {
             node = WalkNode(node);
 
             return node;
+        }
+        public object FixedXMLTOJSON(string XML)
+        {
+            XmlDocument doc = new XmlDocument();
+            doc.LoadXml(XML);
+
+            JToken node = JObject.Parse(JsonConvert.SerializeXmlNode(doc))["Recordset"]["Rows"]["Row"];
+
+            List<IDictionary<string, string>> items= new List<IDictionary<string, string>>();
+            //node = WalkNodeFixed(node);
+            foreach(var Fila in node)
+            {
+                IDictionary<string, string> Row = new Dictionary<String, string>();
+                foreach (JToken Campo in Fila["Fields"]["Field"])
+                {
+                    Row.Add(Campo["Alias"].ToString(), Campo["Value"].ToString());
+                    Console.WriteLine(Campo);
+                }
+                items.Add(Row);
+            }
+
+            return items;
         }
 
 

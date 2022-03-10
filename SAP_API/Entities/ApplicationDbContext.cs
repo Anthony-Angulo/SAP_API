@@ -23,6 +23,7 @@ namespace SAP_API.Entities {
         public DbSet<LogFacturacion> LogFacturacion { get; set; }
         public DbSet<AutorizacionRequest> AutorizacionRequest { get; set; }
 
+        public DbSet<TrasladosVirtuales> TrasladosVirtuales { get; set; }
         public DbSet<VentaInfo> VentaInfo { get; set; }
 
         public DbSet<VentaLibreModel> VentaLibre { get; set; }
@@ -31,7 +32,7 @@ namespace SAP_API.Entities {
         }
 
         private static string GetConnectionString() {
-            const string databaseName = "CCFN";
+            const string databaseName = "CCFNPROD";
             const string databaseUser = "remote";
             const string databasePass = "Ch1v@s.2019@CCFN.2X5B8M";
 
