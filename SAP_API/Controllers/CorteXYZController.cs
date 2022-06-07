@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using SAP_API.Entities;
 using SAP_API.Models;
@@ -16,10 +17,12 @@ namespace SAP_API.Controllers
     public class CorteXYZController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public CorteXYZController(ApplicationDbContext context)
+        public CorteXYZController(ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
         public class Ledger{
@@ -37,113 +40,166 @@ namespace SAP_API.Controllers
             public string Clave { get; set; }
 
             public DateTime Fecha { get; set; }
+
+            public string Cuenta { get; set; }
         }
         public class TransferError : Transfer { 
         public string error { get; set; }
         }
         [HttpPost("Ledger")]
         public async Task<IActionResult> GetLedgers([FromBody] Ledger Ledger)
-        {
-            return Ok();
+       {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.ChartOfAccounts request = (SAPbobsCOM.ChartOfAccounts)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oChartOfAccounts);
-            SAPbobsCOM.JournalEntries move = (SAPbobsCOM.JournalEntries)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oJournalEntries);
             List<TransferError> transferenciasRechazadas = new List<TransferError>();
+            List<String> CuentasDolares = _configuration["CuentasDolares"].Split(",").ToList();
             foreach (Transfer item in Ledger.transfers)
             {
-                string CuentaCargo = "";
-                if (item.Clave == "EF")
-                {
-                    CuentaCargo = "110-005-001-000";
-                }
-                else if (item.Clave == "US")
-                {
-                    CuentaCargo = "110-005-002-000";
-                }
-                else if (item.Clave == "TD")
-                {
-                    CuentaCargo = "110-005-004-000";
-                }
+                SAPbobsCOM.JournalEntries move = (SAPbobsCOM.JournalEntries)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oJournalEntries);
 
-                else if (item.Clave == "TC")
-                {
-                    CuentaCargo = "110-005-003-000";
-                }
-
-                else if (item.Clave == "VL")
-                {
-                    CuentaCargo = "110-005-007-001";
-                }
-                DateTime fecha = item.Fecha;
-                move.Series = 19;
-                move.DueDate = fecha;
-                move.ReferenceDate = fecha;
-                move.TaxDate = fecha;
-                //move.StornoDate
-                //          move.VatDate
-                //Cuenta de cargo
-                move.Lines.ShortName = "110-001-002-001";
-                move.Lines.AccountCode = "110-001-002-001";
-                move.Lines.ContraAccount = CuentaCargo;
-                move.Lines.Credit = item.CantidadReal;
-                move.Lines.Debit = 0;
-                move.Lines.DueDate = fecha;
-                move.Lines.TaxDate = fecha;
-                move.Lines.ReferenceDate1 = fecha;
-                move.Lines.Add();
-                //Cuenta de abono
-                move.Lines.AccountCode = CuentaCargo;
-                move.Lines.ContraAccount = "110-001-002-001";
-                move.Lines.Credit = 0;
-                move.Lines.Debit = item.CantidadEnviada;
-                move.Lines.DueDate = fecha;
-                move.Lines.ReferenceDate1 = fecha;
-                move.Lines.TaxDate = fecha;
-                move.Lines.Add();
-                //Cuenta de abono diferencia
-                move.Lines.AccountCode = "810-200-004-000";
-                move.Lines.ContraAccount = "110-001-002-001";
-                if (item.CantidadReal - item.CantidadEnviada >= 0)
-                {
-                    move.Lines.Debit = Math.Abs(item.CantidadReal - item.CantidadEnviada);
-                    move.Lines.Credit = 0;
-                }
-                else
-                {
-                    move.Lines.Debit = 0;
-                    move.Lines.Credit = Math.Abs(item.CantidadReal - item.CantidadEnviada);
-                }
-                move.Lines.DueDate = fecha;
-                move.Lines.ReferenceDate1 = fecha;
-                move.Lines.TaxDate = fecha;
-                move.Lines.Add();
-                int lRetCode = 0;
                 try
-                {
+                {   string CuentaSucursal = "";
+                    if (int.Parse(Ledger.Sucursal.Substring(1)) > 100){
+                        CuentaSucursal = @$"110-017-{Ledger.Sucursal.Substring(1)}-{Ledger.Sucursal.Substring(1)}" ;
+                    }
+                    else
+                    {
+                        CuentaSucursal = @$"110-017-0{Ledger.Sucursal.Substring(1)}-0{Ledger.Sucursal.Substring(1)}";
+                    }
+                    if(CuentasDolares.Exists(x=>x==item.Cuenta))
+                    {
+                        
+                        DateTime fecha = item.Fecha;
+                        move.Series = 19;
+                        move.DueDate = fecha;
+                        move.ReferenceDate = fecha;
+                        move.TaxDate = fecha;
+                        //move.StornoDate
+                        //          move.VatDate
+                        //Cuenta de cargo
+                        move.Lines.ShortName = CuentaSucursal;
+                        move.Lines.AccountCode = CuentaSucursal;
+                        move.Lines.ContraAccount = item.Cuenta;
+                        move.Lines.FCCurrency = "USV";
+                        move.Lines.FCCredit = item.CantidadReal;
+                        move.Lines.FCDebit= 0;
+
+                        move.Lines.DueDate = fecha;
+                        move.Lines.TaxDate = fecha;
+                        move.Lines.ReferenceDate1 = fecha;
+                        move.Lines.Add();
+                        //Cuenta de abono
+                        move.Lines.AccountCode = item.Cuenta;
+                        move.Lines.ContraAccount = CuentaSucursal;
+                        move.Lines.FCCurrency = "USV";
+                        move.Lines.FCCredit= 0;
+                        move.Lines.FCDebit = item.CantidadEnviada;
+                        move.Lines.DueDate = fecha;
+                        move.Lines.ReferenceDate1 = fecha;
+                        move.Lines.TaxDate = fecha;
+                        move.Lines.Add();
+                        //Cuenta de abono diferencia
+                        move.Lines.AccountCode = "810-200-004-000";
+                        move.Lines.ContraAccount = CuentaSucursal;
+                        move.Lines.FCCurrency = "USV";
+
+                        if (item.CantidadReal - item.CantidadEnviada >= 0)
+                        {
+                            move.Lines.FCDebit= Math.Abs(item.CantidadReal - item.CantidadEnviada);
+                            move.Lines.FCCredit = 0;
+                        }
+                        else
+                        {
+                            move.Lines.FCDebit = 0;
+                            move.Lines.FCCredit = Math.Abs(item.CantidadReal - item.CantidadEnviada);
+                        }
+                        move.Lines.DueDate = fecha;
+                        move.Lines.ReferenceDate1 = fecha;
+                        move.Lines.TaxDate = fecha;
+                        move.Lines.Add();
+
+                    }
+                    else
+                    {
+
+                        DateTime fecha = item.Fecha;
+                        move.Series = 19;
+                        move.DueDate = fecha;
+                        move.ReferenceDate = fecha;
+                        move.TaxDate = fecha;
+                        //move.StornoDate
+                        //          move.VatDate
+                        //Cuenta de cargo
+                        move.Lines.ShortName = CuentaSucursal;
+                        move.Lines.AccountCode = CuentaSucursal;
+                        move.Lines.ContraAccount = item.Cuenta;
+                        move.Lines.Credit = item.CantidadReal;
+                        move.Lines.Debit = 0;
+
+                        move.Lines.DueDate = fecha;
+                        move.Lines.TaxDate = fecha;
+                        move.Lines.ReferenceDate1 = fecha;
+                        move.Lines.Add();
+                        //Cuenta de abono
+                        move.Lines.AccountCode = item.Cuenta;
+                        move.Lines.ContraAccount = CuentaSucursal;
+                        move.Lines.Credit = 0;
+                        move.Lines.Debit = item.CantidadEnviada;
+                        move.Lines.DueDate = fecha;
+                        move.Lines.ReferenceDate1 = fecha;
+                        move.Lines.TaxDate = fecha;
+                        move.Lines.Add();
+                        //Cuenta de abono diferencia
+                        move.Lines.AccountCode = "810-200-004-000";
+                        move.Lines.ContraAccount = CuentaSucursal;
+                        if (item.CantidadReal - item.CantidadEnviada >= 0)
+                        {
+                            move.Lines.Debit = Math.Abs(item.CantidadReal - item.CantidadEnviada);
+                            move.Lines.Credit = 0;
+                        }
+                        else
+                        {
+                            move.Lines.Debit = 0;
+                            move.Lines.Credit = Math.Abs(item.CantidadReal - item.CantidadEnviada);
+                        }
+                        move.Lines.DueDate = fecha;
+                        move.Lines.ReferenceDate1 = fecha;
+                        move.Lines.TaxDate = fecha;
+                        move.Lines.Add();
+
+                    }
+                    int lRetCode = 0;
+
                     lRetCode = move.Add();
+                    if (lRetCode != 0)
+                    {
+
+                        transferenciasRechazadas.Add(new TransferError { Clave = item.Clave, CantidadEnviada = item.CantidadEnviada, CantidadReal = item.CantidadReal, Fecha = item.Fecha, error = context.oCompany.GetLastErrorDescription() });
+                    }
+                    else
+                    {
+
                     _context.TrasladosVirtuales.Add(
-                        new TrasladosVirtuales {
+                        new TrasladosVirtuales
+                        {
                             Cantidad = item.CantidadEnviada.ToString(),
                             CantidadReal = item.CantidadReal.ToString(),
                             ClaveTransaccion = item.Clave,
                             NoCorte = Ledger.NoCorte,
-                            Usuario = Ledger.Usuario
+                            Usuario = Ledger.Usuario,
+                            CuentaDestino=item.Cuenta
                         });
                     _context.SaveChanges();
+                    }
                 }
-
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    transferenciasRechazadas.Add(new TransferError { Clave = item.Clave, CantidadEnviada = item.CantidadEnviada, CantidadReal = item.CantidadReal, Fecha = item.Fecha, error = context.oCompany.GetLastErrorDescription() });
+                    transferenciasRechazadas.Add(new TransferError { Clave = item.Clave, CantidadEnviada = item.CantidadEnviada, CantidadReal = item.CantidadReal, Fecha = item.Fecha, error = ex.Message });
                 }
-                if (lRetCode != 0) {
-
-                    transferenciasRechazadas.Add(new TransferError{ Clave=item.Clave,CantidadEnviada=item.CantidadEnviada,CantidadReal=item.CantidadReal,Fecha=item.Fecha,error=context.oCompany.GetLastErrorDescription()});
-                }
+              
                             
 
             }
-            if (transferenciasRechazadas.Count != 0)
+            if (transferenciasRechazadas.Count == 0)
             {
                 return Ok("Transferencias realizas con exito");
 
@@ -151,9 +207,7 @@ namespace SAP_API.Controllers
             else
             {
 
-            }
-            {
-                return BadRequest(new { Trasnfers=transferenciasRechazadas});
+                return BadRequest(transferenciasRechazadas);
 
             }
 

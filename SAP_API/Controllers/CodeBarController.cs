@@ -6,11 +6,13 @@ using Newtonsoft.Json.Linq;
 using Microsoft.AspNetCore.Authorization;
 using SAP_API.Models;
 
-namespace SAP_API.Controllers {
+namespace SAP_API.Controllers
+{
 
     [Route("api/[controller]")]
     [ApiController]
-    public class CodeBarController : ControllerBase {
+    public class CodeBarController : ControllerBase
+    {
 
         // Note: Documentation No Complete.
         // TODO: Class To Serialize Result.
@@ -25,7 +27,8 @@ namespace SAP_API.Controllers {
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("{CodeBar}")]
         //[Authorize]
-        public async Task<IActionResult> Get(string CodeBar) {
+        public async Task<IActionResult> Get(string CodeBar)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -39,16 +42,17 @@ namespace SAP_API.Controllers {
                     ""UomEntry""
                 From OBCD Where ""BcdCode"" = '{CodeBar}';");
 
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return NoContent();
             }
 
             string ItemCode = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"][0]["ItemCode"].ToString();
 
             oRecSet.DoQuery($@"
-                Select
+                    Select
                     ""ItemCode"",
-""UgpEntry"",
+                    ""UgpEntry"",
                     ""ItemName"",
                     ""QryGroup7"",
                     ""QryGroup41"",
@@ -59,17 +63,17 @@ namespace SAP_API.Controllers {
                     ""U_IL_TipPes"",
                     ""NumInSale"",
                     ""NumInBuy""
-                From OITM Where ""ItemCode"" = '{ItemCode}';");
+                    From OITM Where ""ItemCode"" = '{ItemCode}';");
             oRecSet.MoveFirst();
             JToken Detail = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
             oRecSet.DoQuery($@"
-                Select
+                    Select
                     ""BcdEntry"",
                     ""BcdCode"",
                     ""BcdName"",
                     ""ItemCode"",
                     ""UomEntry""
-                From OBCD Where ""ItemCode"" = '{ItemCode}';");
+                    From OBCD Where ""ItemCode"" = '{ItemCode}';");
             oRecSet.MoveFirst();
             JToken CodeBars = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
 
@@ -92,7 +96,8 @@ namespace SAP_API.Controllers {
             return Ok(new { Detail, CodeBars, uom });
         }
 
-        public class Codebar {
+        public class Codebar
+        {
             public string ItemCode { set; get; }
             public string Barcode { set; get; }
             public int UOMEntry { set; get; }
@@ -110,7 +115,8 @@ namespace SAP_API.Controllers {
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [HttpPost]
         //[Authorize]
-        public async Task<IActionResult> Post([FromBody] Codebar codebar) {
+        public async Task<IActionResult> Post([FromBody] Codebar codebar)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.CompanyService services = context.oCompany.GetCompanyService();
@@ -127,7 +133,8 @@ namespace SAP_API.Controllers {
                     ""UomEntry""
                 From OBCD Where ""BcdCode"" = '{codebar.Barcode}';");
 
-            if (oRecSet.RecordCount != 0){
+            if (oRecSet.RecordCount != 0)
+            {
                 string itemcode = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"][0]["ItemCode"].ToString();
                 return BadRequest("Ya Existe Codigo de Barra Registrado. Producto: " + itemcode);
             }
@@ -135,15 +142,38 @@ namespace SAP_API.Controllers {
             barCode.ItemNo = codebar.ItemCode;
             barCode.BarCode = codebar.Barcode;
             barCode.UoMEntry = codebar.UOMEntry;
-            
-            try {
+
+            try
+            {
                 SAPbobsCOM.BarCodeParams result = barCodesService.Add(barCode);
                 return Ok(result.AbsEntry);
-            } catch (Exception x) {
+            }
+            catch (Exception x)
+            {
                 return BadRequest(x.Message);
             }
-            
+
         }
 
+        [HttpGet("ItemCode/{ItemCode}")]
+        public async Task<IActionResult> GetCodebarFromItemCode(string ItemCode)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery($@"Select ""CodeBars"" From OITM Where ""ItemCode"" = '{ItemCode}'");
+
+            if (oRecSet.RecordCount != 0)
+            {
+                string itemcode = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["CodeBars"].ToString();
+                return Ok(itemcode);
+            }
+            else
+            {
+                return NotFound();
+            }
+
+        }
     }
 }

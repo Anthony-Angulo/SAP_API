@@ -21,5 +21,7 @@ namespace SAP_API.Models
         public string CantidadReal { get; set; }
         [Required]
         public string Usuario { get; set; }
+        [Required]
+        public string CuentaDestino { get; set; }
     }
 }

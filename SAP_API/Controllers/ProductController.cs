@@ -330,7 +330,6 @@ ORDER BY ""ItmsGrpNam""
             GC.WaitForPendingFinalizers();
             return Ok(respose);
         }
-
         // GET: api/Products/ProvidersProducts
         [HttpPost("Search/ToBuy")]
         public async Task<IActionResult> GetSearchToBuy([FromBody] SearchRequest request) {
@@ -398,7 +397,6 @@ ORDER BY ""ItmsGrpNam""
             GC.WaitForPendingFinalizers();
             return Ok(respose);
         }
-
         [HttpPost("Search/ToTransferWithStock/{warehouse}")]
         public async Task<IActionResult> GetSearchToTransferWithStock(string warehouse, [FromBody] SearchRequest request) {
 
@@ -476,7 +474,6 @@ ORDER BY ""ItmsGrpNam""
             GC.WaitForPendingFinalizers();
             return Ok(respose);
         }
-
         [HttpPost("search/PriceList/{priceList}/{group}")]
         public async Task<IActionResult> GetSearchPriceList(string priceList, int group, [FromBody] SearchRequest request) {
         
@@ -592,7 +589,6 @@ ORDER BY ""ItmsGrpNam""
             GC.WaitForPendingFinalizers();
             return Ok(respose);
         }
-
         [HttpPost("Search/{warehouse}/{property}")]
         public async Task<IActionResult> GetSearchWithStockAndProperty(string warehouse, int property, [FromBody] SearchRequest request) {
 
@@ -672,8 +668,6 @@ ORDER BY ""ItmsGrpNam""
             };
             return Ok(respose);
         }
-
-
         [AllowAnonymous]
         // GET: api/Products/CRMToSell/5
         [HttpGet("CRMToSell/{id}/{priceList}/{warehouse}")]
@@ -802,7 +796,6 @@ ORDER BY ""ItmsGrpNam""
                 return BadRequest(ex.Message);
             }
         }
-
         // GET: api/Products/Properties
         [HttpGet("Properties")]
         public async Task<IActionResult> GetProperties() {
@@ -817,9 +810,7 @@ ORDER BY ""ItmsGrpNam""
             GC.WaitForPendingFinalizers();
             return Ok(propertyList);
         }
-
         /// //////////////////////////////////////////
-
         // GET: api/Products/CRMToSellEdit/5
         [HttpGet("CRMToSellEdit/{id}")]
         public async Task<IActionResult> GetCRMToSellEdit(string id) {
@@ -857,7 +848,6 @@ product.""UgpEntry"",
             GC.WaitForPendingFinalizers();
             return Ok(product);
         }
-
         // GET: api/Products/ToTransfer/5/S01
         [HttpGet("ToTransfer/{itemcode}/{warehouse}")]
         public async Task<IActionResult> GetToTransfer(string itemcode, string warehouse) {
@@ -927,7 +917,6 @@ product.""UgpEntry"",
             return Ok(product);
             //return Ok(productDetail);
         }
-
         //[HttpPost("/UpdatePesProm")]
         //public async Task<IActionResult> GetUpdatePesProm([FromBody] string value) {
 

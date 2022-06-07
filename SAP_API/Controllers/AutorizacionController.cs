@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using ClosedXML.Excel;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using SAP_API.Entities;
@@ -6,9 +7,12 @@ using SAP_API.Models;
 using SAPbobsCOM;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
+using System.Net.Mime;
+using System.Text;
 using System.Threading.Tasks;
 using Twilio;
 using Twilio.Rest.Api.V2010.Account;
@@ -96,9 +100,11 @@ namespace SAP_API.Controllers
     <li>Cliente: <b>{request.Cliente}</b></li>
     <li>Producto <b>{request.Producto}</b></li>
  <li>Cantidad: <b>{request.Cantidad}</b></li>
-    <li>Precio base: <b>{preciobase} {request.Currency}</b></li>
-    <li>Precio introducido: <b>{request.PrecioSolicitado.Substring(4)} {request.PrecioSolicitado.Substring(0, 4)}</b></li>
+<li>Costo del artículo*: <b>{double.Parse(request.Costo):##.0000}</b> </li>
+    <li>Precio base: <b>{preciobase:##.0000} {request.Currency}</b></li>
+    <li>Precio introducido: <b>{double.Parse(request.PrecioSolicitado.Substring(4)):##.0000} {request.PrecioSolicitado.Substring(0, 4)}</b></li>
 </ul>    
+<p>*El costo del artículo es en base a la última entrada de mercancía registrada</p>
 <a href=""{_configuration["DireccionAutorizacion"]}{request.id}"" target=""blank""><button
             style = ""background-color: green;color: white;
     border-radius: 12px;margin:10px;
@@ -147,6 +153,7 @@ namespace SAP_API.Controllers
                     return Ok("Autorizacion ya aprobada");
                 }*/
                 autorizacion.Autorizado = 1;
+                autorizacion.FechaAutorizado = DateTime.Now;
                 _context.SaveChanges();
 
             }
@@ -178,8 +185,8 @@ namespace SAP_API.Controllers
                     $"Su solicitud correspondiente a los siguientes datos ha sido autorizada.\n" +
                     $"Cliente: {autorizacion.Cliente}\n" +
                     $"Producto: {autorizacion.Producto}\n" +
-                    $"Precio base: {preciobase} {autorizacion.Currency}\n" +
-                    $"Precio introducido: {autorizacion.PrecioSolicitado.Substring(4)} {autorizacion.PrecioSolicitado.Substring(0,4)}\n" +
+                    $"Precio base: {preciobase:##.0000} {autorizacion.Currency}\n" +
+                    $"Precio introducido: {double.Parse(autorizacion.PrecioSolicitado.Substring(4)):##.0000} {autorizacion.PrecioSolicitado.Substring(0,4)}\n" +
                     $"Tiene 60 minutos para registrar la factura antes de que la autorización expire.";
 
                 // Add Recipient 
@@ -286,6 +293,128 @@ namespace SAP_API.Controllers
 }
         }
        
+        [HttpPost("GetData")]
+        public IActionResult GetData([FromBody] Request request)
+        {
+
+            return Ok(
+                _context.AutorizacionRequest.Where(x=>x.Fecha>=request.FechaInicial && x.Fecha<=request.FechaFinal && x.Autorizado==request.Autorizado).ToList()
+                );
+        }
+
+        [HttpGet("SendMail")]
+        public IActionResult SendMail()
+        {
+            //string to = "gustavo.carreno@superchivas.com.mx";//_configuration["cuentaenvio"];
+            MailMessage message = new MailMessage(_configuration["cuentacorreo"], _configuration["cuentaenvio"]);
+            message.Subject = "Autorizaciones hechas por el Sr. Cervantes en Sistema SAP B1";
+            message.Body = @"";
+            var smtpClient = new SmtpClient(_configuration["smtpserver"])
+            {
+                Port = 587,
+                Credentials = new NetworkCredential(_configuration["cuentacorreo"], _configuration["passcorreo"]),
+                EnableSsl = true
+            };
+            /*List<String> CorreosCostos= _configuration["CorreosCostosAutorizaciones"].Split(",").ToList();
+            foreach (string item in CorreosCostos)
+            {
+                message.To.Add(item);
+            }*/
+          
+            var csv = new StringBuilder();
+            DateTime FechaInicial = DateTime.Now;
+            DateTime FechaFinal = DateTime.Now;
+            FechaInicial = FechaInicial.AddDays(-1);
+            FechaInicial = new DateTime(FechaInicial.Year, FechaInicial.Month, FechaInicial.Day);
+            csv.Append("sep=;" + Environment.NewLine);
+            List<AutorizacionRequest> logFacturacions = _context.AutorizacionRequest.Where(x=>x.Fecha>=FechaInicial).OrderBy(x=>x.Fecha).ToList();
+            //List<LogFacturacion> logFacturacions = _context.LogFacturacion.ToList();
+          
+            csv.Append(string.Format("Fecha" +
+                ";Usuario" +
+                ";Sucursal" +
+                ";Cliente" +
+                ";Codigo Cliente" +
+                ";Producto" +
+                ";Codigo Producto" +
+                ";Precio Base" +
+                ";Moneda Base" +
+                ";Cantidad Base" +
+                ";PrecioSolicitado" + 
+                ";Autorizado" +
+                ";Costo" +
+                ";NumeroDeDocumentoCosto" +
+                ";Fecha Autorizado;") + Environment.NewLine);
+
+            foreach (var item in logFacturacions)
+            {
+                csv.Append(string.Format("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9},{10},{11},{12},{13},{14}",
+                    item.Fecha, item.Usuario,
+                    item.Sucursal,item.Cliente,item.CardCode,
+                    item.Producto,item.ProductCode,
+                    (double.Parse(item.CantidadBase) * double.Parse(item.PrecioBase)).ToString(),
+                    item.Currency,
+                    item.CantidadBase,
+                    item.PrecioSolicitado,
+                    item.Autorizado==1?"Autorizado":"No Autorizado",
+                    item.Costo,
+                    item.DocNumCosto,item.FechaAutorizado) + Environment.NewLine);
+            }
+            var wb = new XLWorkbook();
+            var ws = wb.Worksheets.Add("Inserting Tables");
+            var people = from p in logFacturacions
+
+                         select new
+                         {
+                             Usuario = p.Usuario,
+                             Sucursal = p.Sucursal,
+                             Cliente = p.Cliente,
+                             CodigoCliente = p.CardCode,
+                             Producto = p.Producto,
+                             CodigoProducto = p.ProductCode,
+                             PrecioBase = (double.Parse(p.CantidadBase) * double.Parse(p.PrecioBase)).ToString(),
+                             MonedaBase = p.Currency,
+                             CantidadBase = p.CantidadBase,
+                             PrecioSolicitado = p.PrecioSolicitado,
+                             Autorizado = p.Autorizado == 1 ? "Autorizado" : "No Autorizado",
+                             Costo = p.Costo,
+                             NumeroDeDocumentoCosto = p.DocNumCosto,
+                             FechaAutorizado = p.FechaAutorizado
+                         };
+
+            var tableWithPeople = ws.Cell(1, 1).InsertTable(people.AsEnumerable());
+
+            var memoryStream = new System.IO.MemoryStream();
+                wb.SaveAs(memoryStream);
+            byte[] contentAsBytes = Encoding.UTF8.GetBytes("C:\\test.xlsx");
+
+            memoryStream.Write(contentAsBytes, 0, contentAsBytes.Length);
+
+            memoryStream.Seek(0, SeekOrigin.Begin);
+            var attachment = new System.Net.Mail.Attachment(memoryStream,
+                                                    "autorizaciones_SAP_B1.xlsx", MediaTypeNames.Application.Octet);
+                message.Attachments.Add(attachment);
+            try
+            {
+                if (logFacturacions.Count != 0)
+                {
+                    smtpClient.Send(message);
+                }
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.ToString());
+
+            }
+        }
+
+        public class Request
+        {
+            public DateTime FechaInicial { get; set; }
+            public DateTime FechaFinal { get; set; }
+            public int Autorizado { get; set; }
+        }
     }
 
 }

@@ -15,7 +15,6 @@ namespace SAP_API.Controllers
 
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class ContactController : ControllerBase {
 
         private readonly ApplicationDbContext _context;

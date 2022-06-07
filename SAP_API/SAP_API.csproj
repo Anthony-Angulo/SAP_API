@@ -46,6 +46,7 @@
 
   <ItemGroup>
     <PackageReference Include="BarcodeLib.Core" Version="1.0.9" />
+    <PackageReference Include="ClosedXML" Version="0.95.4" />
     <PackageReference Include="EntityFramework.Extended" Version="6.1.0.168" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.1.2" PrivateAssets="All" />

@@ -85,7 +85,6 @@ namespace SAP_API.Models {
                 foreach (JToken Campo in Fila["Fields"]["Field"])
                 {
                     Row.Add(Campo["Alias"].ToString(), Campo["Value"].ToString());
-                    Console.WriteLine(Campo);
                 }
                 items.Add(Row);
             }

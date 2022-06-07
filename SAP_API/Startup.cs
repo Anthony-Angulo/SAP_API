@@ -47,6 +47,7 @@ namespace SAP_API {
 
             // ===== Add our DbContext ========
             services.AddDbContext<ApplicationDbContext>();
+            services.AddDbContext<LogsContext>();
 
             // ===== Add Identity ========
             services.AddIdentity<User, IdentityRole>(options => {

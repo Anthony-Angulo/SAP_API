@@ -25,16 +25,19 @@ namespace SAP_API.Entities {
 
         public DbSet<TrasladosVirtuales> TrasladosVirtuales { get; set; }
         public DbSet<VentaInfo> VentaInfo { get; set; }
-
-        public DbSet<VentaLibreModel> VentaLibre { get; set; }
+        /*public DbSet<rutinas> rutinas { get; set; }
+        public DbSet<CategoriaPregunta> CategoriaPreguntas { get; set; }
+        public DbSet<Preguntas> Preguntas { get; set; }
+        public DbSet<Respuestas> Respuestas { get; set; }
+        */public DbSet<VentaLibreModel> VentaLibre { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
             optionsBuilder.UseMySql(GetConnectionString());
         }
 
         private static string GetConnectionString() {
             const string databaseName = "CCFNPROD";
-            const string databaseUser = "remote";
-            const string databasePass = "Ch1v@s.2019@CCFN.2X5B8M";
+            const string databaseUser = "apisap";
+            const string databasePass = "34sg!MaXN**5c%tG";
 
             return $"Server=54.177.203.25;" +
                    $"database={databaseName};" +

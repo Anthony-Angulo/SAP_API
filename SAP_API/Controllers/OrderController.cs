@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,13 @@ namespace SAP_API.Controllers {
     [Authorize]
     public class OrderController : ControllerBase {
 
+
+        private readonly LogsContext _contextLogs;
+
+        public OrderController(LogsContext contextLogs)
+        {
+            _contextLogs = contextLogs;
+        }
         /// <summary>
         /// Get Order List to CRM web Filter by DatatableParameters.
         /// </summary>
@@ -98,7 +106,7 @@ namespace SAP_API.Controllers {
             } else if (request.order[0].column == 8) {
                 orderby = $" ORDER BY ord.\"DocStatus\" {request.order[0].dir}";
             } else if (request.order[0].column == 9) {
-                orderby = $" ORDER BY ord.\"DocDate\" {request.order[0].dir}";
+                orderby = $" ORDER BY ord.\"DocDate\" {request.order[0].dir},ord.\"DocTime\" {request.order[0].dir}";
             } else {
                 orderby = $" ORDER BY ord.\"DocNum\" DESC";
             }
@@ -110,7 +118,7 @@ namespace SAP_API.Controllers {
                     ord.""DocEntry"",
                     ord.""DocNum"",
 
-                    to_char(to_date(SUBSTRING(ord.""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') as ""DocDate"",
+                    concat(to_char(to_date(SUBSTRING(ord.""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY'),' '|| SUBSTRING(ord.""DocTime"" , 0, LENGTH(ord.""DocTime"")-2) || ':' || RIGHT(ord.""DocTime"",2)) as ""DocDate"",
 
                     (case when ord.""CANCELED"" = 'Y' then 'Cancelado'
                     when ord.""DocStatus"" = 'O' then 'Abierto'
@@ -119,7 +127,6 @@ namespace SAP_API.Controllers {
 
                     (case when ord.""DocCur"" = 'USD' then ord.""DocTotalFC""
                     else ord.""DocTotal"" end)  AS  ""DocTotal"",
-
                     ord.""CardName"",
                     ord.""DocCur"",
                     payment.""PymntGroup"",
@@ -919,6 +926,68 @@ Detail.""UgpEntry""
             GC.Collect();
             GC.WaitForPendingFinalizers();
             return Ok(list);
+        }
+        // GET: api/order/list
+        // Ordenes Filtradas por dia
+        [AllowAnonymous]
+        [HttpGet("list/{Almacen}")]
+        public async Task<IActionResult> GetListByAlmacen(string Almacen)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Documents items = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery($@"
+Select 
+""DocEntry"",
+""DocNum""
+From ORDR ord
+JOIN NNM1 serie ON ord.""Series"" = serie.""Series""
+JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
+WHERE ""WhsCode"" = '{Almacen}'
+AND to_char(to_date(SUBSTRING(ord.""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') = to_char(to_date(SUBSTRING(NOW(), 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY')");
+            int rc = oRecSet.RecordCount;
+            if (rc == 0)
+            {
+                return NotFound();
+            }
+            oRecSet.MoveFirst();
+            try
+            {
+ JToken documentos=  context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"];
+                List<DocumentosLogs> lst = documentos.ToObject<List<DocumentosLogs>>();
+                List<SAPLog> logssap = _contextLogs.SAPLog.Where(x => DateTime.Compare(x.created_at.Date, DateTime.Now.Date) == 0 && x.action== "Impresion").ToList();
+                foreach (var item in lst.Where(x=>logssap.Exists(p=>p.document==x.DocEntry)))
+                {
+                    item.Impreso = "Impresa";
+                }
+                var wb = new XLWorkbook();
+                var ws = wb.Worksheets.Add("Inserting Tables");
+              
+
+                var tableWithPeople = ws.Cell(1, 1).InsertTable(lst.AsEnumerable());
+
+                var memoryStream = new System.IO.MemoryStream();
+                using (var stream = new System.IO.MemoryStream())
+                {
+                    wb.SaveAs(stream);
+                    var content = stream.ToArray();
+                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "OrdenesImpresas.xlsx");
+                }
+            }
+            catch (Exception ex)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                return BadRequest(ex);
+            }
+}
+        public class DocumentosLogs {
+        public string DocEntry { get; set; }
+        public string DocNum { get; set; }
+
+        public string Impreso { get; set; }
         }
 
         // GET: api/order/list

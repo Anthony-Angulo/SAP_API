@@ -42,5 +42,12 @@ namespace SAP_API.Models
         [NotMapped]
         public string Cantidad { get; set; }
 
+        public DateTime FechaAutorizado { get; set; }
+
+        public string Costo { get; set; }
+
+        public string DocNumCosto { get; set; }
+
+
     }
 }

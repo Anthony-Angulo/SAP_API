@@ -1,13 +1,16 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using ClosedXML.Excel;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using SAP_API.Entities;
 using SAP_API.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
+using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -45,7 +48,7 @@ namespace SAP_API.Controllers
         [HttpGet("SendMail")]
         public IActionResult SendMail()
         {
-            string to = "gustavo.carreno@superchivas.com.mx";//_configuration["cuentaenvio"];
+            string to = _configuration["cuentaenvio"];
             MailMessage message = new MailMessage(_configuration["cuentacorreo"], to);
             message.Subject = "Bitácora de precios de venta fuera del intervalo autorizado";
             message.Body = @"";
@@ -62,32 +65,37 @@ namespace SAP_API.Controllers
             csv.Append("sep=;"+Environment.NewLine);
             //List<LogFacturacion> logFacturacions = _context.LogFacturacion.Where(x=>x.fecha>=FechaInicial).OrderBy(x=>x.fecha).ToList();
             List<LogFacturacion> logFacturacions = _context.LogFacturacion.ToList();
+            var wb = new XLWorkbook();
+            var ws = wb.Worksheets.Add("preciosFueraDeIntervalo");
+            var people = from p in logFacturacions
 
-            csv.Append(string.Format("Fecha;Usuario;Producto;Precio base;Moneda base;Tipo Cambio;Precio introducido;Moneda introducida;Serie;Almacen") + Environment.NewLine);
+                         select new
+                         {
+                             Fecha= p.fecha,
+                             Usuario= p.user,
+                             Producto=p.Productdsc,
+                             Preciobase=(double.Parse(p.CantidadBase) * double.Parse(p.PrecioBase)).ToString(),
+                             MonedaBase=p.MonedaBase,
+                             TipoCambio=p.TipoCambio,
+                             PrecioIntroducido = p.PrecioIntroducido,
+                             MonedaIntroducida = p.MonedaIntroducida,
+                             serie = p.serie,
+                             Almacen=p.warehouseextern
+                         };
+            var tableWithPeople = ws.Cell(1, 1).InsertTable(people.AsEnumerable());
 
-            foreach (var item in logFacturacions)
-            {
-                csv.Append(string.Format("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9}", 
-                    item.fecha,item.user,
-                    item.Productdsc,
-                    (double.Parse(item.CantidadBase)*double.Parse(item.PrecioBase)).ToString(),
-                    item.MonedaBase, 
-                    item.TipoCambio,
-                    item.PrecioIntroducido,
-                    item.MonedaIntroducida,
-                    item.serie,
-                    item.warehouseextern)+ Environment.NewLine);
-            }
-            System.IO.MemoryStream theStream = new System.IO.MemoryStream();
-            byte[] byteArr = Encoding.ASCII.GetBytes(csv.ToString());
-            
-            System.IO.MemoryStream stream1 = new System.IO.MemoryStream(byteArr, true);
-            stream1.Write(byteArr, 0, byteArr.Length);
-            stream1.Position = 0;
-            message.Attachments.Add(new Attachment(stream1, $"precios_de_venta_fuera_de_intervalo_autorizado.csv"));
+            var memoryStream = new System.IO.MemoryStream();
+            wb.SaveAs(memoryStream);
+            byte[] contentAsBytes = Encoding.UTF8.GetBytes("C:\\test.xlsx");
+
+            memoryStream.Write(contentAsBytes, 0, contentAsBytes.Length);
+
+            memoryStream.Seek(0, SeekOrigin.Begin);
+            var attachment = new System.Net.Mail.Attachment(memoryStream,
+                                                    "precios_de_venta_fuera_de_intervalo_autorizado.xlsx", MediaTypeNames.Application.Octet);
+            message.Attachments.Add(attachment);
             // Credentials are necessary if the server requires the client
             // to authenticate before it will send email on the client's behalf.
-
             try
             {
                 if (logFacturacions.Count != 0)

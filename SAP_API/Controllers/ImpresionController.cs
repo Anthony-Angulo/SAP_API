@@ -547,6 +547,8 @@ namespace SAP_API.Controllers
 
             string s = "^XA\n";
             s += $"^FO120,50^BQ,2,10^FDQA, {qR.Codigo} ^FS";
+            s += $"^CF0,30";
+            s += $"^FO140,320^FD{qR.Codigo}^FS";
             s += "^XZ";
 
 
@@ -567,7 +569,7 @@ namespace SAP_API.Controllers
         public void PostQ([FromBody] CodigoGondola CodG)
         {
 
-            String szPrinterName = $@"\\192.168.115.171\Bixo";
+            String szPrinterName = $@"\\192.168.1.66\Bixo";
 
             string Producto = "^FO420,50^FD";
             int Contador = 0;
@@ -598,8 +600,9 @@ namespace SAP_API.Controllers
                 }
             }
             string s = $@"^XA
+
 ^CF0,30
-^FO150,40^BY2^BCN,50,,,,A^FDA0602C37^FS
+^FO150,40^BY2^BCN,50,,,,A^FD{CodG.ItemCode}^FS
 ^CF0,20
 {Producto}
 ^CF0,70
@@ -614,6 +617,7 @@ namespace SAP_API.Controllers
 
 ^FDfi.11/12/21
 ^FS
+
 ^XZ";
             var bytes = Encoding.ASCII.GetBytes(s);
             // Send a printer-specific to the printer.
