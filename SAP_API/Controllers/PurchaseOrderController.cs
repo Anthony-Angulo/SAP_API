@@ -428,7 +428,7 @@ namespace SAP_API.Controllers
             //    return BadRequest("Documento Cerrado");
             //}
 
-            if (POrder["OPOR"]["DocStatus"].ToString() != "O")
+           if (POrder["OPOR"]["DocStatus"].ToString() != "O")
             {
                 return BadRequest("Documento Cerrado");
             }
@@ -467,15 +467,14 @@ namespace SAP_API.Controllers
                         ""NumInBuy""
                     From OITM Where ""ItemCode"" = '" + pro["ItemCode"] + "'");
                 oRecSet.MoveFirst();
-                pro["Detail"] = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
-                oRecSet.DoQuery(@"
-                    Select
+                pro["Detail"] = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];              
+                    oRecSet.DoQuery($@"Select
                         ""BcdEntry"",
                         ""BcdCode"",
                         ""BcdName"",
                         ""ItemCode"",
                         ""UomEntry""
-                    From OBCD Where ""ItemCode"" = '" + pro["ItemCode"] + "'");
+                    From OBCD Where ""ItemCode"" in ('{pro["ItemCode"]}G','{pro["ItemCode"]}')");
                 oRecSet.MoveFirst();
                 pro["CodeBars"] = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
             }

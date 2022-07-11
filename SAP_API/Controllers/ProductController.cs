@@ -863,6 +863,7 @@ product.""UgpEntry"",
                     product.""ItemCode"",
                     product.""U_IL_PesProm"",
                     warehouse.""OnHand"",
+product.""U_EQUIVALENTE"",
                     product.""validFor"",
   product.""UgpEntry""
                 From OITM product
@@ -898,6 +899,7 @@ product.""UgpEntry"",
                 Select 
                     header.""UgpCode"",
                     header.""BaseUom"",
+detail.""BaseQty"",
                     baseUOM.""UomCode"" as baseUOM,
                     detail.""UomEntry"",
                     UOM.""UomCode"",

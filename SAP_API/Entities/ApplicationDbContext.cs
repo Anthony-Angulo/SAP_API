@@ -4,8 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using SAP_API.Controllers;
 using SAP_API.Models;
 
-namespace SAP_API.Entities {
-    public class ApplicationDbContext : IdentityDbContext<User, IdentityRole, string> {
+namespace SAP_API.Entities
+{
+    public class ApplicationDbContext : IdentityDbContext<User, IdentityRole, string>
+    {
         public DbSet<Warehouse> Warehouses { get; set; }
         public DbSet<Status> Statuses { get; set; }
         public DbSet<Department> Departments { get; set; }
@@ -29,12 +31,15 @@ namespace SAP_API.Entities {
         public DbSet<CategoriaPregunta> CategoriaPreguntas { get; set; }
         public DbSet<Preguntas> Preguntas { get; set; }
         public DbSet<Respuestas> Respuestas { get; set; }
-        */public DbSet<VentaLibreModel> VentaLibre { get; set; }
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
+        */
+        public DbSet<VentaLibreModel> VentaLibre { get; set; }
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
             optionsBuilder.UseMySql(GetConnectionString());
         }
 
-        private static string GetConnectionString() {
+        private static string GetConnectionString()
+        {
             const string databaseName = "CCFNPROD";
             const string databaseUser = "apisap";
             const string databasePass = "34sg!MaXN**5c%tG";
@@ -46,7 +51,8 @@ namespace SAP_API.Entities {
                    $"pooling=true;";
         }
 
-        protected override void OnModelCreating(ModelBuilder builder) {
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
             base.OnModelCreating(builder);
             // Customize the ASP.NET Identity model and override the defaults if needed.
             // For example, you can rename the ASP.NET Identity table names and more.

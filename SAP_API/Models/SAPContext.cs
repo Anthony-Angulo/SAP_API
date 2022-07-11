@@ -4,13 +4,16 @@ using System;
 using System.Collections.Generic;
 using System.Xml;
 
-namespace SAP_API.Models {
+namespace SAP_API.Models
+{
 
-    public class SAPContext {
+    public class SAPContext
+    {
 
         public SAPbobsCOM.Company oCompany;
 
-        public SAPContext() {
+        public SAPContext()
+        {
             oCompany = new SAPbobsCOM.Company();
             oCompany.Server = "192.168.0.92:30015";
             oCompany.DbServerType = SAPbobsCOM.BoDataServerTypes.dst_HANADB;
@@ -29,30 +32,41 @@ namespace SAP_API.Models {
             oCompany.language = SAPbobsCOM.BoSuppLangs.ln_Spanish;
         }
 
-        static JToken WalkNode(JToken node) {
-            if (node.Type == JTokenType.Object) {
+        static JToken WalkNode(JToken node)
+        {
+            if (node.Type == JTokenType.Object)
+            {
                 JToken token = node["row"];
-                if (token != null) {
+                if (token != null)
+                {
                     node = ArrayFormatRow(node);
                     node = WalkNode(node);
-                } else {
+                }
+                else
+                {
 
                     token = node["@nil"];
-                    if (token != null) {
+                    if (token != null)
+                    {
                         node = null;
                     }
-                    else {
+                    else
+                    {
                         JObject temp = new JObject();
-                        foreach (JProperty child in node.Children<JProperty>()) {
+                        foreach (JProperty child in node.Children<JProperty>())
+                        {
                             temp.Add(child.Name, WalkNode(child.Value));
                         }
                         node = temp;
                     }
                 }
 
-            } else if (node.Type == JTokenType.Array) {
+            }
+            else if (node.Type == JTokenType.Array)
+            {
                 JArray temp = new JArray();
-                foreach (JToken child in node.Children()) {
+                foreach (JToken child in node.Children())
+                {
                     temp.Add(WalkNode(child));
                 }
                 node = temp;
@@ -60,8 +74,9 @@ namespace SAP_API.Models {
 
             return node;
         }
-   
-        public JToken XMLTOJSON(string XML) {
+
+        public JToken XMLTOJSON(string XML)
+        {
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(XML);
 
@@ -77,9 +92,9 @@ namespace SAP_API.Models {
 
             JToken node = JObject.Parse(JsonConvert.SerializeXmlNode(doc))["Recordset"]["Rows"]["Row"];
 
-            List<IDictionary<string, string>> items= new List<IDictionary<string, string>>();
+            List<IDictionary<string, string>> items = new List<IDictionary<string, string>>();
             //node = WalkNodeFixed(node);
-            foreach(var Fila in node)
+            foreach (var Fila in node)
             {
                 IDictionary<string, string> Row = new Dictionary<String, string>();
                 foreach (JToken Campo in Fila["Fields"]["Field"])
@@ -93,10 +108,14 @@ namespace SAP_API.Models {
         }
 
 
-        static JToken ArrayFormatRow(JToken temp) {
-            if (temp["row"] is JArray) {
+        static JToken ArrayFormatRow(JToken temp)
+        {
+            if (temp["row"] is JArray)
+            {
                 return temp["row"];
-            } else {
+            }
+            else
+            {
                 List<Object> rowList = new List<Object>();
                 rowList.Add(temp["row"]);
                 return JToken.FromObject(rowList);

@@ -55,7 +55,7 @@ namespace SAP_API.Controllers
             foreach (Transfer item in Ledger.transfers)
             {
                 SAPbobsCOM.JournalEntries move = (SAPbobsCOM.JournalEntries)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oJournalEntries);
-
+                move.Memo = $@"Usuario:{Ledger.Usuario}";
                 try
                 {   string CuentaSucursal = "";
                     if (int.Parse(Ledger.Sucursal.Substring(1)) > 100){
@@ -120,7 +120,7 @@ namespace SAP_API.Controllers
                     }
                     else
                     {
-
+                        
                         DateTime fecha = item.Fecha;
                         move.Series = 19;
                         move.DueDate = fecha;
