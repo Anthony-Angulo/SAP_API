@@ -25,15 +25,16 @@ namespace SAP_API.Controllers
             _configuration = configuration;
         }
 
-        public class Ledger{
+        public class Ledger
+        {
             public string NoCorte { get; set; }
             public string Usuario { get; set; }
 
             public string Sucursal { get; set; }
-            public List<Transfer> transfers { get; set; }
+            public List<Transferes> transfers { get; set; }
         }
 
-        public class Transfer
+        public class Transferes
         {
             public double CantidadEnviada { get; set; }
             public double CantidadReal { get; set; }
@@ -43,31 +44,34 @@ namespace SAP_API.Controllers
 
             public string Cuenta { get; set; }
         }
-        public class TransferError : Transfer { 
-        public string error { get; set; }
+        public class TransferError : Transferes
+        {
+            public string error { get; set; }
         }
         [HttpPost("Ledger")]
         public async Task<IActionResult> GetLedgers([FromBody] Ledger Ledger)
-       {
+        {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             List<TransferError> transferenciasRechazadas = new List<TransferError>();
             List<String> CuentasDolares = _configuration["CuentasDolares"].Split(",").ToList();
-            foreach (Transfer item in Ledger.transfers)
+            foreach (Transferes item in Ledger.transfers)
             {
                 SAPbobsCOM.JournalEntries move = (SAPbobsCOM.JournalEntries)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oJournalEntries);
                 move.Memo = $@"Usuario:{Ledger.Usuario}";
                 try
-                {   string CuentaSucursal = "";
-                    if (int.Parse(Ledger.Sucursal.Substring(1)) > 100){
-                        CuentaSucursal = @$"110-017-{Ledger.Sucursal.Substring(1)}-{Ledger.Sucursal.Substring(1)}" ;
+                {
+                    string CuentaSucursal = "";
+                    if (int.Parse(Ledger.Sucursal.Substring(1)) > 100)
+                    {
+                        CuentaSucursal = @$"110-017-{Ledger.Sucursal.Substring(1)}-{Ledger.Sucursal.Substring(1)}";
                     }
                     else
                     {
                         CuentaSucursal = @$"110-017-0{Ledger.Sucursal.Substring(1)}-0{Ledger.Sucursal.Substring(1)}";
                     }
-                    if(CuentasDolares.Exists(x=>x==item.Cuenta))
+                    if (CuentasDolares.Exists(x => x == item.Cuenta))
                     {
-                        
+
                         DateTime fecha = item.Fecha;
                         move.Series = 19;
                         move.DueDate = fecha;
@@ -81,7 +85,7 @@ namespace SAP_API.Controllers
                         move.Lines.ContraAccount = item.Cuenta;
                         move.Lines.FCCurrency = "USV";
                         move.Lines.FCCredit = item.CantidadReal;
-                        move.Lines.FCDebit= 0;
+                        move.Lines.FCDebit = 0;
 
                         move.Lines.DueDate = fecha;
                         move.Lines.TaxDate = fecha;
@@ -91,7 +95,7 @@ namespace SAP_API.Controllers
                         move.Lines.AccountCode = item.Cuenta;
                         move.Lines.ContraAccount = CuentaSucursal;
                         move.Lines.FCCurrency = "USV";
-                        move.Lines.FCCredit= 0;
+                        move.Lines.FCCredit = 0;
                         move.Lines.FCDebit = item.CantidadEnviada;
                         move.Lines.DueDate = fecha;
                         move.Lines.ReferenceDate1 = fecha;
@@ -104,7 +108,7 @@ namespace SAP_API.Controllers
 
                         if (item.CantidadReal - item.CantidadEnviada >= 0)
                         {
-                            move.Lines.FCDebit= Math.Abs(item.CantidadReal - item.CantidadEnviada);
+                            move.Lines.FCDebit = Math.Abs(item.CantidadReal - item.CantidadEnviada);
                             move.Lines.FCCredit = 0;
                         }
                         else
@@ -120,7 +124,7 @@ namespace SAP_API.Controllers
                     }
                     else
                     {
-                        
+
                         DateTime fecha = item.Fecha;
                         move.Series = 19;
                         move.DueDate = fecha;
@@ -178,25 +182,25 @@ namespace SAP_API.Controllers
                     else
                     {
 
-                    _context.TrasladosVirtuales.Add(
-                        new TrasladosVirtuales
-                        {
-                            Cantidad = item.CantidadEnviada.ToString(),
-                            CantidadReal = item.CantidadReal.ToString(),
-                            ClaveTransaccion = item.Clave,
-                            NoCorte = Ledger.NoCorte,
-                            Usuario = Ledger.Usuario,
-                            CuentaDestino=item.Cuenta
-                        });
-                    _context.SaveChanges();
+                        _context.TrasladosVirtuales.Add(
+                            new TrasladosVirtuales
+                            {
+                                Cantidad = item.CantidadEnviada.ToString(),
+                                CantidadReal = item.CantidadReal.ToString(),
+                                ClaveTransaccion = item.Clave,
+                                NoCorte = Ledger.NoCorte,
+                                Usuario = Ledger.Usuario,
+                                CuentaDestino = item.Cuenta
+                            });
+                        _context.SaveChanges();
                     }
                 }
                 catch (Exception ex)
                 {
                     transferenciasRechazadas.Add(new TransferError { Clave = item.Clave, CantidadEnviada = item.CantidadEnviada, CantidadReal = item.CantidadReal, Fecha = item.Fecha, error = ex.Message });
                 }
-              
-                            
+
+
 
             }
             if (transferenciasRechazadas.Count == 0)
@@ -218,7 +222,7 @@ namespace SAP_API.Controllers
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             //string query2 = $@"SELECT * FROM ""@SO1_01DEVOLUCION"" LIMIT 5";
-            string query =$@"
+            string query = $@"
 
 
 SELECT
@@ -353,7 +357,7 @@ T0.""Forma_de_Pago""";
             {
                 //return Ok(context.XMLTOJSON(oRecSet.GetAsXML()));
 
-                return Ok(new { Corte = context.FixedXMLTOJSON(oRecSet.GetFixedXML(SAPbobsCOM.RecordsetXMLModeEnum.rxmData)),Movimientos=_context.TrasladosVirtuales.Where(x=>x.NoCorte== NoCorte).ToList() });
+                return Ok(new { Corte = context.FixedXMLTOJSON(oRecSet.GetFixedXML(SAPbobsCOM.RecordsetXMLModeEnum.rxmData)), Movimientos = _context.TrasladosVirtuales.Where(x => x.NoCorte == NoCorte).ToList() });
 
             }
             catch (Exception ex)

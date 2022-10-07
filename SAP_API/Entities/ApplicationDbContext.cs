@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SAP_API.Controllers;
 using SAP_API.Models;
-
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace SAP_API.Entities
 {
     public class ApplicationDbContext : IdentityDbContext<User, IdentityRole, string>
@@ -27,12 +27,20 @@ namespace SAP_API.Entities
 
         public DbSet<TrasladosVirtuales> TrasladosVirtuales { get; set; }
         public DbSet<VentaInfo> VentaInfo { get; set; }
+
+        public DbSet<rutas> rutas { get; set; }
+        public DbSet<tiendas_ruta> tiendas_ruta { get; set; }
+
+        public DbSet<QR_ALMACENES> QR_ALMACENES { get; set; }
         /*public DbSet<rutinas> rutinas { get; set; }
         public DbSet<CategoriaPregunta> CategoriaPreguntas { get; set; }
         public DbSet<Preguntas> Preguntas { get; set; }
         public DbSet<Respuestas> Respuestas { get; set; }
         */
         public DbSet<VentaLibreModel> VentaLibre { get; set; }
+
+        public DbSet<tarima> tarima { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseMySql(GetConnectionString());
@@ -54,6 +62,7 @@ namespace SAP_API.Entities
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
             // Customize the ASP.NET Identity model and override the defaults if needed.
             // For example, you can rename the ASP.NET Identity table names and more.
             // Add your customizations after calling base.OnModelCreating(builder);

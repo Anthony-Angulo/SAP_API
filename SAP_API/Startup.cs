@@ -22,17 +22,22 @@ using SAP_API.Entities;
 using SAP_API.Models;
 using SAP_API.Middlewares;
 using System.Threading.Tasks;
+using AutoMapper;
 
-namespace SAP_API {
-    public class Startup {
-        public Startup(IConfiguration configuration) {
+namespace SAP_API
+{
+    public class Startup
+    {
+        public Startup(IConfiguration configuration)
+        {
             Configuration = configuration;
         }
 
         public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services) {
+        public void ConfigureServices(IServiceCollection services)
+        {
 
             services.AddCors(options =>
             {
@@ -50,7 +55,8 @@ namespace SAP_API {
             services.AddDbContext<LogsContext>();
 
             // ===== Add Identity ========
-            services.AddIdentity<User, IdentityRole>(options => {
+            services.AddIdentity<User, IdentityRole>(options =>
+            {
                 options.ClaimsIdentity.UserIdClaimType = "UserID";
             })
                 //.AddDefaultUI()
@@ -86,9 +92,11 @@ namespace SAP_API {
                     };
                 });
 
-            services.AddMvc(options => {
+            services.AddMvc(options =>
+            {
                 options.Filters.Add(new ResponseCacheAttribute { NoStore = true, Location = ResponseCacheLocation.None });
-            }).AddJsonOptions(options => {
+            }).AddJsonOptions(options =>
+            {
                 options.SerializerSettings.ContractResolver = new DefaultContractResolver();
             }).SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 
@@ -123,6 +131,7 @@ namespace SAP_API {
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 c.IncludeXmlComments(xmlPath);
             });
+            services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
             services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
             services.AddAuthorization(options =>
@@ -141,18 +150,23 @@ namespace SAP_API {
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ApplicationDbContext dbContext) {
-
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ApplicationDbContext dbContext)
+        {
+            string baseApiUrl = Configuration.GetSection("BaseApiUrl").Value;
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "My Api V1");
+
+                c.SwaggerEndpoint("v1/swagger.json", "My Api V1");
             });
             app.UseStatusCodePages();
-
-            if (env.IsDevelopment()) {
+            app.UseStaticFiles();
+            if (env.IsDevelopment())
+            {
                 app.UseDeveloperExceptionPage();
-            } else {
+            }
+            else
+            {
                 app.UseHsts();
             }
             app.UseCors("CORS");
@@ -195,23 +209,28 @@ namespace SAP_API {
             //});
 
             SAPContext SAPContext = app.ApplicationServices.GetService(typeof(SAPContext)) as SAPContext;
+            /*
+                        app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action =>
+                         {
+                             action.Use(async (context, next) =>
+                             {
+                                 if (!SAPContext.oCompany.Connected)
+                                 {
+                                     int code = SAPContext.oCompany.Connect();
+                                     if (code != 0)
+                                     {
+                                         string error = SAPContext.oCompany.GetLastErrorDescription();
+                                         var result = JsonConvert.SerializeObject(new { error });
+                                         context.Response.ContentType = "application/json";
+                                         context.Response.StatusCode = 400;
+                                         await context.Response.WriteAsync(result);
+                                         return;
+                                     }
+                                 }
 
-            app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action => {
-                action.Use(async (context, next) => {
-                    if (!SAPContext.oCompany.Connected) {
-                        int code = SAPContext.oCompany.Connect();
-                        if (code != 0) {
-                            string error = SAPContext.oCompany.GetLastErrorDescription();
-                            var result = JsonConvert.SerializeObject(new { error });
-                            context.Response.ContentType = "application/json";
-                            context.Response.StatusCode = 400;
-                            await context.Response.WriteAsync(result);
-                            return;
-                        }
-                    }
-                    await next();
-                });
-            });
+                                 await next();
+                             });
+                         });*/
             app.UseLogMiddleware();
             app.UseAuthentication();
             app.UseMvc();

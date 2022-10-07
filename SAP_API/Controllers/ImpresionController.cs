@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LPS;
@@ -14,6 +15,7 @@ using MigraDoc.Rendering;
 using Newtonsoft.Json.Linq;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
+using SAP_API.Entities;
 using SAP_API.Models;
 
 namespace SAP_API.Controllers
@@ -24,6 +26,12 @@ namespace SAP_API.Controllers
     public class ImpresionController : ControllerBase
     {
 
+        static private ApplicationDbContext _context;
+
+        public ImpresionController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
         // GET: api/Impresion/
         [HttpGet("Impresoras")]
         //[Authorize]
@@ -556,9 +564,35 @@ namespace SAP_API.Controllers
             // Send a printer-specific to the printer.
             RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\Tarima", bytes, bytes.Length);
         }
+        [HttpPost("TARIMASQR")]
+        public IActionResult PostQRTARIMAS()
+        {
+            ;
+            var IdNuevo= _context.tarima.Count() != 0 ?_context.tarima.OrderBy(x => x.id).Last().id:0;
+
+            IdNuevo++;
+            
+            string s = "^XA\n";
+            s += $"^FO120,50^BQ,2,10^FDQA, {IdNuevo} ^FS";
+            s += $"^CF0,30";
+            s += $"^FO140,320^FD{IdNuevo}^FS";
+            s += "^XZ";
+
+                       var bytes = Encoding.ASCII.GetBytes(s);
+            // Send a printer-specific to the printer.
+            //RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\Tarima", bytes, bytes.Length);
+            _context.tarima.Add(new tarima
+            {
+                id = IdNuevo,
+                ubicacion=""
+            });
+            _context.SaveChanges();
+            return Ok(IdNuevo);
+
+        }
         public class CodigoGondola
         {
-           public string ItemCode { get; set; }
+            public string ItemCode { get; set; }
             public string ItemName { get; set; }
 
             public string price { get; set; }
@@ -590,7 +624,7 @@ namespace SAP_API.Controllers
                 {
                     Producto += item;
 
-                    if (letras== CodG.ItemName.Length-1)
+                    if (letras == CodG.ItemName.Length - 1)
                     {
                         Producto += "^FS";
                     }

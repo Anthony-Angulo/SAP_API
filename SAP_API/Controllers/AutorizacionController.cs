@@ -32,26 +32,27 @@ namespace SAP_API.Controllers
             _configuration = configuration;
 
         }
-      /*  [HttpPost("TwilioAutorizacion")]
-        public async Task<IActionResult> SendTwilioAsync()
-        {
-            TwilioClient.Init("AC325fc690a873079a3b6f77f3512cc872", "25f7b22387f439b5937c4874f1e87ee3");
-            AutorizacionRequest request = _context.AutorizacionRequest.Where(x => x.id == 43).FirstOrDefault();
-            double preciobase = double.Parse(request.PrecioBase) * double.Parse(request.CantidadBase);
+        /*  [HttpPost("TwilioAutorizacion")]
+          public async Task<IActionResult> SendTwilioAsync()
+          {
+              TwilioClient.Init("AC325fc690a873079a3b6f77f3512cc872", "25f7b22387f439b5937c4874f1e87ee3");
+              AutorizacionRequest request = _context.AutorizacionRequest.Where(x => x.id == 43).FirstOrDefault();
+              double preciobase = double.Parse(request.PrecioBase) * double.Parse(request.CantidadBase);
 
-            String Body = $@"El usuario {request.Usuario} de la sucursal {request.Sucursal} solicita autorización para vender un producto a precio diferente al autorizado.{Environment.NewLine}Cliente:{request.Cliente}.{Environment.NewLine}Producto:{request.Producto}.{Environment.NewLine}Cantidad:{request.Cantidad}.{Environment.NewLine}Precio base:{preciobase} {request.Currency}.{Environment.NewLine}Precio introducido:{request.PrecioSolicitado.Substring(4)} {request.PrecioSolicitado.Substring(0, 4)}.{Environment.NewLine} Si desea aprobarlo escriba:{request.id}";
-            var message = MessageResource.Create(
-                body: Body,
-                from: new Twilio.Types.PhoneNumber("whatsapp:+14155238886"),
-                to: new Twilio.Types.PhoneNumber("whatsapp:+5216864259059")
-            );
-            //var messages = MessageResource.Read(to: new Twilio.Types.PhoneNumber("whatsapp:+5216864259059"));
-            return Ok();
-        }
-        */[HttpPost("RequestAutorizacion")]
+              String Body = $@"El usuario {request.Usuario} de la sucursal {request.Sucursal} solicita autorización para vender un producto a precio diferente al autorizado.{Environment.NewLine}Cliente:{request.Cliente}.{Environment.NewLine}Producto:{request.Producto}.{Environment.NewLine}Cantidad:{request.Cantidad}.{Environment.NewLine}Precio base:{preciobase} {request.Currency}.{Environment.NewLine}Precio introducido:{request.PrecioSolicitado.Substring(4)} {request.PrecioSolicitado.Substring(0, 4)}.{Environment.NewLine} Si desea aprobarlo escriba:{request.id}";
+              var message = MessageResource.Create(
+                  body: Body,
+                  from: new Twilio.Types.PhoneNumber("whatsapp:+14155238886"),
+                  to: new Twilio.Types.PhoneNumber("whatsapp:+5216864259059")
+              );
+              //var messages = MessageResource.Read(to: new Twilio.Types.PhoneNumber("whatsapp:+5216864259059"));
+              return Ok();
+          }
+          */
+        [HttpPost("RequestAutorizacion")]
         public async Task<IActionResult> SendMailAsync([FromBody] AutorizacionRequest request)
         {
-           if (!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
                 return BadRequest("No esta bien formada la solicitud");
             }
@@ -88,7 +89,7 @@ namespace SAP_API.Controllers
                 MailAddress bcc = new MailAddress(to1);
                 message.Bcc.Add(bcc);
             }
-                        message.Subject = "Solicitud de Autorizacion";
+            message.Subject = "Solicitud de Autorizacion";
             message.IsBodyHtml = true;
             double preciobase = double.Parse(request.PrecioBase) * double.Parse(request.CantidadBase);
 
@@ -119,7 +120,7 @@ namespace SAP_API.Controllers
 	        </html>";
             var smtpClient = new SmtpClient(_configuration["smtpserver"])
             {
-                Port = 587,
+                Port = int.Parse(_configuration["port"]),
                 Credentials = new NetworkCredential(_configuration["CuentaAutorizacion"], _configuration["PassAutorizacion"]),
                 EnableSsl = true,
             };
@@ -128,7 +129,7 @@ namespace SAP_API.Controllers
 
             try
             {
-                    smtpClient.Send(message);
+                smtpClient.Send(message);
                 return Ok();
             }
             catch (Exception ex)
@@ -186,7 +187,7 @@ namespace SAP_API.Controllers
                     $"Cliente: {autorizacion.Cliente}\n" +
                     $"Producto: {autorizacion.Producto}\n" +
                     $"Precio base: {preciobase:##.0000} {autorizacion.Currency}\n" +
-                    $"Precio introducido: {double.Parse(autorizacion.PrecioSolicitado.Substring(4)):##.0000} {autorizacion.PrecioSolicitado.Substring(0,4)}\n" +
+                    $"Precio introducido: {double.Parse(autorizacion.PrecioSolicitado.Substring(4)):##.0000} {autorizacion.PrecioSolicitado.Substring(0, 4)}\n" +
                     $"Tiene 60 minutos para registrar la factura antes de que la autorización expire.";
 
                 // Add Recipient 
@@ -196,7 +197,7 @@ namespace SAP_API.Controllers
                 oRecipientCollection.Add();
                 oRecipientCollection.Item(0).SendInternal = BoYesNoEnum.tYES; // send internal message
                 oRecipientCollection.Item(0).UserCode = autorizacion.USER_CODE; // add existing user name
-                
+
 
                 // send the message
                 oMessageService.SendMessage(oMessage);
@@ -246,7 +247,7 @@ namespace SAP_API.Controllers
                 return BadRequest(ex);
             }
 
-       
+
         }
         [HttpGet("InsertarSAP")]
         public IActionResult InsertarSAP()
@@ -258,8 +259,8 @@ namespace SAP_API.Controllers
             try
             {
                 SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-        SAPbobsCOM.UserTable oUserTable;
-        oUserTable = context.oCompany.UserTables.Item("CCFN_AUTORIZACIONES");
+                SAPbobsCOM.UserTable oUserTable;
+                oUserTable = context.oCompany.UserTables.Item("CCFN_AUTORIZACIONES");
                 oUserTable.Code = autorizacion.CardCode + autorizacion.ProductCode + FechaInicial.ToString("yyyyMMddHHMMss");
                 oUserTable.Name = autorizacion.CardCode + autorizacion.ProductCode + FechaInicial.ToString("yyyyMMddHHMMss");
                 oUserTable.UserFields.Fields.Item("U_CardCode").Value = autorizacion.CardCode;
@@ -278,27 +279,29 @@ namespace SAP_API.Controllers
                 if (result == 0)
                 {
                     return Content(@"<script>window.close();</script>", "text/html");
-    }
+                }
                 else
                 {
                     string error = context.oCompany.GetLastErrorDescription();
-                    return BadRequest(new { error
-});
+                    return BadRequest(new
+                    {
+                        error
+                    });
                 }
             }
             catch (Exception ex)
-{
+            {
 
-    return BadRequest(ex);
-}
+                return BadRequest(ex);
+            }
         }
-       
+
         [HttpPost("GetData")]
         public IActionResult GetData([FromBody] Request request)
         {
 
             return Ok(
-                _context.AutorizacionRequest.Where(x=>x.Fecha>=request.FechaInicial && x.Fecha<=request.FechaFinal && x.Autorizado==request.Autorizado).ToList()
+                _context.AutorizacionRequest.Where(x => x.Fecha >= request.FechaInicial && x.Fecha <= request.FechaFinal && x.Autorizado == request.Autorizado).ToList()
                 );
         }
 
@@ -311,7 +314,7 @@ namespace SAP_API.Controllers
             message.Body = @"";
             var smtpClient = new SmtpClient(_configuration["smtpserver"])
             {
-                Port = 587,
+                Port = int.Parse(_configuration["port"]),
                 Credentials = new NetworkCredential(_configuration["cuentacorreo"], _configuration["passcorreo"]),
                 EnableSsl = true
             };
@@ -320,16 +323,16 @@ namespace SAP_API.Controllers
             {
                 message.To.Add(item);
             }*/
-          
+
             var csv = new StringBuilder();
             DateTime FechaInicial = DateTime.Now;
             DateTime FechaFinal = DateTime.Now;
             FechaInicial = FechaInicial.AddDays(-1);
             FechaInicial = new DateTime(FechaInicial.Year, FechaInicial.Month, FechaInicial.Day);
             csv.Append("sep=;" + Environment.NewLine);
-            List<AutorizacionRequest> logFacturacions = _context.AutorizacionRequest.Where(x=>x.Fecha>=FechaInicial).OrderBy(x=>x.Fecha).ToList();
+            List<AutorizacionRequest> logFacturacions = _context.AutorizacionRequest.Where(x => x.Fecha >= FechaInicial).OrderBy(x => x.Fecha).ToList();
             //List<LogFacturacion> logFacturacions = _context.LogFacturacion.ToList();
-          
+
             csv.Append(string.Format("Fecha" +
                 ";Usuario" +
                 ";Sucursal" +
@@ -340,7 +343,7 @@ namespace SAP_API.Controllers
                 ";Precio Base" +
                 ";Moneda Base" +
                 ";Cantidad Base" +
-                ";PrecioSolicitado" + 
+                ";PrecioSolicitado" +
                 ";Autorizado" +
                 ";Costo" +
                 ";NumeroDeDocumentoCosto" +
@@ -350,15 +353,15 @@ namespace SAP_API.Controllers
             {
                 csv.Append(string.Format("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9},{10},{11},{12},{13},{14}",
                     item.Fecha, item.Usuario,
-                    item.Sucursal,item.Cliente,item.CardCode,
-                    item.Producto,item.ProductCode,
+                    item.Sucursal, item.Cliente, item.CardCode,
+                    item.Producto, item.ProductCode,
                     (double.Parse(item.CantidadBase) * double.Parse(item.PrecioBase)).ToString(),
                     item.Currency,
                     item.CantidadBase,
                     item.PrecioSolicitado,
-                    item.Autorizado==1?"Autorizado":"No Autorizado",
+                    item.Autorizado == 1 ? "Autorizado" : "No Autorizado",
                     item.Costo,
-                    item.DocNumCosto,item.FechaAutorizado) + Environment.NewLine);
+                    item.DocNumCosto, item.FechaAutorizado) + Environment.NewLine);
             }
             var wb = new XLWorkbook();
             var ws = wb.Worksheets.Add("Inserting Tables");
@@ -385,7 +388,7 @@ namespace SAP_API.Controllers
             var tableWithPeople = ws.Cell(1, 1).InsertTable(people.AsEnumerable());
 
             var memoryStream = new System.IO.MemoryStream();
-                wb.SaveAs(memoryStream);
+            wb.SaveAs(memoryStream);
             byte[] contentAsBytes = Encoding.UTF8.GetBytes("C:\\test.xlsx");
 
             memoryStream.Write(contentAsBytes, 0, contentAsBytes.Length);
@@ -393,7 +396,7 @@ namespace SAP_API.Controllers
             memoryStream.Seek(0, SeekOrigin.Begin);
             var attachment = new System.Net.Mail.Attachment(memoryStream,
                                                     "autorizaciones_SAP_B1.xlsx", MediaTypeNames.Application.Octet);
-                message.Attachments.Add(attachment);
+            message.Attachments.Add(attachment);
             try
             {
                 if (logFacturacions.Count != 0)

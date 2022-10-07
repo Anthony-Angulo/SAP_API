@@ -18,7 +18,7 @@ namespace SAP_API.Models
             oCompany.Server = "192.168.0.92:30015";
             oCompany.DbServerType = SAPbobsCOM.BoDataServerTypes.dst_HANADB;
             //oCompany.CompanyDB = "CCFN_PRODUCCCION"; 
-            //oCompany.CompanyDB = "CCFN_PROD";
+            //oCompany.CompanyDB = "CCFN_PROD";szzzzzz
             //oCompany.CompanyDB = "CCFN_CORPORATIVO";
             oCompany.CompanyDB = "CCFN_B1CORP";
             //oCompany.CompanyDB = "CCFN_BASECORP";

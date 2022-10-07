@@ -48,21 +48,21 @@ namespace SAP_API.Controllers
         [HttpGet("SendMail")]
         public IActionResult SendMail()
         {
-            string to = _configuration["cuentaenvio"];
+            string to = "lorenzo.cabrera@superchivas.com.mx"; //_configuration["cuentaenvio"];
             MailMessage message = new MailMessage(_configuration["cuentacorreo"], to);
             message.Subject = "Bitácora de precios de venta fuera del intervalo autorizado";
             message.Body = @"";
             var smtpClient = new SmtpClient(_configuration["smtpserver"])
             {
-                Port = 587,
+                Port = int.Parse(_configuration["port"]),
                 Credentials = new NetworkCredential(_configuration["cuentacorreo"], _configuration["passcorreo"]),
                 EnableSsl = true
             };
             var csv = new StringBuilder();
             DateTime FechaInicial = DateTime.Now;
             DateTime FechaFinal = DateTime.Now;
-          FechaInicial= FechaInicial.AddDays(-1);
-            csv.Append("sep=;"+Environment.NewLine);
+            FechaInicial = FechaInicial.AddDays(-1);
+            csv.Append("sep=;" + Environment.NewLine);
             //List<LogFacturacion> logFacturacions = _context.LogFacturacion.Where(x=>x.fecha>=FechaInicial).OrderBy(x=>x.fecha).ToList();
             List<LogFacturacion> logFacturacions = _context.LogFacturacion.ToList();
             var wb = new XLWorkbook();
@@ -71,16 +71,16 @@ namespace SAP_API.Controllers
 
                          select new
                          {
-                             Fecha= p.fecha,
-                             Usuario= p.user,
-                             Producto=p.Productdsc,
-                             Preciobase=(double.Parse(p.CantidadBase) * double.Parse(p.PrecioBase)).ToString(),
-                             MonedaBase=p.MonedaBase,
-                             TipoCambio=p.TipoCambio,
+                             Fecha = p.fecha,
+                             Usuario = p.user,
+                             Producto = p.Productdsc,
+                             Preciobase = (double.Parse(p.CantidadBase) * double.Parse(p.PrecioBase)).ToString(),
+                             MonedaBase = p.MonedaBase,
+                             TipoCambio = p.TipoCambio,
                              PrecioIntroducido = p.PrecioIntroducido,
                              MonedaIntroducida = p.MonedaIntroducida,
                              serie = p.serie,
-                             Almacen=p.warehouseextern
+                             Almacen = p.warehouseextern
                          };
             var tableWithPeople = ws.Cell(1, 1).InsertTable(people.AsEnumerable());
 
