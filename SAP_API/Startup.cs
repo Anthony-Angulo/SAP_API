@@ -209,7 +209,7 @@ namespace SAP_API
             //});
 
             SAPContext SAPContext = app.ApplicationServices.GetService(typeof(SAPContext)) as SAPContext;
-            /*
+            
                         app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action =>
                          {
                              action.Use(async (context, next) =>
@@ -230,7 +230,7 @@ namespace SAP_API
 
                                  await next();
                              });
-                         });*/
+                         });
             app.UseLogMiddleware();
             app.UseAuthentication();
             app.UseMvc();

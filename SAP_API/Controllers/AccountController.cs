@@ -121,6 +121,8 @@ namespace SAP_API.Controllers
             public int SAPID { get; set; }
             public string Active_Burn { get; set; }
             public int Serie { get; set; }
+
+
         }
         /// <summary>
         /// Register User.

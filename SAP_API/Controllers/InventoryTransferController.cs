@@ -11,6 +11,10 @@ using SAP_API.Models;
 using System.Net.Mail;
 using System.Net;
 using Microsoft.Extensions.Configuration;
+using ClosedXML.Excel;
+using System.IO;
+using System.Net.Mime;
+using Newtonsoft.Json;
 
 namespace SAP_API.Controllers
 {
@@ -251,7 +255,187 @@ namespace SAP_API.Controllers
             return Ok(temp);
 
         }
+        [AllowAnonymous]
+        [HttpGet("PedidoSugerido/{id}")]
+        public async Task<IActionResult> PedidoSugerido(string id)
+        {
 
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+
+            string p = $@"
+            SELECT
+T0.""Artículo"",
+T0.""ItemName"",
+T0.""WhsCode"",
+T0.""V_ACUMULADA"",
+T0.""Prom_Lun"",
+T0.""Prom_Mar"",
+T0.""Prom_Mie"",
+T0.""Prom_Jue"",
+T0.""Prom_Vie"",
+T0.""Prom_Sab"",
+T0.""Prom_Dom"",
+T0.""OnHand"",
+T0.""Unidad de Medida Base"",
+T0.""UNIDADES x CAJA"",
+T0.""STOCK x CAJAS"" ,
+(CASE WHEN T0.""WhsCode"" IN('S09', '''S21', 'S32', 'S34', 'S38', 'S46', 'S48', 'S51', 'S52', 'S57') THEN
+CASE WHEN WEEKDAY(CURRENT_DATE)= 1 THEN(T0.""Prom_Mar"" + T0.""Prom_Mie"" + T0.""Prom_Jue"" + T0.""Prom_Vie"")
+ELSE
+CASE WHEN WEEKDAY(CURRENT_DATE)= 3 THEN(T0.""Prom_Jue"" + T0.""Prom_Vie"" + T0.""Prom_Sab"" + T0.""Prom_Dom"")
+ELSE
+CASE WHEN WEEKDAY(CURRENT_DATE)= 5 THEN(T0.""Prom_Sab"" + T0.""Prom_Dom"" + T0.""Prom_Lun"" + T0.""Prom_Mar"") ELSE 0 END
+END
+END
+ELSE
+CASE WHEN T0.""WhsCode"" IN('S02', 'S03', 'S04', 'S08', 'S11', 'S14', 'S23', 'S28', 'S44', 'S54', 'S61', 'S64', 'S65') THEN
+CASE WHEN WEEKDAY(CURRENT_DATE)= 0 THEN(""Prom_Lun"" + T0.""Prom_Mar"" + T0.""Prom_Mie"" + T0.""Prom_Jue"")
+ELSE
+CASE WHEN WEEKDAY(CURRENT_DATE)= 2 THEN(T0.""Prom_Mie"" + T0.""Prom_Jue"" + T0.""Prom_Vie"" + T0.""Prom_Sab"")
+ELSE
+CASE WHEN WEEKDAY(CURRENT_DATE)= 4 THEN(T0.""Prom_Vie"" + T0.""Prom_Sab"" + T0.""Prom_Dom"" + T0.""Prom_Lun"") ELSE 0 END
+END
+END
+END
+END) AS ""VENTA PROMEDIO HISTORICA"",
+(CASE WHEN T0.""WhsCode"" IN('S09', 'S21', 'S32', 'S34', 'S38', 'S46', 'S48', 'S51', 'S52', 'S57') THEN
+CASE WHEN WEEKDAY(CURRENT_DATE)= 1 AND((T0.""Prom_Mar"" + T0.""Prom_Mie"" + T0.""Prom_Jue"" + T0.""Prom_Vie"") - T0.""OnHand"") > 0 THEN(T0.""Prom_Mar"" + T0.""Prom_Mie"" + T0.""Prom_Jue"" + T0.""Prom_Vie"") - T0.""OnHand""
+ELSE
+CASE WHEN WEEKDAY(CURRENT_DATE)= 3 AND((T0.""Prom_Jue"" + T0.""Prom_Vie"" + T0.""Prom_Sab"" + T0.""Prom_Dom"") - T0.""OnHand"") > 0 THEN(T0.""Prom_Jue"" + T0.""Prom_Vie"" + T0.""Prom_Sab"" + T0.""Prom_Dom"") - T0.""OnHand""
+ELSE
+CASE WHEN WEEKDAY(CURRENT_DATE)= 5 AND((T0.""Prom_Sab"" + T0.""Prom_Dom"" + T0.""Prom_Lun"" + T0.""Prom_Mar"") - T0.""OnHand"") > 0 THEN(T0.""Prom_Sab"" + T0.""Prom_Dom"" + T0.""Prom_Lun"" + T0.""Prom_Mar"") - T0.""OnHand"" ELSE 0 END
+END
+END
+ELSE
+CASE WHEN T0.""WhsCode"" IN('S02', 'S03', 'S04', 'S08', 'S11', 'S14', 'S23', 'S28', 'S44', 'S54', 'S61', 'S64', 'S65') THEN
+CASE WHEN WEEKDAY(CURRENT_DATE)= 0 AND((T0.""Prom_Lun"" + T0.""Prom_Mar"" + T0.""Prom_Mie"" + T0.""Prom_Jue"") - T0.""OnHand"") > 0 THEN(T0.""Prom_Lun"" + T0.""Prom_Mar"" + T0.""Prom_Mie"" + T0.""Prom_Jue"") - T0.""OnHand""
+ELSE
+CASE WHEN WEEKDAY(CURRENT_DATE)= 2 AND((T0.""Prom_Mie"" + T0.""Prom_Jue"" + T0.""Prom_Vie"" + T0.""Prom_Sab"") - T0.""OnHand"") > 0 THEN(T0.""Prom_Mie"" + T0.""Prom_Jue"" + T0.""Prom_Vie"" + T0.""Prom_Sab"") - T0.""OnHand""
+ELSE
+CASE WHEN WEEKDAY(CURRENT_DATE)= 4 AND((T0.""Prom_Vie"" + T0.""Prom_Sab"" + T0.""Prom_Dom"" + T0.""Prom_Lun"") - T0.""OnHand"") > 0 THEN(T0.""Prom_Vie"" + T0.""Prom_Sab"" + T0.""Prom_Dom"" + T0.""Prom_Lun"") - T0.""OnHand"" ELSE 0 END
+END
+END
+END
+END) AS ""PEDIDO SUGERIDO"",
+(T0.""Prom_Lun"" + T0.""Prom_Mar"" + T0.""Prom_Mie"" + T0.""Prom_Jue"" + T0.""Prom_Vie"" + T0.""Prom_Sab"" + T0.""Prom_Dom"") AS ""VTA-PROM-SEM"",
+(T0.""OnHand"" / ((T0.""Prom_Lun"" + T0.""Prom_Mar"" + T0.""Prom_Mie"" + T0.""Prom_Jue"" + T0.""Prom_Vie"" + T0.""Prom_Sab"" + T0.""Prom_Dom"")/ 7 )) as ""DIAS-INV""
+
+FROM
+(
+SELECT
+T1.""U_SO1_NUMEROARTICULO"" AS ""Artículo"",
+T3.""ItemName"",
+T2.""WhsCode"",
+SUM(T1.""U_SO1_CANTIDAD"") AS ""V_ACUMULADA"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 0 then 1 else 0 end) as ""Lunes"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 0 then 1 else 0 end) / 8 as ""Prom_Lun"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 1 then 1 else 0 end) as ""Martes"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 1 then 1 else 0 end) / 8 as ""Prom_Mar"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 2 then 1 else 0 end) as ""Miercoles"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 2 then 1 else 0 end) / 8 as ""Prom_Mie"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 3 then 1 else 0 end) as ""Jueves"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 3 then 1 else 0 end) / 8 as ""Prom_Jue"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 4 then 1 else 0 end) as ""Viernes"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 4 then 1 else 0 end) / 8 as ""Prom_Vie"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 5 then 1 else 0 end) as ""Sabado"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 5 then 1 else 0 end) / 8 as ""Prom_Sab"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 6 then 1 else 0 end) as ""Domingo"",
+sum(case when WEEKDAY(T0.""U_SO1_FECHA"") = 6 then 1 else 0 end) / 8 as ""Prom_Dom"",
+SUM(T1.""U_SO1_CANTIDAD"" * T1.""U_SO1_IMPORTENETO"") AS ""Importe"" ,
+T2.""OnHand"",
+(case when T3.""InvntryUom"" = 'H87' then 'PZ'
+when T3.""InvntryUom"" = 'XPK' then 'PQ'
+when T3.""InvntryUom"" = 'XSA' then 'SC'
+when T3.""InvntryUom"" = 'H87' then 'PZ'
+when T3.""InvntryUom"" = 'KGM' then 'KG'
+when T3.""InvntryUom"" = 'XBX' then 'CJ'
+when T3.""InvntryUom"" = 'XBJ' then 'CB'
+when T3.""InvntryUom"" = 'BLL' then 'GALON'
+else T3.""InvntryUom"" end) AS ""Unidad de Medida Base"",
+T5.""BaseQty"" AS ""UNIDADES x CAJA"",
+T2.""OnHand"" / T5.""BaseQty"" AS ""STOCK x CAJAS""
+
+FROM ""@SO1_01VENTA"" T0
+INNER JOIN ""@SO1_01VENTADETALLE"" T1 ON T1.""U_SO1_FOLIO"" = T0.""Name""
+INNER JOIN OITW T2 ON T2.""ItemCode"" = T1.""U_SO1_NUMEROARTICULO""
+INNER JOIN OITM T3 ON T2.""ItemCode"" = T3.""ItemCode""
+INNER JOIN OUGP T4 ON T3.""UgpEntry"" = T4.""UgpEntry""
+INNER JOIN UGP1 T5 ON T4.""UgpEntry"" = T5.""UgpEntry"" AND T3.""PUoMEntry"" = T5.""UomEntry""
+INNER JOIN OUOM T6 ON T3.""PUoMEntry"" = T6.""UomEntry""
+
+WHERE T0.""U_SO1_FECHA"" >= ADD_DAYS(CURRENT_DATE, -56) AND T2.""ItemCode"" Like 'A040%'
+AND T0.""U_SO1_FECHA"" <= CURRENT_DATE
+AND T0.""U_SO1_SUCURSAL"" = '{id}'
+AND T2.""WhsCode"" = '{id}'
+AND T2.""OnHand"" > 0
+GROUP BY T1.""U_SO1_NUMEROARTICULO"" , T3.""ItemName"", T2.""WhsCode"", T2.""OnHand"",T5.""BaseQty"",T3.""InvntryUom""
+ORDER BY T1.""U_SO1_NUMEROARTICULO""
+) T0
+";
+            try
+            {
+                oRecSet.DoQuery(p);
+                if (oRecSet.RecordCount != 0)
+                {
+                    var invoice = context.FixedXMLTOJSON(oRecSet.GetFixedXML(SAPbobsCOM.RecordsetXMLModeEnum.rxmData));
+                    List<JObject> Lista=JsonConvert.DeserializeObject<List<JObject>>(JsonConvert.SerializeObject(invoice));
+                    JObject pe= (JObject)Lista[0];
+                     String value= (string)pe.GetValue("Articulo");
+                    var people = from pre in Lista
+
+                                 select new
+                                 {
+                                    Articulo=pre.GetValue("Artículo").ToString(),
+                                     Producto = pre.GetValue("ItemName").ToString(),
+                                     AlmacenCodigo = pre.GetValue("WhsCode").ToString(),
+                                     V_ACUMULADA = pre.GetValue("V_ACUMULADA").ToString(),
+                                     Prom_Lun = pre.GetValue("Prom_Lun").ToString(),
+                                     Prom_Mar = pre.GetValue("Prom_Mar").ToString(),
+                                     Prom_Mie = pre.GetValue("Prom_Mie").ToString(),
+                                     Prom_Jue = pre.GetValue("Prom_Jue").ToString(),
+                                     Prom_Vie = pre.GetValue("Prom_Vie").ToString(),
+                                     Prom_Sab= pre.GetValue("Prom_Sab").ToString(),
+                                     Prom_Dom = pre.GetValue("Prom_Dom").ToString(),
+                                     OnHand = pre.GetValue("OnHand").ToString(),
+                                     Unidad_Medida_Base = pre.GetValue("Col13").ToString(),
+                                     UNIDADESxCaja = pre.GetValue("Col14").ToString(),
+                                     STOCKxCaja= pre.GetValue("Col15").ToString(),
+                                     VENTA_PROMEDIO_HISTORICA = pre.GetValue("Col16").ToString(),
+                                     PEDIDOSUGERIDO = pre.GetValue("Col17").ToString(),
+                                     VTA_PROM_SEM= pre.GetValue("VTA-PROM-SEM").ToString(),
+                                     DIAS_INV= pre.GetValue("DIAS-INV").ToString(),
+
+                                
+                                 };
+
+                     var wb = new XLWorkbook();
+                     var ws = wb.Worksheets.Add("Inserting Tables");
+
+                     var tableWithPeople = ws.Cell(1, 1).InsertTable(people.AsEnumerable());
+
+                      using (var stream = new System.IO.MemoryStream())
+                    {
+                        wb.SaveAs(stream);
+                        var content = stream.ToArray();
+                        return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Sugerido.xlsx");
+                    }
+            }
+                else
+                {
+                    return NotFound();
+                }
+
+
+            }
+            catch (Exception ex)
+            {
+
+                return BadRequest(ex);
+            }
+          return BadRequest();
+        }
         /// <summary>
         /// Add a Transfer Document Linked to a Order Document.
         /// </summary>

@@ -48,7 +48,7 @@ namespace SAP_API.Controllers
         [HttpGet("SendMail")]
         public IActionResult SendMail()
         {
-            string to = "lorenzo.cabrera@superchivas.com.mx"; //_configuration["cuentaenvio"];
+            string to =_configuration["cuentaenvio"];
             MailMessage message = new MailMessage(_configuration["cuentacorreo"], to);
             message.Subject = "Bitácora de precios de venta fuera del intervalo autorizado";
             message.Body = @"";

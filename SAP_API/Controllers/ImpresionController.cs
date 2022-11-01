@@ -564,7 +564,8 @@ namespace SAP_API.Controllers
             // Send a printer-specific to the printer.
             RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\Tarima", bytes, bytes.Length);
         }
-        [HttpPost("TARIMASQR")]
+
+        [HttpGet("TARIMASQR")]
         public IActionResult PostQRTARIMAS()
         {
             ;
@@ -580,7 +581,11 @@ namespace SAP_API.Controllers
 
                        var bytes = Encoding.ASCII.GetBytes(s);
             // Send a printer-specific to the printer.
-            //RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\Tarima", bytes, bytes.Length);
+            for (int i = 0; i < 4; i++)
+            {
+                RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\Tarima", bytes, bytes.Length);
+
+            }
             _context.tarima.Add(new tarima
             {
                 id = IdNuevo,
