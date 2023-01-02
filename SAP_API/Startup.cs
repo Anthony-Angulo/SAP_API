@@ -207,8 +207,8 @@ namespace SAP_API
             //        await next();
             //    });
             //});
-
-            SAPContext SAPContext = app.ApplicationServices.GetService(typeof(SAPContext)) as SAPContext;
+            
+           SAPContext SAPContext = app.ApplicationServices.GetService(typeof(SAPContext)) as SAPContext;
             
                         app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action =>
                          {

@@ -20,8 +20,9 @@ namespace SAP_API.Models
             //oCompany.CompanyDB = "CCFN_PRODUCCCION"; 
             //oCompany.CompanyDB = "CCFN_PROD";szzzzzz
             //oCompany.CompanyDB = "CCFN_CORPORATIVO";
+            //oCompany.CompanyDB = "CCFN_DEV";
             oCompany.CompanyDB = "CCFN_B1CORP";
-            //oCompany.CompanyDB = "CCFN_BASECORP";
+//            oCompany.CompanyDB = "CCFN_BASECORP";
             //oCompany.CompanyDB = "CCFN_DEV";
 
             oCompany.UserName = "SISTEMAS04";

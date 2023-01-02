@@ -24,6 +24,7 @@ namespace SAP_API.Entities
         public DbSet<ClientsProducts> Clientes_Productos { get; set; }
         public DbSet<LogFacturacion> LogFacturacion { get; set; }
         public DbSet<AutorizacionRequest> AutorizacionRequest { get; set; }
+        public DbSet<AutorizacionAlmacenes> AutorizacionAlmacenes { get; set; }
 
         public DbSet<TrasladosVirtuales> TrasladosVirtuales { get; set; }
         public DbSet<VentaInfo> VentaInfo { get; set; }

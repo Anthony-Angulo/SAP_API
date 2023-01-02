@@ -1251,6 +1251,39 @@ product.""UgpEntry"",
             GC.WaitForPendingFinalizers();
             return Ok(productLastSellPrices);
         }
+        [HttpPost("UomDetailWithLastSellPrice/{Id}")]
+        public async Task<IActionResult> GetUomDetailsWithSource([FromRoute] String Id, [FromBody] string[] itemcodes)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            string itemcodesFormat = String.Join("','", itemcodes);
+            oRecSet.DoQuery(@$"
+                Select
+                    product.""ItemCode"",
+                    product.""ItemName"",
+                    product.""NumInSale"",
+                    product.""SUoMEntry"",
+                    product.""IUoMEntry"",
+                    product.""U_IL_PesProm"",
+                    warehouse.""AvgPrice"" AS ""Price"",
+                    'MXN' as ""Currency"",
+                    product.""QryGroup5"",
+                    product.""QryGroup6"",
+                    product.""QryGroup7"",
+                    product.""QryGroup8"",
+                    product.""QryGroup39""
+                From OITM product
+                JOIN OITW warehouse ON product.""ItemCode"" = warehouse.""ItemCode""
+                Where product.""ItemCode"" in ('" + itemcodesFormat + $@"')
+                AND warehouse.""WhsCode"" = '{Id}' ");
+            oRecSet.MoveFirst();
+            JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
+            List<ProductLastSellPriceWMS> productLastSellPrices = products.ToObject<List<ProductLastSellPriceWMS>>();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(productLastSellPrices);
+        }
 
         // GET: api/Products/UomDetailWithLastSellPrice
         [HttpGet("UomDetailWithLastSellPrice/{id}")]
@@ -1492,6 +1525,51 @@ header.""UgpEntry"",
             oRecSet.MoveFirst();
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             var returnValue = new { products, priceList, stock, uom };
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(returnValue);
+        }
+
+        [AllowAnonymous]
+        // GET: api/Products/APPCRM
+        [HttpGet("TARIMASPRODUCTOS")]
+        public async Task<IActionResult> TARIMASPRODUCTOS()
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            oRecSet.DoQuery(@"
+                Select 
+                    ""ItemName"",
+                    ""UgpEntry"",
+                    ""ItemCode"",
+                    ""QryGroup7"" as ""Meet"",
+""CodeBars"" as ""CodeBars"",
+                    RTRIM(RTRIM(""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm""
+                From OITM
+                Where ""SellItem"" = 'Y'
+                AND ""QryGroup3"" = 'Y'
+                AND ""Canceled"" = 'N'
+                AND ""validFor"" = 'Y'");
+            oRecSet.MoveFirst();
+            JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
+            oRecSet.DoQuery(@"
+                Select 
+                   header.""UgpCode"",
+                    header.""BaseUom"",
+                    baseUOM.""UomCode"" as baseUOM,
+                    detail.""UomEntry"",
+header.""UgpEntry"",
+                    UOM.""UomCode"",
+                    RTRIM(RTRIM(detail.""BaseQty"", '0'), '.') AS ""BaseQty""
+                From OUGP header
+                JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                Where header.""UgpEntry"" in (Select ""UgpEntry"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
+            oRecSet.MoveFirst();
+            JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            var returnValue = new { products,  uom };
             GC.Collect();
             GC.WaitForPendingFinalizers();
             return Ok(returnValue);

@@ -138,6 +138,203 @@ namespace SAP_API.Controllers
 
             }
         }
+        [HttpPost("Test")]
+        public async Task<IActionResult> Test()
+        {
+      
+            /* TwilioClient.Init("AC325fc690a873079a3b6f77f3512cc872", "25f7b22387f439b5937c4874f1e87ee3");
+             double preciobase = double.Parse(request.PrecioBase) * double.Parse(request.CantidadBase);
+
+             String Body = $@"El usuario {request.Usuario} de la sucursal {request.Sucursal} solicita autorización para vender un producto a precio diferente al autorizado.{Environment.NewLine}Cliente:{request.Cliente}.{Environment.NewLine}Producto:{request.Producto}.{Environment.NewLine}Cantidad:{request.Cantidad}.{Environment.NewLine}Precio base:{preciobase} {request.Currency}.{Environment.NewLine}Precio introducido:{request.PrecioSolicitado.Substring(4)} {request.PrecioSolicitado.Substring(0, 4)}.{Environment.NewLine} Si desea aprobarlo escriba:{request.id}";
+
+             var message = MessageResource.Create(
+                 body: Body,
+                 from: new Twilio.Types.PhoneNumber("whatsapp:+14155238886"),
+                 to: new Twilio.Types.PhoneNumber("whatsapp:+5216864259059")
+             );
+
+             return Ok();
+             */
+
+            string to = "lorenzo.cabrera@superchivas.com.mx";
+            MailMessage message = new MailMessage(_configuration["CuentaAutorizacion"], to);
+            message.Subject = "Solicitud de Autorizacion";
+            message.IsBodyHtml = true;
+
+            message.Body = $@"
+            <html>
+            <body>
+	MAIL DE PRUEBA
+     
+                    </body>
+	        </html>";
+            var smtpClient = new SmtpClient(_configuration["smtpserver"])
+            {
+                Port = int.Parse(_configuration["port"]),
+                Credentials = new NetworkCredential(_configuration["CuentaAutorizacion"], _configuration["PassAutorizacion"]),
+                EnableSsl = true,
+            };
+            // Credentials are necessary if the server requires the client
+            // to authenticate before it will send email on the client's behalf.
+
+            try
+            {
+                smtpClient.Send(message);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.ToString());
+
+            }
+        }
+        [HttpPost("RequestAutorizacionAlmacenes")]
+        public async Task<IActionResult> SendMailAsyncAlmacenes([FromBody] AutorizacionAlmacenes request)
+        {
+            AutorizacionAlmacenes Vieja = _context.AutorizacionAlmacenes.Where(x => x.WhsDestino == request.WhsDestino
+            && x.WhsOrigen==request.WhsOrigen && x.Autorizado!=2
+            && x.Fecha.Date==DateTime.Now.Date
+             ).FirstOrDefault();
+            if (Vieja != null) return BadRequest("Ya existe una solicitud para este almacen, Favor de esperar respuesta");
+            if (!ModelState.IsValid)
+            {
+                return BadRequest("No esta bien formada la solicitud");
+            }
+            try
+            {
+                request.Fecha = DateTime.Now;
+                _context.AutorizacionAlmacenes.Add(request);
+                _context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+
+                return BadRequest(ex.InnerException);
+            }
+            /* TwilioClient.Init("AC325fc690a873079a3b6f77f3512cc872", "25f7b22387f439b5937c4874f1e87ee3");
+             double preciobase = double.Parse(request.PrecioBase) * double.Parse(request.CantidadBase);
+
+             String Body = $@"El usuario {request.Usuario} de la sucursal {request.Sucursal} solicita autorización para vender un producto a precio diferente al autorizado.{Environment.NewLine}Cliente:{request.Cliente}.{Environment.NewLine}Producto:{request.Producto}.{Environment.NewLine}Cantidad:{request.Cantidad}.{Environment.NewLine}Precio base:{preciobase} {request.Currency}.{Environment.NewLine}Precio introducido:{request.PrecioSolicitado.Substring(4)} {request.PrecioSolicitado.Substring(0, 4)}.{Environment.NewLine} Si desea aprobarlo escriba:{request.id}";
+
+             var message = MessageResource.Create(
+                 body: Body,
+                 from: new Twilio.Types.PhoneNumber("whatsapp:+14155238886"),
+                 to: new Twilio.Types.PhoneNumber("whatsapp:+5216864259059")
+             );
+
+             return Ok();
+             */
+
+            string to = "lorenzo.cabrera@superchivas.com.mx"; //_configuration["cuentarecibeAutorizacion"];
+            MailMessage message = new MailMessage(_configuration["CuentaAutorizacion"], to);
+            //string to1 = _configuration["cuentaRecibeAutorizacion2"];
+           /* if (to1 != "")
+            {
+                MailAddress bcc = new MailAddress(to1);
+                message.Bcc.Add(bcc);
+            }*/
+            message.Subject = "Solicitud de Autorizacion de transferencia entre almacenes";
+            message.IsBodyHtml = true;
+            message.Body = $@"
+            <html>
+            <body>
+	        <p>La sucursal <b>{request.WhsOrigen}</b> solicita autorización para hacer transpasos al Almacen <b>{request.WhsDestino}</b>.</p>
+<ul>
+    <li>Almacen Origen <b>{request.WhsOrigen}</b></li>
+    <li>Almacen Destino: <b>{request.WhsDestino}</b></li>
+</ul>    
+<p>*Al confirmar este autorizacion se le permitira al almacen origen hacer traspasos al almacen destino durante el dia en curso</p>
+<a href=""{_configuration["DireccionAutorizacionAlmacen"]}{request.id}"" target=""blank""><button
+            style = ""background-color: green;color: white;
+    border-radius: 12px;margin:10px;
+        padding: 0.5rem; "">AUTORIZAR</button></a>
+      
+          <a><button style = ""background-color: red;color: white;
+    border-radius: 12px;margin:10px;
+        padding: 0.5rem;"">RECHAZAR</button>
+     </a>
+     
+                    </body>
+	        </html>";
+            var smtpClient = new SmtpClient(_configuration["smtpserver"])
+            {
+                Port = int.Parse(_configuration["port"]),
+                Credentials = new NetworkCredential(_configuration["CuentaAutorizacion"], _configuration["PassAutorizacion"]),
+                EnableSsl = true,
+            };
+            // Credentials are necessary if the server requires the client
+            // to authenticate before it will send email on the client's behalf.
+
+            try
+            {
+                smtpClient.Send(message);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.ToString());
+
+            }
+        }
+        [HttpGet("Almacen/{id}")]
+        public IActionResult AutorizarSolicitudAlmacen([FromRoute] int id)
+        {
+            AutorizacionAlmacenes autorizacion = _context.AutorizacionAlmacenes.Where(x => x.id == id).FirstOrDefault();
+
+            try
+            {
+                if (autorizacion == null)
+                {
+                    return NotFound();
+                }
+                /*else if (autorizacion.Autorizado == 1)
+                {
+                    return Ok("Autorizacion ya aprobada");
+                }*/
+                autorizacion.Autorizado = 1;
+                _context.SaveChanges();
+
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+
+            try
+            {
+                SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+                SAPbobsCOM.UserTable oUserTable;
+                oUserTable = context.oCompany.UserTables.Item("WH_AUT");
+                oUserTable.Code = autorizacion.WhsDestino + autorizacion.WhsOrigen + DateTime.Now.ToString("yyyyMMddHHMMss");
+                oUserTable.Name = autorizacion.WhsDestino + autorizacion.WhsOrigen + DateTime.Now.ToString("yyyyMMddHHMMss");
+                oUserTable.UserFields.Fields.Item("U_FECHA").Value = DateTime.Now.Date;
+                oUserTable.UserFields.Fields.Item("U_WH_DEST").Value = autorizacion.WhsDestino;
+                oUserTable.UserFields.Fields.Item("U_WH_ORIG").Value = autorizacion.WhsOrigen;
+                int result = oUserTable.Add();
+                if (result == 0)
+                {
+                    return Content(@"<script>window.close();</script>", "text/html");
+                }
+                else
+                {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(new
+                    {
+                        error
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+
+                return BadRequest(ex);
+            }
+
+
+
+
+        }
+            
         [HttpGet("{id}")]
         public IActionResult AutorizarSolicitud([FromRoute] int id)
         {
@@ -252,29 +449,18 @@ namespace SAP_API.Controllers
         [HttpGet("InsertarSAP")]
         public IActionResult InsertarSAP()
         {
-            AutorizacionRequest autorizacion = _context.AutorizacionRequest.Where(x => x.id == 24).FirstOrDefault();
+            AutorizacionAlmacenes autorizacion = _context.AutorizacionAlmacenes.Where(x => x.id == 1).FirstOrDefault();
 
-            DateTime FechaInicial = DateTime.Now;
-            DateTime FechaFinal = FechaInicial.AddMinutes(60);
             try
             {
                 SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
                 SAPbobsCOM.UserTable oUserTable;
-                oUserTable = context.oCompany.UserTables.Item("CCFN_AUTORIZACIONES");
-                oUserTable.Code = autorizacion.CardCode + autorizacion.ProductCode + FechaInicial.ToString("yyyyMMddHHMMss");
-                oUserTable.Name = autorizacion.CardCode + autorizacion.ProductCode + FechaInicial.ToString("yyyyMMddHHMMss");
-                oUserTable.UserFields.Fields.Item("U_CardCode").Value = autorizacion.CardCode;
-                oUserTable.UserFields.Fields.Item("U_ItemCode").Value = autorizacion.ProductCode;
-                oUserTable.UserFields.Fields.Item("U_DateIn").Value = FechaInicial;
-                oUserTable.UserFields.Fields.Item("U_HourIn").Value = FechaInicial;
-                oUserTable.UserFields.Fields.Item("U_DateOut").Value = FechaFinal;
-                oUserTable.UserFields.Fields.Item("U_HourOut").Value = FechaFinal;
-                oUserTable.UserFields.Fields.Item("U_Status").Value = "0";
-                oUserTable.UserFields.Fields.Item("U_U_NAME").Value = autorizacion.USER_CODE;
-                oUserTable.UserFields.Fields.Item("U_DateReg").Value = FechaInicial;
-                oUserTable.UserFields.Fields.Item("U_HourReg").Value = FechaInicial;
-                oUserTable.UserFields.Fields.Item("U_VatSum").Value = autorizacion.PrecioSolicitado;
-
+                oUserTable = context.oCompany.UserTables.Item("WH_AUT");
+                oUserTable.Code = autorizacion.WhsDestino + autorizacion.WhsOrigen+ DateTime.Now.ToString("yyyyMMddHHMMss");
+                oUserTable.Name = autorizacion.WhsDestino+ autorizacion.WhsOrigen + DateTime.Now.ToString("yyyyMMddHHMMss");
+                oUserTable.UserFields.Fields.Item("U_FECHA").Value = DateTime.Now.Date;
+                oUserTable.UserFields.Fields.Item("U_WH_DEST").Value = autorizacion.WhsDestino;
+                oUserTable.UserFields.Fields.Item("U_WH_ORIG").Value = autorizacion.WhsOrigen;
                 int result = oUserTable.Add();
                 if (result == 0)
                 {
