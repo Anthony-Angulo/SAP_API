@@ -68,6 +68,8 @@ namespace SAP_API.Models
         [Required]
         public DateTime Fecha { get; set; }
 
+        [NotMapped]
+        public string Comentario { get; set; }
         public sbyte Autorizado { get; set; }
 
     }

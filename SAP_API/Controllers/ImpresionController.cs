@@ -556,7 +556,7 @@ namespace SAP_API.Controllers
             string s = "^XA\n";
             s += $"^FO120,50^BQ,2,10^FDQA, {qR.Codigo} ^FS";
             s += $"^CF0,30";
-            s += $"^FO140,320^FD{qR.Codigo}^FS";
+            s += $"^FO100,320^FD{qR.Codigo}^FS";
             s += "^XZ";
 
 

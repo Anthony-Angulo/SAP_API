@@ -1547,10 +1547,7 @@ header.""UgpEntry"",
 ""CodeBars"" as ""CodeBars"",
                     RTRIM(RTRIM(""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm""
                 From OITM
-                Where ""SellItem"" = 'Y'
-                AND ""QryGroup3"" = 'Y'
-                AND ""Canceled"" = 'N'
-                AND ""validFor"" = 'Y'");
+               ");
             oRecSet.MoveFirst();
             JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
             oRecSet.DoQuery(@"
@@ -1566,10 +1563,22 @@ header.""UgpEntry"",
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpEntry"" in (Select ""UgpEntry"" From OITM Where ""SellItem"" = 'Y' AND ""QryGroup3"" = 'Y' AND ""Canceled"" = 'N'  AND ""validFor"" = 'Y')");
+                Where header.""UgpEntry"" in (Select ""UgpEntry"" From OITM");
             oRecSet.MoveFirst();
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
-            var returnValue = new { products,  uom };
+
+            oRecSet.DoQuery(@"
+ Select
+                    ""BcdCode"",
+                    OITM.""ItemCode""
+                From OBCD
+                join OITM on OITM.""ItemCode"" = OBCD.""ItemCode""
+               ;
+
+            ");
+                            JToken CodeBars= context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
+
+            var returnValue = new { products,  uom ,CodeBars};
             GC.Collect();
             GC.WaitForPendingFinalizers();
             return Ok(returnValue);

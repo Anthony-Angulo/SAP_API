@@ -192,8 +192,8 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> SendMailAsyncAlmacenes([FromBody] AutorizacionAlmacenes request)
         {
             AutorizacionAlmacenes Vieja = _context.AutorizacionAlmacenes.Where(x => x.WhsDestino == request.WhsDestino
-            && x.WhsOrigen==request.WhsOrigen && x.Autorizado!=2
-            && x.Fecha.Date==DateTime.Now.Date
+            && x.WhsOrigen == request.WhsOrigen && x.Autorizado != 2
+            && x.Fecha.Date == DateTime.Now.Date
              ).FirstOrDefault();
             if (Vieja != null) return BadRequest("Ya existe una solicitud para este almacen, Favor de esperar respuesta");
             if (!ModelState.IsValid)
@@ -211,28 +211,17 @@ namespace SAP_API.Controllers
 
                 return BadRequest(ex.InnerException);
             }
-            /* TwilioClient.Init("AC325fc690a873079a3b6f77f3512cc872", "25f7b22387f439b5937c4874f1e87ee3");
-             double preciobase = double.Parse(request.PrecioBase) * double.Parse(request.CantidadBase);
+        
 
-             String Body = $@"El usuario {request.Usuario} de la sucursal {request.Sucursal} solicita autorización para vender un producto a precio diferente al autorizado.{Environment.NewLine}Cliente:{request.Cliente}.{Environment.NewLine}Producto:{request.Producto}.{Environment.NewLine}Cantidad:{request.Cantidad}.{Environment.NewLine}Precio base:{preciobase} {request.Currency}.{Environment.NewLine}Precio introducido:{request.PrecioSolicitado.Substring(4)} {request.PrecioSolicitado.Substring(0, 4)}.{Environment.NewLine} Si desea aprobarlo escriba:{request.id}";
-
-             var message = MessageResource.Create(
-                 body: Body,
-                 from: new Twilio.Types.PhoneNumber("whatsapp:+14155238886"),
-                 to: new Twilio.Types.PhoneNumber("whatsapp:+5216864259059")
-             );
-
-             return Ok();
-             */
-
-            string to = "lorenzo.cabrera@superchivas.com.mx"; //_configuration["cuentarecibeAutorizacion"];
+            string to = _configuration["cuentarecibeAutorizacion"];
             MailMessage message = new MailMessage(_configuration["CuentaAutorizacion"], to);
-            //string to1 = _configuration["cuentaRecibeAutorizacion2"];
-           /* if (to1 != "")
-            {
-                MailAddress bcc = new MailAddress(to1);
-                message.Bcc.Add(bcc);
-            }*/
+       
+            string to1 = _configuration["cuentaRecibeAutorizacion2"];
+             if (to1 != "")
+             {
+                 MailAddress bcc = new MailAddress(to1);
+                 message.Bcc.Add(bcc);
+             }
             message.Subject = "Solicitud de Autorizacion de transferencia entre almacenes";
             message.IsBodyHtml = true;
             message.Body = $@"
@@ -242,6 +231,8 @@ namespace SAP_API.Controllers
 <ul>
     <li>Almacen Origen <b>{request.WhsOrigen}</b></li>
     <li>Almacen Destino: <b>{request.WhsDestino}</b></li>
+    <li>Comentario: <b>{request.Comentario}</b></li>
+
 </ul>    
 <p>*Al confirmar este autorizacion se le permitira al almacen origen hacer traspasos al almacen destino durante el dia en curso</p>
 <a href=""{_configuration["DireccionAutorizacionAlmacen"]}{request.id}"" target=""blank""><button
@@ -311,6 +302,14 @@ namespace SAP_API.Controllers
                 oUserTable.UserFields.Fields.Item("U_WH_DEST").Value = autorizacion.WhsDestino;
                 oUserTable.UserFields.Fields.Item("U_WH_ORIG").Value = autorizacion.WhsOrigen;
                 int result = oUserTable.Add();
+
+                oUserTable = context.oCompany.UserTables.Item("WH_AUT");
+                oUserTable.Code = autorizacion.WhsDestino + autorizacion.WhsOrigen + DateTime.Now.ToString("yyyyMMddHHMMss");
+                oUserTable.Name = autorizacion.WhsDestino + autorizacion.WhsOrigen + DateTime.Now.ToString("yyyyMMddHHMMss");
+                oUserTable.UserFields.Fields.Item("U_FECHA").Value = DateTime.Now.Date;
+                oUserTable.UserFields.Fields.Item("U_WH_DEST").Value = "TSR"+autorizacion.WhsDestino;
+                oUserTable.UserFields.Fields.Item("U_WH_ORIG").Value = autorizacion.WhsOrigen;
+                result = oUserTable.Add();
                 if (result == 0)
                 {
                     return Content(@"<script>window.close();</script>", "text/html");

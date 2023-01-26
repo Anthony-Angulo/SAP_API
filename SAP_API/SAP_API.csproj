@@ -73,8 +73,7 @@
 
   <ItemGroup>
     <Reference Include="SAPBusinessOneSDK">
-      <HintPath>..\..\Compartido\SAP Business One SDK\Lib\SAPBusinessOneSDK.dll</HintPath>
-      <Private>true</Private>
+      <HintPath>..\..\..\Documents\SAPBusinessOneSDK.dll</HintPath>
     </Reference>
     <Reference Include="System.Web.Extensions">
       <HintPath>..\..\..\..\..\..\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Web.Extensions.dll</HintPath>
