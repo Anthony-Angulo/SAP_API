@@ -1546,7 +1546,7 @@ header.""UgpEntry"",
                     ""QryGroup7"" as ""Meet"",
 ""CodeBars"" as ""CodeBars"",
                     RTRIM(RTRIM(""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm""
-                From OITM
+                From OITM WHERE ""Canceled"" = 'N'  AND ""validFor"" = 'Y'  AND ""ItemName"" is not null
                ");
             oRecSet.MoveFirst();
             JToken products = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"];
@@ -1563,7 +1563,7 @@ header.""UgpEntry"",
                 JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
                 JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
                 JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
-                Where header.""UgpEntry"" in (Select ""UgpEntry"" From OITM");
+                Where header.""UgpEntry"" in (Select ""UgpEntry"" From OITM WHERE ""Canceled"" = 'N'  AND ""validFor"" = 'Y'  AND ""ItemName"" is not null)");
             oRecSet.MoveFirst();
             JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
 
@@ -1572,7 +1572,7 @@ header.""UgpEntry"",
                     ""BcdCode"",
                     OITM.""ItemCode""
                 From OBCD
-                join OITM on OITM.""ItemCode"" = OBCD.""ItemCode""
+                join OITM on OITM.""ItemCode"" = OBCD.""ItemCode""  WHERE ""Canceled"" = 'N'  AND ""validFor"" = 'Y'  AND ""ItemName"" is not null
                ;
 
             ");
@@ -1774,7 +1774,7 @@ header.""UgpEntry"",
                     ""WhsCode"",
                     RTRIM(RTRIM(""OnHand"", '0'), '.') AS ""OnHand""
                 From OITW
-                WHERE ""WhsCode"" in ('S01', 'S06', 'S07', 'S10','S17', 'S12', 'S13', 'S15', 'S24', 'S36', 'S37', 'S47', 'S55', 'S59')
+                WHERE ""WhsCode"" in ('S01', 'S06', 'S07', 'S10','S17', 'S12', 'S13', 'S15', 'S24', 'S36', 'S37', 'S47', 'S55', 'S59','S62')
                 AND ""ItemCode"" = '" + id + "'");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];
@@ -1833,7 +1833,7 @@ header.""UgpEntry"",
                     ""WhsCode"",
                     RTRIM(RTRIM(""OnHand"", '0'), '.') AS ""OnHand""
                 From OITW
-                WHERE ""WhsCode"" in ('S01', 'S06', 'S07', 'S10','S17', 'S12', 'S13', 'S15', 'S24', 'S36', 'S37', 'S47', 'S55', 'S59')
+                WHERE ""WhsCode"" in ('S01', 'S06', 'S07', 'S10','S17', 'S12', 'S13', 'S15', 'S24', 'S36', 'S37', 'S47', 'S55', 'S59','S62')
                 AND ""ItemCode"" = '" + id + "'");
             oRecSet.MoveFirst();
             JToken stock = context.XMLTOJSON(oRecSet.GetAsXML())["OITW"];

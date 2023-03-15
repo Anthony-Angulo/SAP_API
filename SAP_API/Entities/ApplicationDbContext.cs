@@ -28,6 +28,7 @@ namespace SAP_API.Entities
 
         public DbSet<TrasladosVirtuales> TrasladosVirtuales { get; set; }
         public DbSet<VentaInfo> VentaInfo { get; set; }
+        public DbSet<cotizaciones> cotizaciones { get; set; }
 
         public DbSet<rutas> rutas { get; set; }
         public DbSet<tiendas_ruta> tiendas_ruta { get; set; }

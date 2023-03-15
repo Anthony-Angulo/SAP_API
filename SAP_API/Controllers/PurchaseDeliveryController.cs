@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
+using SAP_API.Entities;
 using SAP_API.Models;
 
 namespace SAP_API.Controllers
@@ -14,6 +15,12 @@ namespace SAP_API.Controllers
     [Authorize]
     public class PurchaseDeliveryController : ControllerBase {
 
+        static private ApplicationDbContext _context;
+
+        public PurchaseDeliveryController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
         [HttpPost("search")]
         public async Task<IActionResult> GetSearch([FromBody] SearchRequest request) {
 
@@ -366,16 +373,23 @@ namespace SAP_API.Controllers
             return Ok(list);
         }
 
-        // POST: api/PurchaseDelivery
+        public class ItemPrint
+        {
+            public string ItemCode { get; set; }
+
+            public double count { get; set; }
+
+            public int UomCode { get; set; }
+        }
+            // POST: api/PurchaseDelivery
         [HttpPost]
         //[Authorize]
         public async Task<IActionResult> Post([FromBody] PurchaseOrderDelivery value) {
-
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Documents purchaseOrder = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
             SAPbobsCOM.Documents purchaseOrderdelivery = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseDeliveryNotes);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
+            List<ItemPrint> itemsToPrint = new List<ItemPrint>();
             if (purchaseOrder.GetByKey(value.order)) {
 
                 if ((String)purchaseOrder.UserFields.Fields.Item("U_IL_Pedimento").Value == String.Empty) {
@@ -432,7 +446,7 @@ namespace SAP_API.Controllers
                     purchaseOrderdelivery.Lines.BaseEntry = purchaseOrder.DocEntry;
                     purchaseOrderdelivery.Lines.BaseLine = value.products[i].Line;
                     purchaseOrderdelivery.Lines.BaseType = 22;
-
+                    
                     if (value.products[i].UoMEntry == 116 || value.products[i].UoMEntry == 196) {
                         
                         purchaseOrder.Lines.SetCurrentLine(value.products[i].Line);
@@ -488,11 +502,12 @@ namespace SAP_API.Controllers
                         purchaseOrderdelivery.Lines.BatchNumbers.Add();
 
                     }
-                    purchaseOrderdelivery.Lines.Add();
+                    purchaseOrderdelivery.Lines.Add();                    
                 }
-
+             
                 int result = purchaseOrderdelivery.Add();
                 if (result == 0) {
+                 
                     return Ok(new { value });
 
                 }

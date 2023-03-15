@@ -345,10 +345,10 @@ namespace SAP_API.Controllers
                 {
                     return NotFound();
                 }
-                /*else if (autorizacion.Autorizado == 1)
+                else if (autorizacion.Autorizado == 1)
                 {
-                    return Ok("Autorizacion ya aprobada");
-                }*/
+                    return Ok("Autorizacion ya fue aprobada anteriormente");
+                }
                 autorizacion.Autorizado = 1;
                 autorizacion.FechaAutorizado = DateTime.Now;
                 _context.SaveChanges();
