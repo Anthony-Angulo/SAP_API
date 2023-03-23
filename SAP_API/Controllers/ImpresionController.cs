@@ -428,7 +428,7 @@ namespace SAP_API.Controllers
             paragraph.AddLineBreak();
             paragraph.AddText("Nombre: " + orderDetail.CardFName);
             paragraph.AddLineBreak();
-            paragraph.AddText("Codigó: " + orderDetail.CardCode);
+            paragraph.AddText("Código: " + orderDetail.CardCode);
             paragraph.AddLineBreak();
             paragraph.AddText("Dirección: " + orderDetail.Address2);
             table.AddRow();
@@ -460,7 +460,7 @@ namespace SAP_API.Controllers
             row.HeadingFormat = true;
             row.Format.Alignment = ParagraphAlignment.Center;
             row.Format.Font.Bold = true;
-            row.Cells[0].AddParagraph("Codigo");
+            row.Cells[0].AddParagraph("Código");
             row.Cells[0].Format.Alignment = ParagraphAlignment.Left;
             row.Cells[1].AddParagraph("Producto");
             row.Cells[1].Format.Alignment = ParagraphAlignment.Left;
@@ -530,7 +530,7 @@ namespace SAP_API.Controllers
             paragraph.AddLineBreak();
             paragraph.AddText(@"Hora de Impresión: " + DateTime.Now.ToString("HH:mm"));
             paragraph.AddLineBreak();
-            paragraph.AddFormattedText(@"*La cantidad de cajas es un aproximado en base al peso promedio por caja del producto", TextFormat.Bold);
+            paragraph.AddFormattedText(@"*La cantidad de cajas es un aproximado basándose en el peso promedio por caja del producto", TextFormat.Bold);
 
             paragraph = new Paragraph();
             paragraph.AddText("Page ");
@@ -591,7 +591,7 @@ namespace SAP_API.Controllers
             Image image;
             Style style;
             Document document = new Document();
-            document.Info.Title = "Cotizacion CRM";
+            document.Info.Title = "Cotización CRM";
             document.DefaultPageSetup.LeftMargin = MigraDoc.DocumentObjectModel.Unit.FromCentimeter(.9);
             document.DefaultPageSetup.RightMargin = MigraDoc.DocumentObjectModel.Unit.FromCentimeter(.9);
 
@@ -761,11 +761,15 @@ namespace SAP_API.Controllers
             row = table.AddRow();
             row.VerticalAlignment = VerticalAlignment.Top;
             paragraph = row.Cells[1].AddParagraph();
-            paragraph.AddText("# Cotizacion: " + cotizaciones.Id);
+            paragraph.AddText("# Cotización: " + cotizaciones.Id);
             paragraph.AddLineBreak();
             paragraph.AddText("Fecha de Creación del Pedido: " + cotizaciones.Date);
+            if (cotizaciones.Date.AddDays(1) < DateTime.Now)
+            {
+                paragraph.AddLineBreak();
+                paragraph.AddFormattedText("COTIZACIÓN SOBREPASA LAS 24 HORAS DE DISPONIBILIDAD",TextFormat.Bold);
+            }
             paragraph.AddLineBreak();
-
             row = table.AddRow();
             row.VerticalAlignment = VerticalAlignment.Top;
             paragraph = row.Cells[0].AddParagraph("Compañia");
@@ -796,7 +800,7 @@ namespace SAP_API.Controllers
             paragraph.AddLineBreak();
             paragraph.AddText("Nombre: " + cotizaciones.CardFName);
             paragraph.AddLineBreak();
-            paragraph.AddText("Codigó: " + cotizaciones.CardCode);
+            paragraph.AddText("Código: " + cotizaciones.CardCode);
             table.AddRow();
 
             table = section.AddTable();
@@ -822,11 +826,11 @@ namespace SAP_API.Controllers
             row.HeadingFormat = true;
             row.Format.Alignment = ParagraphAlignment.Center;
             row.Format.Font.Bold = true;
-            row.Cells[0].AddParagraph("Codigo");
+            row.Cells[0].AddParagraph("Código");
             row.Cells[0].Format.Alignment = ParagraphAlignment.Left;
             row.Cells[1].AddParagraph("Producto");
             row.Cells[1].Format.Alignment = ParagraphAlignment.Left;
-            row.Cells[2].AddParagraph("Costo Unitario");
+            row.Cells[2].AddParagraph("Costo por UM");
             row.Cells[2].Format.Alignment = ParagraphAlignment.Left;
             row.Cells[3].AddParagraph("Cantidad");
             row.Cells[3].Format.Alignment = ParagraphAlignment.Left;
@@ -844,7 +848,7 @@ namespace SAP_API.Controllers
                 row.Borders.Right.Visible = false;
                 row.Cells[0].AddParagraph(item.Code);
                 row.Cells[1].AddParagraph(item.Descripcion);
-                row.Cells[2].AddParagraph(item.Price + " " + item.Currency);
+                row.Cells[2].AddParagraph((double.Parse(item.Price)*item.EquivalentePV) + " " + item.Currency);
                 row.Cells[3].AddParagraph(item.Quantity + " " + item.UomDescripcion);
             }
 
@@ -863,9 +867,15 @@ namespace SAP_API.Controllers
             paragraph.Format.SpaceBefore = "1cm";
             paragraph.AddText(@"Hora de Impresión: " + DateTime.Now.ToString("HH:mm"));
             paragraph.AddLineBreak();
-            paragraph.AddFormattedText(@"*La cantidad de cajas es un aproximado en base al peso promedio por caja del producto", TextFormat.Bold);
+            paragraph.AddFormattedText(@"*La cantidad de cajas es un aproximado basándose en el peso promedio por caja del producto", TextFormat.Bold);
             paragraph.AddLineBreak();
-            paragraph.AddFormattedText(@"*Los precios en esta cotizacion estan propensos a cambios sin previo aviso a discrecion de Comercial de Carnes Frias del Norte", TextFormat.Bold);
+            paragraph.AddFormattedText(@"*Los precios en esta cotización están propensos a cambios sin previo aviso a discreción de Comercial de Carnes Frias del Norte", TextFormat.Bold);
+            paragraph.AddLineBreak();
+            paragraph.AddFormattedText(@"*Pedido sujeto a existencia y cambios sin previo aviso", TextFormat.Bold);
+            paragraph.AddLineBreak();
+            paragraph.AddFormattedText(@"*No incluye 1% cuando paga en dólares", TextFormat.Bold);
+            paragraph.AddLineBreak();
+            paragraph.AddFormattedText(@"*Precio más IVA lo que aplique", TextFormat.Bold);
 
             paragraph = new Paragraph();
             paragraph.AddText("Page ");
@@ -966,15 +976,15 @@ namespace SAP_API.Controllers
 
         }
 
-        [HttpGet("PrintRecepionTarima")]
-        public void PrintTarimRecibo(string ItemCode, string Total, string UoM)
+        [HttpGet("PruebaReciboTarima")]
+        public IActionResult PrintTarimRecibo(string ItemCode, decimal Total, string UoM,string DocNum)
         {
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
             try
             {
+                SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
 
-               SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+                SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
                 string Descripcion = "";
                 string uom = "";
                 oRecSet.DoQuery(@"
@@ -987,7 +997,7 @@ namespace SAP_API.Controllers
                 oRecSet.DoQuery(@$"
             SELECT ""UomCode"" FROM ""OUOM"" WHERE ""UomEntry""={UoM}");
                 oRecSet.MoveFirst();
-                uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUOM"][0]["UomName"].ToObject<string>();
+                uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUOM"][0]["UomCode"].ToObject<string>();
                 
             
  string s = $@"^XA
@@ -1002,9 +1012,11 @@ namespace SAP_API.Controllers
 ^BY3,3,40
 ^FO300,230 ^BCN,130,N,N,^FD{ItemCode} ^FS
 ^CFA,30
-^FO50,390 ^FDTotal Tarima: {Total} {uom} ^FS
-^FO50,450 ^FDFecha de recibo: {DateTime.Now.Date} ^FS
-^FO300,500 ^BCN,130,,N,^FD{Total} ^FS
+^FO50,390 ^FDTotal Tarima: { Math.Round(Total,2)} {(UoM == "196" ? "KG" : uom)} ^FS
+^FO50,420 ^FD2 UM: CAJA ^FS
+^FO50,450 ^FDFecha de recibo: {DateTime.Now} ^FS
+^FO50,750^FDPedido:{DocNum} ^FS 
+^FO300,500 ^BCN,130,,N,^FD{Math.Round(Total, 2)} ^FS
 ^XZ";
                 var bytes = Encoding.ASCII.GetBytes(s);
                 // Send a printer-specific to the printer.
@@ -1012,10 +1024,11 @@ namespace SAP_API.Controllers
                 {
                     RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\Tarima", bytes, bytes.Length);
                 }
+                return Ok();
             }
             catch (Exception Ex)
             {
-
+                return BadRequest(Ex.Message);
             }
             
           
