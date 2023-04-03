@@ -62,6 +62,8 @@ namespace SAP_API.Models
 
         public string Currency { get; set; }
         public string Descripcion { get; set; }
+
+        public string SelectedCurrency { get; set; }
         public cotizaciones cotizaciones { get; set; }
     }
 

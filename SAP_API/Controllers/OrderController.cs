@@ -23,10 +23,13 @@ namespace SAP_API.Controllers
 
 
         private readonly LogsContext _contextLogs;
+        private readonly ApplicationDbContext _context;
 
-        public OrderController(LogsContext contextLogs)
+        public OrderController(LogsContext contextLogs,ApplicationDbContext context)
         {
             _contextLogs = contextLogs;
+            _context = context;
+
         }
         /// <summary>
         /// Get Order List to CRM web Filter by DatatableParameters.
@@ -1241,6 +1244,87 @@ AND to_char(to_date(SUBSTRING(ord.""DocDate"", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYY
             GC.WaitForPendingFinalizers();
             return Ok(orders);
         }
+        [AllowAnonymous]
+        [HttpGet("CRMAPP/top10Sellers/{currency}")]
+        public async Task<IActionResult> Top10Vendedores(string currency)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery($@"
+               SELECT top 10 TO_NVARCHAR(""U_nwr_Tag"") as TAG,sum(""DocTotal"") as TOTAL FROM ORDR
+WHERE (""U_nwr_Tag"" is not null ) 
+AND TO_NVARCHAR(""U_nwr_Tag"")!='0'
+AND ""DocCur""='{currency}' 
+AND ""DocDate""= CURRENT_DATE
+GROUP BY TO_NVARCHAR(""U_nwr_Tag"") order by sum(""DocTotal"") desc");
+
+            oRecSet.MoveFirst();
+            JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"];
+            IList<top10> person = orders.ToObject<IList<top10>>();
+            foreach (var item in person)
+            {
+                item.Name=_context.Users.Where(x=>x.Id==item.TAG).First().Name;
+            }
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(person);
+        }
+        [HttpGet("CRMAPP/compraspormes/{CardCode}&{Month}&{Year}")]
+        public async Task<IActionResult> comprasporMes(string CardCode,int Month, int Year)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery($@"
+SELECT  T0.""DocDate"",count(T0.""DocEntry"") FROM ORDR T0
+ WHERE ""CardCode""='{CardCode}'
+ AND MONTH (T0.""DocDate"")={Month}
+ AND YEAR (T0.""DocDate"")={Year}
+GROUP BY T0.""DocDate""
+order by T0.""DocDate"" desc
+");
+
+            oRecSet.MoveFirst();
+            JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"];
+            
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(orders);
+        }
+
+        [HttpGet("CRMAPP/comprastopProductos/{CardCode}&{Month}&{Year}")]
+        public async Task<IActionResult> comprastop10Mes(string CardCode, int Month, int Year)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery($@"
+SELECT  top 10 ""Dscription"",""ItemCode"",sum(T1.""Quantity"") FROM ORDR T0
+join RDR1 T1 on T0.""DocEntry""=T1.""DocEntry""
+ WHERE ""CardCode""='{CardCode}' 
+ AND MONTH (T0.""DocDate"")={Month}
+ AND YEAR (T0.""DocDate"")={Year}
+GROUP BY ""Dscription"",""ItemCode"" order by sum(T1.""Quantity"") desc
+");
+
+            oRecSet.MoveFirst();
+            JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["RDR1"];
+          
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(orders);
+        }
+        public class top10
+        {
+            public string TAG { get; set; }
+            public string TOTAL { get; set; }
+
+            public string Name { get; set; }
+        }
         // GET: api/Order/5
         // Orden Detalle
         [HttpGet("{id}")]
@@ -1356,6 +1440,7 @@ SELECT
             temp["RDR1"] = products["RDR1"];
             return Ok(temp);
         }
+
 
         private JToken limiteCredito(string CardCode, int Series, SAPContext context)
         {
