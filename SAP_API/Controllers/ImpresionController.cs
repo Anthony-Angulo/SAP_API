@@ -477,7 +477,7 @@ namespace SAP_API.Controllers
 
             //table.SetEdge(0, 0, 6, 1, Edge.Box, BorderStyle.Single, 0.75, Color.Empty);
 
-            double boxes = 0;
+            double boxes;
             for (int i = 0; i < orderDetail.OrderRows.Count; i++)
             {
 
@@ -542,8 +542,7 @@ namespace SAP_API.Controllers
 
             document.UseCmykColor = true;
             const bool unicode = false;
-            const PdfFontEmbedding embedding = PdfFontEmbedding.Always;
-            PdfDocumentRenderer pdfRenderer = new PdfDocumentRenderer(unicode, embedding);
+            PdfDocumentRenderer pdfRenderer = new PdfDocumentRenderer(unicode);
             pdfRenderer.Document = document;
             pdfRenderer.RenderDocument();
             ms = new MemoryStream();
@@ -887,8 +886,7 @@ namespace SAP_API.Controllers
 
             document.UseCmykColor = true;
             const bool unicode = false;
-            const PdfFontEmbedding embedding = PdfFontEmbedding.Always;
-            PdfDocumentRenderer pdfRenderer = new PdfDocumentRenderer(unicode, embedding);
+            PdfDocumentRenderer pdfRenderer = new PdfDocumentRenderer(unicode);
             pdfRenderer.Document = document;
             pdfRenderer.RenderDocument();
             ms = new MemoryStream();
@@ -977,7 +975,7 @@ namespace SAP_API.Controllers
         }
 
         [HttpGet("PruebaReciboTarima")]
-        public IActionResult PrintTarimRecibo(string ItemCode, decimal Total, string UoM,string DocNum)
+        public IActionResult PrintTarimRecibo(string ItemCode, decimal Total, string UoM,string DocNum,int Cajas=0,string printer = "\\\\192.168.0.10\\Tarima")
         {
 
             try
@@ -1003,26 +1001,26 @@ namespace SAP_API.Controllers
  string s = $@"^XA
 ^PW1000
             ^CF0,60
-^FO100,50 ^FB650,3 ^FD{Descripcion}^FS
+^FO100,50 ^FB650,2 ^FD{Descripcion}^FS
 ^ CF0,30
-^FO50,220 ^GB700,3,3 ^FS
-^FO50,370 ^GB700,3,3 ^FS
+^FO50,180 ^GB700,3,3 ^FS
+^FO50,320 ^GB700,3,3 ^FS
 ^CF0,50
-^FO50,270 ^FB250,3 ^FD{ItemCode} ^FS
+^FO50,220 ^FB250,3 ^FD{ItemCode} ^FS
 ^BY3,3,40
-^FO300,230 ^BCN,130,N,N,^FD{ItemCode} ^FS
+^FO300,200 ^BCN,100,N,N,^FD{ItemCode} ^FS
 ^CFA,30
-^FO50,390 ^FDTotal Tarima: { Math.Round(Total,2)} {(UoM == "196" ? "KG" : uom)} ^FS
-^FO50,420 ^FD2 UM: CAJA ^FS
-^FO50,450 ^FDFecha de recibo: {DateTime.Now} ^FS
-^FO50,750^FDPedido:{DocNum} ^FS 
-^FO300,500 ^BCN,130,,N,^FD{Math.Round(Total, 2)} ^FS
+^FO50,340 ^FDTotal Tarima: {Math.Round(Total, 2)} {(UoM == "196" || UoM == "116" ? "KG" : uom)} ^FS
+^FO50,370 ^FD2 UM: {Cajas} CAJAS ^FS
+^FO50,400 ^FDFecha de recibo: {DateTime.Now} ^FS
+^FO50,570^FDPedido:{DocNum} ^FS  
+^FO20,430 ^BCN,80,,N,^FD{Math.Round(Total, 2)} ^FS
 ^XZ";
                 var bytes = Encoding.ASCII.GetBytes(s);
                 // Send a printer-specific to the printer.
                 for (int i = 0; i < 2; i++)
                 {
-                    RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\Tarima", bytes, bytes.Length);
+                    RawPrinterHelper.SendBytesToPrinter(printer, bytes, bytes.Length);
                 }
                 return Ok();
             }

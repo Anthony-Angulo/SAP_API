@@ -24,7 +24,18 @@ namespace SAP_API.Controllers
             _context = context;
             _configuration = configuration;
         }
-
+        /// <summary>
+        /// Clase que guarda la informacion de la transferencia
+        /// 
+        /// <list type="bullet">
+        /// <item>
+        /// <term>NoCorte</term> <description>El numero de corte al cual se le esta haciendo la transaccion</description></item>
+        /// <item><term>Usuario</term> <description>Identificador del usuario que esta haciendo el movimiento</description></item>
+        /// <item><term>Sucursal</term> <description>Sucursal de la cual se esta sustrayendo el dinero</description></item>
+        /// <item> <term><see cref="Transferes">transfers</see> </term> <description>Listado con las transferencias que se haran</description></item>
+        /// 
+        /// </list>
+        /// </summary>
         public class Ledger
         {
             public string NoCorte { get; set; }
@@ -33,7 +44,9 @@ namespace SAP_API.Controllers
             public string Sucursal { get; set; }
             public List<Transferes> transfers { get; set; }
         }
-
+        /// <summary>
+        /// Listado de la transferencias
+        /// </summary>
         public class Transferes
         {
             public double CantidadEnviada { get; set; }

@@ -1284,7 +1284,7 @@ SELECT  T0.""DocDate"",count(T0.""DocEntry"") FROM ORDR T0
  AND MONTH (T0.""DocDate"")={Month}
  AND YEAR (T0.""DocDate"")={Year}
 GROUP BY T0.""DocDate""
-order by T0.""DocDate"" desc
+order by T0.""DocDate"" asc
 ");
 
             oRecSet.MoveFirst();
@@ -1312,7 +1312,7 @@ GROUP BY ""Dscription"",""ItemCode"" order by sum(T1.""Quantity"") desc
 ");
 
             oRecSet.MoveFirst();
-            JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["RDR1"];
+            JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"];
           
             GC.Collect();
             GC.WaitForPendingFinalizers();

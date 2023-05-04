@@ -434,7 +434,6 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
 
                 return BadRequest(ex);
             }
-          return BadRequest();
         }
         /// <summary>
         /// Add a Transfer Document Linked to a Order Document.
