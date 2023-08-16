@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SAP_API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[controller]/[action]")]
     [ApiController]
     [Authorize]
     [AllowAnonymous]
@@ -111,6 +111,8 @@ namespace SAP_API.Controllers
 T0.""DocNum"",
 T0.""DocDate"",
 T0.""CardCode"",
+T0.""DocCur"",
+T0.""DocRate"",
 T0.""CardName"",
 /*
 T1.""ItemCode"",
@@ -125,6 +127,48 @@ FROM OINV T0
 --INNER JOIN INV1 T1 ON T0.""DocEntry"" = T1.""DocEntry""
 INNER JOIN OCRD T2 ON T0.""CardCode"" = T2.""CardCode""
 WHERE T2.""U_IL_Zone""='{Zone}' AND T0.""DocStatus"" ='O'");
+            if (oRecSet.RecordCount == 0)
+            {
+                // Handle no Existing Invoice
+                return NotFound();
+            }
+            invoice = context.XMLTOJSON(oRecSet.GetAsXML())["OINV"];
+
+            return Ok(invoice);
+        }
+       
+        [HttpGet]
+        public IActionResult GetInvoicesByZoneAndDate([FromQuery]string Zone, [FromQuery] string InitialDate, [FromQuery] string FinalDate)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            JToken invoice;
+            oRecSet.DoQuery($@"
+                SELECT
+T0.""DocNum"",
+T0.""DocDate"",
+T0.""CardCode"",
+T0.""DocCur"",
+T0.""DocRate"",
+T0.""CardName"",
+/*
+T1.""ItemCode"",
+T1.""Dscription"",
+T1.""Quantity"",
+T1.""WhsCode"",
+*/
+T0.""DocTotal"",
+T0.""DocTotalFC"",
+T2.""U_IL_Zone""
+FROM OINV T0
+--INNER JOIN INV1 T1 ON T0.""DocEntry"" = T1.""DocEntry""
+INNER JOIN OCRD T2 ON T0.""CardCode"" = T2.""CardCode""
+WHERE T2.""U_IL_Zone""='{Zone}' AND T0.""DocStatus"" ='O'
+AND ""DocDate"">='{InitialDate}'
+AND ""DocDate""<='{FinalDate}'
+");
+            //2023/08/10
             if (oRecSet.RecordCount == 0)
             {
                 // Handle no Existing Invoice

@@ -975,7 +975,7 @@ namespace SAP_API.Controllers
         }
 
         [HttpGet("PruebaReciboTarima")]
-        public IActionResult PrintTarimRecibo(string ItemCode, decimal Total, string UoM,string DocNum,int Cajas=0,string printer = "\\\\192.168.0.10\\Tarima")
+        public IActionResult PrintTarimRecibo(string ItemCode, decimal Total, string UoM,string DocNum,int Cajas=0,string printer = "Tarima")
         {
 
             try
@@ -1000,8 +1000,8 @@ namespace SAP_API.Controllers
             
  string s = $@"^XA
 ^PW1000
-            ^CF0,60
-^FO100,50 ^FB650,2 ^FD{Descripcion}^FS
+            ^CF0,40
+^FO100,50 ^FB700,3 ^FD{Descripcion}^FS
 ^ CF0,30
 ^FO50,180 ^GB700,3,3 ^FS
 ^FO50,320 ^GB700,3,3 ^FS
@@ -1020,7 +1020,7 @@ namespace SAP_API.Controllers
                 // Send a printer-specific to the printer.
                 for (int i = 0; i < 2; i++)
                 {
-                    RawPrinterHelper.SendBytesToPrinter(printer, bytes, bytes.Length);
+                    RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\"+printer, bytes, bytes.Length);
                 }
                 return Ok();
             }
