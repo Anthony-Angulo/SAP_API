@@ -93,6 +93,8 @@ namespace SAP_API.Models
     public class TransferRowBatch {
         public double Quantity { set; get; }
         public string Code { set; get; }
+
+        public string CodeBar { get; set; }
     }
 
 }

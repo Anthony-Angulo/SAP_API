@@ -15,6 +15,7 @@ using ClosedXML.Excel;
 using System.IO;
 using System.Net.Mime;
 using Newtonsoft.Json;
+using SAPbobsCOM;
 
 namespace SAP_API.Controllers
 {
@@ -480,8 +481,55 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
             {
                 return BadRequest("Error En Sucursal.");
             }
+            /*if (value.TransferRows.Exists(x => x.BatchList.Exists(x => x.Code == "SI")))
+            {
+            SAPbobsCOM.CompanyService oCS = (SAPbobsCOM.CompanyService)context.oCompany.GetCompanyService();
+            SAPbobsCOM.InventoryPostingsService oICS = (InventoryPostingsService)oCS.GetBusinessService(SAPbobsCOM.ServiceTypes.InventoryPostingsService);
+            SAPbobsCOM.InventoryPosting oIC ;
+            oIC = (InventoryPosting)oICS.GetDataInterface(SAPbobsCOM.InventoryPostingsServiceDataInterfaces.ipsInventoryPosting);
+            DateTime dt = DateTime.Now;
+            oIC.CountDate = DateTime.Now;
+            
+            foreach (var item in value.TransferRows)
+            {
+                if (item.BatchList.Exists(x => x.Code == "SI"))
+                {
+                    SAPbobsCOM.InventoryPostingLines oICLS = oIC.InventoryPostingLines;
+                    SAPbobsCOM.InventoryPostingLine oICL = oICLS.Add();
+                    oICL.ItemCode = item.ItemCode;
 
+                    oICL.CountedQuantity = item.BatchList.Where(x => x.Code == "SI").Sum(x => x.Quantity);
+                    oICL.UoMCountedQuantity = item.BatchList.Where(x => x.Code == "SI").Sum(x => x.Quantity);
+                    oICL.UoMCode = item.UomCode;
+                    oICL.WarehouseCode = transferRequest.FromWarehouse;
+                    SAPbobsCOM.InventoryPostingBatchNumber batch = oICL.InventoryPostingBatchNumbers.Add();
+                    batch.Quantity = -item.BatchList.Where(x => x.Code == "SI").Sum(x => x.Quantity);
+                    batch.BatchNumber = "SI";
 
+                    foreach (var lote in item.BatchList)
+                    {
+                        batch = oICL.InventoryPostingBatchNumbers.Add();
+                        if (String.IsNullOrEmpty(lote.CodeBar)) { }
+                        else
+                        {
+                            if (lote.Code == "SI")
+                            {
+                                batch.Quantity = lote.Quantity;
+                                batch.BatchNumber = lote.CodeBar;
+                            }
+                            else
+                            {
+                                batch.Quantity = lote.Quantity;
+                                batch.BatchNumber = lote.Code;
+                            }
+                        }
+                    }
+                }
+            }
+                SAPbobsCOM.InventoryPostingParams oICP = oICS.Add(oIC);
+
+            }*/
+            
             //int Serie = context.XMLTOJSON(oRecSet.GetAsXML())["NNM1"][0]["Series"].ToObject<int>();
             int Serie = (int)oRecSet.Fields.Item("Series").Value;
 
@@ -499,7 +547,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 if (value.TransferRows[i].Pallet != String.Empty && value.TransferRows[i].Pallet != null)
                 {
                     transfer.Lines.UserFields.Fields.Item("U_Tarima").Value = value.TransferRows[i].Pallet;
-                }
+              }
 
                 for (int k = 0; k < value.TransferRows[i].BatchList.Count; k++)
                 {

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SAP_API.Controllers
 {
-    [Route("api/[controller]/[action]")]
+    [Route("api/[controller]")]
     [ApiController]
     [Authorize]
     [AllowAnonymous]
@@ -16,7 +16,7 @@ namespace SAP_API.Controllers
 
         // GET api/<InvoiceController>/5
         [HttpGet("{DocEntry}")]
-        public IActionResult GetInvoice(string DocEntry)
+        public IActionResult get(string DocEntry)
         {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
@@ -48,7 +48,7 @@ namespace SAP_API.Controllers
 
             return Ok(invoice);
         }
-        [HttpGet("")]
+        [HttpGet()]
         public IActionResult GetInvoices()
         {
 
@@ -114,6 +114,9 @@ T0.""CardCode"",
 T0.""DocCur"",
 T0.""DocRate"",
 T0.""CardName"",
+T0.""DocDate"",
+T0.""DocDueDate"",
+T0.""LicTradNum"",
 /*
 T1.""ItemCode"",
 T1.""Dscription"",
@@ -137,8 +140,14 @@ WHERE T2.""U_IL_Zone""='{Zone}' AND T0.""DocStatus"" ='O'");
             return Ok(invoice);
         }
        
-        [HttpGet]
-        public IActionResult GetInvoicesByZoneAndDate([FromQuery]string Zone, [FromQuery] string InitialDate, [FromQuery] string FinalDate)
+        public class PostZoneAndDate
+        {
+            public string Zone { get; set; }  
+                public string InitialDate { get; set; }  
+                public string FinalDate { get; set; }
+        }
+        [HttpPost("GetInvoicesByZone")]
+        public IActionResult GetInvoicesByZoneAndDate(PostZoneAndDate postZoneAndDate)
         {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
@@ -152,6 +161,9 @@ T0.""CardCode"",
 T0.""DocCur"",
 T0.""DocRate"",
 T0.""CardName"",
+T2.""CardFName"",
+T0.""DocDueDate"",
+T0.""LicTradNum"",
 /*
 T1.""ItemCode"",
 T1.""Dscription"",
@@ -164,9 +176,9 @@ T2.""U_IL_Zone""
 FROM OINV T0
 --INNER JOIN INV1 T1 ON T0.""DocEntry"" = T1.""DocEntry""
 INNER JOIN OCRD T2 ON T0.""CardCode"" = T2.""CardCode""
-WHERE T2.""U_IL_Zone""='{Zone}' AND T0.""DocStatus"" ='O'
-AND ""DocDate"">='{InitialDate}'
-AND ""DocDate""<='{FinalDate}'
+WHERE T2.""U_IL_Zone""='{postZoneAndDate.Zone}' AND T0.""DocStatus"" ='O'
+AND ""DocDate"">='{postZoneAndDate.InitialDate}'
+AND ""DocDate""<='{postZoneAndDate.FinalDate}'
 ");
             //2023/08/10
             if (oRecSet.RecordCount == 0)

@@ -66,8 +66,14 @@ namespace SAP_API.Middlewares
                             $"Time: {watch.Elapsed.TotalMilliseconds} ms\r\n";
                         string Sobrepasa = watch.Elapsed.TotalMilliseconds > 300000 ? "Sobrepasa: True" : "Sobrepasa: False";
                         Consola += Sobrepasa;
-                        Console.WriteLine(Consola);
+                        if (context.Request.Path.ToString().Contains("impresion"))
+                        {
 
+                        }
+                        else
+                        {
+                            Console.WriteLine(Consola);
+                        }
                         responseBodyStream.Seek(0, SeekOrigin.Begin);
 
                         await responseBodyStream.CopyToAsync(originalResponseBody);
