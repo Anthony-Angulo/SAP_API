@@ -32,7 +32,7 @@ namespace SAP_API.Models
             oCompany.LicenseServer = "192.168.0.92:40000";
             oCompany.language = SAPbobsCOM.BoSuppLangs.ln_Spanish;
         }
-
+        
         static JToken WalkNode(JToken node)
         {
             if (node.Type == JTokenType.Object)

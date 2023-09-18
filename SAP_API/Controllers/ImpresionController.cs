@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DocumentFormat.OpenXml.Bibliography;
 using LPS;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -89,7 +90,6 @@ namespace SAP_API.Controllers
         public async Task<FileContentResult> GetOrderCotizacion(string cotId)
         {
 
-            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             List<MemoryStream> pdfList = new List<MemoryStream>();
             PdfDocument outputDocument = new PdfDocument();
@@ -118,6 +118,171 @@ namespace SAP_API.Controllers
             GC.WaitForPendingFinalizers();
             return File(bytes, "application/pdf");
         }
+        [HttpGet("GetRoutePdf")]
+        public async Task<FileContentResult> GetRoutePdf()
+        {
+
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            List<MemoryStream> pdfList = new List<MemoryStream>();
+            PdfDocument outputDocument = new PdfDocument();
+            outputDocument.Info.Title = "";
+
+            pdfList.Add(GetRoutePdfDocument(1));
+
+            for (int i = 0; i < pdfList.Count; i++)
+            {
+                PdfDocument inputDocument = PdfReader.Open(pdfList[i], PdfDocumentOpenMode.Import);
+
+                int count = inputDocument.PageCount;
+                for (int idx = 0; idx < count; idx++)
+                {
+                    PdfPage page = inputDocument.Pages[idx];
+                    outputDocument.AddPage(page);
+                }
+
+                outputDocument.Info.Title += inputDocument.Info.Title + ",";
+            }
+
+            MemoryStream ms = new MemoryStream();
+            outputDocument.Save(ms, false);
+            var bytes = ms.ToArray();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return File(bytes, "application/pdf");
+        }
+
+        private MemoryStream GetRoutePdfDocument(int DocEntry)
+        {
+           
+
+            MemoryStream ms = new MemoryStream();
+            Section section;
+            Paragraph paragraph;
+            Table table;
+            Row row;
+            MigraDoc.DocumentObjectModel.Tables.Column column;
+            Text text;
+            Image image;
+            Style style;
+            Document document = new Document();
+            document.Info.Title = "Ruta Cobranza";
+            document.DefaultPageSetup.LeftMargin = MigraDoc.DocumentObjectModel.Unit.FromCentimeter(.9);
+            document.DefaultPageSetup.RightMargin = MigraDoc.DocumentObjectModel.Unit.FromCentimeter(.9);
+
+            style = document.Styles["Normal"];
+            style.Font.Name = "Verdana";
+            style = document.Styles[StyleNames.Header];
+            style.ParagraphFormat.AddTabStop("8cm", TabAlignment.Right);
+            style = document.Styles[StyleNames.Footer];
+            style.ParagraphFormat.AddTabStop("8cm", TabAlignment.Center);
+            style = document.Styles.AddStyle("Table", "Normal");
+            style.Font.Name = "Verdana";
+            style.Font.Size = 10;
+
+            section = document.AddSection();
+
+            table = section.AddTable();
+            table.TopPadding = "-1.5cm";
+            column = table.AddColumn("2.5cm");
+            column.Format.Alignment = ParagraphAlignment.Center;
+            column = table.AddColumn("2.5cm");
+            column.Format.Alignment = ParagraphAlignment.Right;
+            column = table.AddColumn("2.5cm");
+            column.Format.Alignment = ParagraphAlignment.Right;
+            column = table.AddColumn("2cm");
+            column.Format.Alignment = ParagraphAlignment.Right;
+            column = table.AddColumn("2.5cm");
+            column.Format.Alignment = ParagraphAlignment.Right;
+            column = table.AddColumn("3.5cm");
+            column.Format.Alignment = ParagraphAlignment.Right;
+            column = table.AddColumn("2.3cm");
+            column.Format.Alignment = ParagraphAlignment.Right;
+            column = table.AddColumn("2.3cm");
+            column.Format.Alignment = ParagraphAlignment.Right;
+
+            row = table.AddRow();
+            row.HeadingFormat = true;
+            row.Format.Alignment = ParagraphAlignment.Center;
+            row.Format.Font.Bold = true;
+            row.Cells[0].AddParagraph("Codigo Cliente");
+            row.Cells[0].Format.Font.Bold = true;
+            row.Cells[0].Format.Font.Underline= Underline.Single;
+
+            row.Cells[0].Format.Alignment = ParagraphAlignment.Left;
+            row.Cells[0].VerticalAlignment = VerticalAlignment.Center;
+            row.Cells[0].MergeDown = 1;
+            row.Cells[1].AddParagraph("Nombre Fantasia");
+            row.Cells[1].Format.Font.Underline = Underline.Single;
+            row.Cells[1].Format.Alignment = ParagraphAlignment.Left;
+            row.Cells[1].MergeRight = 2;
+
+
+            row.Cells[4].AddParagraph("RFC");
+            row.Cells[4].Format.Font.Underline = Underline.Single;
+            row.Cells[4].Format.Alignment = ParagraphAlignment.Left;
+            row.Cells[4].VerticalAlignment = VerticalAlignment.Top;
+          
+            row = table.AddRow();
+            row.Cells[1].AddParagraph("No. de Factura");
+            row.Cells[1].Format.Alignment = ParagraphAlignment.Left;
+            row.Cells[1].VerticalAlignment = VerticalAlignment.Bottom;
+            row.Cells[2].AddParagraph("Emision");
+            row.Cells[2].Format.Alignment = ParagraphAlignment.Left;
+            row.Cells[2].VerticalAlignment = VerticalAlignment.Bottom;
+            row.Cells[3].AddParagraph("Vencto.");
+            row.Cells[3].Format.Alignment = ParagraphAlignment.Left;
+            row.Cells[3].VerticalAlignment = VerticalAlignment.Bottom;
+            row.Cells[4].AddParagraph("Moneda");
+            row.Cells[4].Format.Alignment = ParagraphAlignment.Left;
+            row.Cells[4].VerticalAlignment = VerticalAlignment.Bottom;
+            row.Cells[5].AddParagraph("Valor Original");
+            row.Cells[5].Format.Alignment = ParagraphAlignment.Left;
+            row.Cells[5].VerticalAlignment = VerticalAlignment.Bottom;
+            row.Cells[6].AddParagraph("Total Pesos");
+            row.Cells[6].Format.Alignment = ParagraphAlignment.Left;
+            row.Cells[6].VerticalAlignment = VerticalAlignment.Bottom;
+            row.Cells[7].AddParagraph("Total Dlls");
+            row.Cells[7].Format.Alignment = ParagraphAlignment.Left;
+            row.Cells[7].VerticalAlignment = VerticalAlignment.Bottom;
+            row.BottomPadding = ".2cm";
+            row = table.AddRow();
+            row.Borders.Width = 0.2;
+            row.TopPadding = "-1.0cm";
+            row.Borders.Color = Colors.Black;
+
+            row = table.AddRow();
+            row.Borders.Width = 0.2;
+            row.TopPadding = "-1.0cm";
+            row.Borders.Color = Colors.Black;
+            document.UseCmykColor = true;
+            const bool unicode = false;
+            PdfDocumentRenderer pdfRenderer = new PdfDocumentRenderer(unicode); try
+            {
+
+            pdfRenderer.Document = document;
+            pdfRenderer.RenderDocument();
+            ms = new MemoryStream();
+            pdfRenderer.PdfDocument.Info.Title = "Prueba de Ruta";
+            pdfRenderer.PdfDocument.Save(ms, false);
+                return ms;
+
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            return ms;
+            //var bytes = ms.ToArray();
+            //GC.Collect();
+            //GC.WaitForPendingFinalizers();
+            //return File(bytes, "application/pdf");
+            //order = null;
+            //oRecSet = null;
+            //DocCur = null;
+            //return File(new byte[] { }, "application/pdf");
+        }
+
         private MemoryStream GetOrderPDFDocument(int DocEntry)
         {
 
@@ -558,6 +723,7 @@ namespace SAP_API.Controllers
             return ms;
             //return File(new byte[] { }, "application/pdf");
         }
+
 
         private MemoryStream GetCotizacionPdfDocument(int DocEntry)
         {

@@ -16,6 +16,8 @@ using System.IO;
 using System.Net.Mime;
 using Newtonsoft.Json;
 using SAPbobsCOM;
+using Microsoft.CodeAnalysis.CSharp;
+using DocumentFormat.OpenXml.EMMA;
 
 namespace SAP_API.Controllers
 {
@@ -436,6 +438,12 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 return BadRequest(ex);
             }
         }
+
+        public class BatchWithCode
+        {
+            public string Code { get; set; }
+            public string CodeBar { get; set; }
+        }
         /// <summary>
         /// Add a Transfer Document Linked to a Order Document.
         /// </summary>
@@ -452,6 +460,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
         [ProducesResponseType(typeof(string), StatusCodes.Status409Conflict)]
         //[Authorize]
         [HttpPost("SAP")]
+        [AllowAnonymous]
         public async Task<IActionResult> InventoryTransferPost([FromBody] Transfer value)
         {
 
@@ -481,56 +490,71 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
             {
                 return BadRequest("Error En Sucursal.");
             }
-            /*if (value.TransferRows.Exists(x => x.BatchList.Exists(x => x.Code == "SI")))
+
+            try
             {
-            SAPbobsCOM.CompanyService oCS = (SAPbobsCOM.CompanyService)context.oCompany.GetCompanyService();
-            SAPbobsCOM.InventoryPostingsService oICS = (InventoryPostingsService)oCS.GetBusinessService(SAPbobsCOM.ServiceTypes.InventoryPostingsService);
-            SAPbobsCOM.InventoryPosting oIC ;
-            oIC = (InventoryPosting)oICS.GetDataInterface(SAPbobsCOM.InventoryPostingsServiceDataInterfaces.ipsInventoryPosting);
-            DateTime dt = DateTime.Now;
-            oIC.CountDate = DateTime.Now;
-            
-            foreach (var item in value.TransferRows)
-            {
-                if (item.BatchList.Exists(x => x.Code == "SI"))
+
+                SAPbobsCOM.CompanyService oCS = (SAPbobsCOM.CompanyService)context.oCompany.GetCompanyService();
+
+                if (value.TransferRows.Exists(x => x.BatchList.Exists(x => x.Code == "SI" && !String.IsNullOrEmpty(x.CodeBar))))
                 {
-                    SAPbobsCOM.InventoryPostingLines oICLS = oIC.InventoryPostingLines;
-                    SAPbobsCOM.InventoryPostingLine oICL = oICLS.Add();
-                    oICL.ItemCode = item.ItemCode;
+                    List<BatchWithCode> batchWithCodes = new List<BatchWithCode>();
+                    SAPbobsCOM.InventoryPostingsService oICS = (InventoryPostingsService)oCS.GetBusinessService(SAPbobsCOM.ServiceTypes.InventoryPostingsService);
+                    SAPbobsCOM.InventoryPosting oIC;
+                    oIC = (InventoryPosting)oICS.GetDataInterface(SAPbobsCOM.InventoryPostingsServiceDataInterfaces.ipsInventoryPosting);
+                    DateTime dt = DateTime.Now;
+                    oIC.CountDate = DateTime.Now;
+                    SAPbobsCOM.Recordset Producto = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
-                    oICL.CountedQuantity = item.BatchList.Where(x => x.Code == "SI").Sum(x => x.Quantity);
-                    oICL.UoMCountedQuantity = item.BatchList.Where(x => x.Code == "SI").Sum(x => x.Quantity);
-                    oICL.UoMCode = item.UomCode;
-                    oICL.WarehouseCode = transferRequest.FromWarehouse;
-                    SAPbobsCOM.InventoryPostingBatchNumber batch = oICL.InventoryPostingBatchNumbers.Add();
-                    batch.Quantity = -item.BatchList.Where(x => x.Code == "SI").Sum(x => x.Quantity);
-                    batch.BatchNumber = "SI";
-
-                    foreach (var lote in item.BatchList)
+                    foreach (var item in value.TransferRows)
                     {
-                        batch = oICL.InventoryPostingBatchNumbers.Add();
-                        if (String.IsNullOrEmpty(lote.CodeBar)) { }
-                        else
+                        if (item.BatchList.Exists(x => x.Code == "SI" && !String.IsNullOrEmpty(x.CodeBar)))
                         {
-                            if (lote.Code == "SI")
+                            SAPbobsCOM.InventoryPostingLines oICLS = oIC.InventoryPostingLines;
+                            SAPbobsCOM.InventoryPostingLine oICL = oICLS.Add();
+                            oICL.ItemCode = item.ItemCode;
+                            oICL.WarehouseCode = transferRequest.FromWarehouse;
+                            oICL.CountDate = DateTime.Now;
+                            Producto.DoQuery($@"SELECT  * FROM OITW where ""ItemCode""='{item.ItemCode}' and ""WhsCode""='{transferRequest.FromWarehouse}'");
+                            Producto.MoveFirst();
+                            JToken products = context.XMLTOJSON(Producto.GetAsXML())["OITW"][0];
+                            oICL.CountedQuantity = double.Parse(products["OnHand"].ToString());
+                            oICL.UoMCode = item.UomCode;
+                                                        SAPbobsCOM.InventoryPostingBatchNumber batch = oICL.InventoryPostingBatchNumbers.Add();
+                            batch.Quantity = -item.BatchList.Where(x => x.Code == "SI").Sum(x => x.Quantity);
+                            batch.BatchNumber = "SI";
+                            foreach (var lote in item.BatchList)
                             {
-                                batch.Quantity = lote.Quantity;
-                                batch.BatchNumber = lote.CodeBar;
-                            }
-                            else
-                            {
-                                batch.Quantity = lote.Quantity;
-                                batch.BatchNumber = lote.Code;
+
+                                if (String.IsNullOrEmpty(lote.CodeBar)) { }
+                                else
+                                {
+                                    if (lote.Code == "SI")
+                                    {
+                                        batch = oICL.InventoryPostingBatchNumbers.Add();
+                                        batch.Quantity = lote.Quantity;
+                                        Console.WriteLine("Quantity:" + lote.Quantity);
+
+                                        batch.BatchNumber = lote.CodeBar.Length > 36 ? lote.CodeBar.Substring(lote.CodeBar.Length - 36) : lote.CodeBar;
+                                        batchWithCodes.Add(new BatchWithCode{Code = batch.BatchNumber,CodeBar = lote.CodeBar});
+                                    }
+                                }
                             }
                         }
                     }
-                }
-            }
-                SAPbobsCOM.InventoryPostingParams oICP = oICS.Add(oIC);
+                    SAPbobsCOM.InventoryPostingParams oICP = oICS.Add(oIC);
+                    foreach (var item in batchWithCodes)
+                    {
+                        ActualizarBatch(context, oCS,item);
+                    }
 
-            }*/
-            
-            //int Serie = context.XMLTOJSON(oRecSet.GetAsXML())["NNM1"][0]["Series"].ToObject<int>();
+                }
+                
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Hubo un error al hacer el movimiento entre lotes");
+            }
             int Serie = (int)oRecSet.Fields.Item("Series").Value;
 
             transfer.DocDate = DateTime.Now;
@@ -551,10 +575,25 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
 
                 for (int k = 0; k < value.TransferRows[i].BatchList.Count; k++)
                 {
+                    if (String.IsNullOrEmpty(value.TransferRows[i].BatchList[k].CodeBar))
+                    {
 
-                    transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].Code;
-                    transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList[k].Quantity;
+                        transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].Code;
+                        transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList[k].Quantity;
+                        transfer.Lines.BatchNumbers.Add();
+                    }
+                    else
+                    {
+                        if (value.TransferRows[i].BatchList[k].Code == "SI")
+                    transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].CodeBar.Length>36?value.TransferRows[i].BatchList[k].CodeBar.Substring(value.TransferRows[i].BatchList[k].CodeBar.Length - 36) :value.TransferRows[i].BatchList[k].CodeBar;
+                        else
+                            transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].Code;
+
+                        transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList[k].Quantity;
                     transfer.Lines.BatchNumbers.Add();
+
+                    }
+                    
                 }
 
                 transfer.Lines.Add();
@@ -627,6 +666,34 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
 
             return Ok(newRequest);
         }
+
+        [NonAction]
+        private static void ActualizarBatch(SAPContext context, CompanyService oCS,BatchWithCode batch)
+        {
+            SAPbobsCOM.CompanyService oCompanyService;
+            SAPbobsCOM.BatchNumberDetailsService oBatchNumbersService;
+            oBatchNumbersService = (BatchNumberDetailsService)oCS.GetBusinessService(SAPbobsCOM.ServiceTypes.BatchNumberDetailsService);
+            SAPbobsCOM.BatchNumberDetailParams oBatchNumberDetailParams;
+            oBatchNumberDetailParams = (BatchNumberDetailParams)oBatchNumbersService.GetDataInterface(SAPbobsCOM.BatchNumberDetailsServiceDataInterfaces.bndsBatchNumberDetailParams);
+            try
+            {
+                SAPbobsCOM.Recordset Producto = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+                Producto.DoQuery($@"SELECT ""AbsEntry"" FROM OBTN Where ""DistNumber""='{batch.Code}'");
+                Producto.MoveFirst();
+                JToken lote = context.XMLTOJSON(Producto.GetAsXML())["OBTN"][0];
+                oBatchNumberDetailParams.DocEntry = int.Parse(lote["AbsEntry"].ToString());
+                SAPbobsCOM.BatchNumberDetail oBatchNumberDetail;
+                oBatchNumberDetail = oBatchNumbersService.Get(oBatchNumberDetailParams);
+                oBatchNumberDetail.UserFields.Item("U_IL_CodBar").Value = batch.CodeBar;
+                oBatchNumbersService.Update(oBatchNumberDetail);
+           
+            }
+            catch (Exception e)
+            {            
+            }     
+
+        }
+
         [NonAction]
             public void sendMail(Transfer transferPOST,SAPbobsCOM.StockTransfer transferencia,SAPbobsCOM.StockTransfer transferrequest)
         {

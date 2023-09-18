@@ -14,7 +14,7 @@ namespace SAP_API.Controllers
     [Authorize]
     public class ProductsController : ControllerBase
     {
-
+        [AllowAnonymous]
         // GET: api/Products/5
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(string id)
@@ -1741,6 +1741,7 @@ header.""UgpEntry"",
 
         // GET: api/Products/CRM/5
         [HttpGet("CRM/{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetCRM(string id)
         {
 
@@ -1749,9 +1750,11 @@ header.""UgpEntry"",
             oRecSet.DoQuery(@"
                 Select 
                     ""ItemName"", 
-""UgpEntry"",
+                    ""UgpEntry"",
                     ""ItemCode"", 
                     ""ItmsGrpCod"",
+                    ""ManBtchNum"",
+                    ""U_IL_TipPes"",
                     RTRIM(RTRIM(""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm"",
                     ""SUoMEntry""
                 From OITM where ""ItemCode"" = '" + id + "'");
