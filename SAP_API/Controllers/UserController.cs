@@ -13,28 +13,31 @@ using SAP_API.Models;
 using static SAP_API.Controllers.AccountController;
 using static SAP_API.Models.Permission;
 
-namespace SAP_API.Controllers {
+namespace SAP_API.Controllers
+{
 
     //[Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class UserController : ControllerBase {
+    public class UserController : ControllerBase
+    {
 
         // Atributtes
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
-
         // Constructor
         public UserController(ApplicationDbContext context,
                               UserManager<User> userManager,
-                              RoleManager<IdentityRole> roleManager) {
+                              RoleManager<IdentityRole> roleManager)
+        {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
         }
 
-        class UserOutput {
+        class UserOutput
+        {
             public string Id { get; set; }
             public string LastName { get; set; }
             public string Name { get; set; }
@@ -50,9 +53,11 @@ namespace SAP_API.Controllers {
         // GET: api/User
         [ProducesResponseType(typeof(UserOutput[]), StatusCodes.Status200OK)]
         [HttpGet]
-        public async Task<IActionResult> Get() {
+        public async Task<IActionResult> Get()
+        {
             List<UserOutput> output = _context.Users.Select(user =>
-                new UserOutput {
+                new UserOutput
+                {
                     Id = user.Id,
                     Email = user.Email,
                     Name = user.Name,
@@ -64,7 +69,8 @@ namespace SAP_API.Controllers {
             return Ok(output);
         }
 
-       public class UserDetailOutput {
+        public class UserDetailOutput
+        {
             public string Id { get; set; }
             public string Email { get; set; }
             public string Name { get; set; }
@@ -88,7 +94,8 @@ namespace SAP_API.Controllers {
         [ProducesResponseType(typeof(UserDetailOutput), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(string id) {
+        public async Task<IActionResult> Get(string id)
+        {
 
             // TODO: Change This.
             var user1 = _context.Users.Where(User => User.Id == id).Select(User => (new { Department = User.Department.Name, Warehouse = User.Warehouse.WhsName }));
@@ -96,7 +103,8 @@ namespace SAP_API.Controllers {
 
             User user = await _userManager.FindByIdAsync(id);
 
-            if (user == null) {
+            if (user == null)
+            {
                 return NoContent();
             }
 
@@ -104,7 +112,8 @@ namespace SAP_API.Controllers {
 
             List<PermissionsOutput> RolePermissions = new List<PermissionsOutput>();
 
-            if (userRoleNames.Count != 0) {
+            if (userRoleNames.Count != 0)
+            {
                 IQueryable<IdentityRole> userRoles = _roleManager.Roles.Where(x => userRoleNames.Contains(x.Name));
 
                 IList<Claim> roleClaims = await _roleManager.GetClaimsAsync(userRoles.FirstOrDefault());
@@ -116,12 +125,14 @@ namespace SAP_API.Controllers {
 
             IList<Claim> userClaims = await _userManager.GetClaimsAsync(user);
             List<PermissionsOutput> PermissionsExtra = new List<PermissionsOutput>();
-            if (userClaims.Count != 0) {
+            if (userClaims.Count != 0)
+            {
                 IEnumerable<string> PermissionsExtraClaims = userClaims.Where(x => x.Type == CustomClaimTypes.Permission).Select(x => x.Value);
                 PermissionsExtra = Permission.Get(PermissionsExtraClaims.ToList());
             }
 
-            UserDetailOutput result = new UserDetailOutput {
+            UserDetailOutput result = new UserDetailOutput
+            {
                 Id = user.Id,
                 Email = user.Email,
                 Name = user.Name,
@@ -151,25 +162,30 @@ namespace SAP_API.Controllers {
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpPut("{id}")]
-        public async Task<IActionResult> Put(string id, [FromBody] EditDto model) {
+        public async Task<IActionResult> Put(string id, [FromBody] EditDto model)
+        {
 
             User user = await _userManager.FindByIdAsync(id);
 
-            if (user == null) {
+            if (user == null)
+            {
                 return NoContent();
             }
 
             Warehouse warehouse = _context.Warehouses.Find(model.Warehouse);
-            if (warehouse == null) {
+            if (warehouse == null)
+            {
                 return BadRequest("No Warehouse");
             }
             Department department = _context.Departments.Find(model.Department);
-            if (department == null) {
+            if (department == null)
+            {
                 return BadRequest("No Departamento");
             }
 
             IdentityRole Role = await _roleManager.FindByIdAsync(model.Role);
-            if (Role == null) {
+            if (Role == null)
+            {
                 return BadRequest("NO ROL");
             }
 
@@ -184,17 +200,21 @@ namespace SAP_API.Controllers {
 
             var result = await _userManager.UpdateAsync(user);
 
-            if (model.Password != null) {
+            if (model.Password != null)
+            {
                 await _userManager.RemovePasswordAsync(user);
                 await _userManager.AddPasswordAsync(user, model.Password);
             }
 
-            if (result.Succeeded) {
+            if (result.Succeeded)
+            {
 
                 IList<string> userRoleNames = await _userManager.GetRolesAsync(user);
                 string ActualRole = userRoleNames.FirstOrDefault();
-                if (Role.Name != ActualRole) {
-                    if (ActualRole != null) {
+                if (Role.Name != ActualRole)
+                {
+                    if (ActualRole != null)
+                    {
                         await _userManager.RemoveFromRoleAsync(user, ActualRole);
                     }
                     await _userManager.AddToRoleAsync(user, Role.Name);
@@ -203,15 +223,19 @@ namespace SAP_API.Controllers {
                 var UserClaims = await _userManager.GetClaimsAsync(user);
                 var Permissions = UserClaims.Where(x => x.Type == CustomClaimTypes.Permission);
 
-                foreach (var permission in Permissions) {
-                    if (!model.PermissionsExtra.Exists(x => x == permission.Value)) {
+                foreach (var permission in Permissions)
+                {
+                    if (!model.PermissionsExtra.Exists(x => x == permission.Value))
+                    {
                         await _userManager.RemoveClaimAsync(user, permission);
                     }
                 }
 
                 var PermissionList = Permissions.ToList();
-                foreach (var permission in model.PermissionsExtra) {
-                    if (!PermissionList.Exists(x => x.Value == permission)) {
+                foreach (var permission in model.PermissionsExtra)
+                {
+                    if (!PermissionList.Exists(x => x.Value == permission))
+                    {
                         await _userManager.AddClaimAsync(user, new Claim(CustomClaimTypes.Permission, permission));
                     }
                 }
@@ -220,7 +244,8 @@ namespace SAP_API.Controllers {
             }
 
             StringBuilder stringBuilder = new StringBuilder();
-            foreach (IdentityError m in result.Errors.ToList()) {
+            foreach (IdentityError m in result.Errors.ToList())
+            {
                 stringBuilder.AppendFormat("Codigo: {0} Descripcion: {1}\n", m.Code, m.Description);
             }
             return BadRequest(stringBuilder.ToString());

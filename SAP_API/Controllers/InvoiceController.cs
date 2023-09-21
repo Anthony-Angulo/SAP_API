@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
-using System.Threading.Tasks;
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace SAP_API.Controllers
@@ -94,7 +93,7 @@ namespace SAP_API.Controllers
                 // Handle no Existing Invoice
                 return NotFound();
             }
-           var invoice = context.FixedXMLTOJSON(oRecSet.GetFixedXML(SAPbobsCOM.RecordsetXMLModeEnum.rxmData));
+            var invoice = context.FixedXMLTOJSON(oRecSet.GetFixedXML(SAPbobsCOM.RecordsetXMLModeEnum.rxmData));
 
             return Ok(invoice);
         }
@@ -139,12 +138,12 @@ WHERE T2.""U_IL_Zone""='{Zone}' AND T0.""DocStatus"" ='O'");
 
             return Ok(invoice);
         }
-       
+
         public class PostZoneAndDate
         {
-            public string Zone { get; set; }  
-                public string InitialDate { get; set; }  
-                public string FinalDate { get; set; }
+            public string Zone { get; set; }
+            public string InitialDate { get; set; }
+            public string FinalDate { get; set; }
         }
         [HttpPost("GetInvoicesByZone")]
         public IActionResult GetInvoicesByZoneAndDate(PostZoneAndDate postZoneAndDate)
@@ -215,7 +214,7 @@ AND ""DocDate""<='{postZoneAndDate.FinalDate}'
                     From OINV Invoice
                     JOIN OCRD Client ON Client.""CardCode""= Invoice.""CardCode""
                     Where Invoice.""DocNum""|| Invoice.""CardCode"" || to_char(Invoice.""DocDate"", 'YYYYMMDD') = '" + Codebar + "'" +
-                    @"and Invoice.""CANCELED""='N'");
+                          @"and Invoice.""CANCELED""='N'");
             if (oRecSet.RecordCount == 0)
             {
                 // Handle no Existing Invoice

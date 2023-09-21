@@ -1,33 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using ClosedXML.Excel;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
-using System.Net.Mail;
-using System.Net;
-using Microsoft.Extensions.Configuration;
-using ClosedXML.Excel;
-using System.IO;
-using System.Net.Mime;
-using Newtonsoft.Json;
 using SAPbobsCOM;
-using Microsoft.CodeAnalysis.CSharp;
-using DocumentFormat.OpenXml.EMMA;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Mail;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class InventoryTransferController : ControllerBase {
+    public class InventoryTransferController : ControllerBase
+    {
         private readonly IConfiguration _configuration;
 
-        public InventoryTransferController( IConfiguration configuration)
+        public InventoryTransferController(IConfiguration configuration)
         {
             _configuration = configuration;
 
@@ -41,34 +38,48 @@ namespace SAP_API.Controllers
         // POST: api/InventoryTransfer/Search
         [ProducesResponseType(typeof(TransferSearchResponse), StatusCodes.Status200OK)]
         [HttpPost("Search")]
-        public async Task<IActionResult> GetSearch([FromBody] SearchRequest request) {
+        public async Task<IActionResult> GetSearch([FromBody] SearchRequest request)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
             List<string> where = new List<string>();
-            if (request.columns[0].search.value != String.Empty) {
+            if (request.columns[0].search.value != String.Empty)
+            {
                 where.Add($"LOWER(\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
             }
-            if (request.columns[1].search.value != String.Empty) {
+            if (request.columns[1].search.value != String.Empty)
+            {
                 where.Add($"LOWER(\"Filler\") Like LOWER('%{request.columns[1].search.value}%')");
             }
-            if (request.columns[2].search.value != String.Empty) {
+            if (request.columns[2].search.value != String.Empty)
+            {
                 where.Add($"LOWER(\"ToWhsCode\") Like LOWER('%{request.columns[2].search.value}%')");
             }
-            if (request.columns[3].search.value != String.Empty) {
+            if (request.columns[3].search.value != String.Empty)
+            {
                 where.Add($"to_char(to_date(SUBSTRING(\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[3].search.value}%'");
             }
 
             string orderby = "";
-            if (request.order[0].column == 0) {
+            if (request.order[0].column == 0)
+            {
                 orderby = $" ORDER BY \"DocNum\" {request.order[0].dir}";
-            } else if (request.order[0].column == 1) {
+            }
+            else if (request.order[0].column == 1)
+            {
                 orderby = $" ORDER BY \"Filler\" {request.order[0].dir}";
-            } else if (request.order[0].column == 2) {
+            }
+            else if (request.order[0].column == 2)
+            {
                 orderby = $" ORDER BY \"ToWhsCode\" {request.order[0].dir}";
-            } else if (request.order[0].column == 3) {
+            }
+            else if (request.order[0].column == 3)
+            {
                 orderby = $" ORDER BY \"DocDate\" {request.order[0].dir}";
-            } else {
+            }
+            else
+            {
                 orderby = $" ORDER BY \"DocNum\" DESC";
             }
 
@@ -83,7 +94,8 @@ namespace SAP_API.Controllers
                     ""Filler""
                 From OWTR ";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 query += "Where " + whereClause;
             }
 
@@ -97,14 +109,16 @@ namespace SAP_API.Controllers
 
             string queryCount = @"Select Count (*) as COUNT From OWTR ";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 queryCount += "Where " + whereClause;
             }
             oRecSet.DoQuery(queryCount);
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OWTR"][0]["COUNT"].ToObject<int>();
 
-            TransferSearchResponse respose = new TransferSearchResponse {
+            TransferSearchResponse respose = new TransferSearchResponse
+            {
                 data = orders,
                 draw = request.Draw,
                 recordsFiltered = COUNT,
@@ -125,10 +139,11 @@ namespace SAP_API.Controllers
         [ProducesResponseType(typeof(TransferDetail), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("WMSDetail/{DocEntry}")]
-        public async Task<IActionResult> GetWMSDetail(uint DocEntry) {
+        public async Task<IActionResult> GetWMSDetail(uint DocEntry)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
 
             oRecSet.DoQuery($@"
                 Select
@@ -143,7 +158,8 @@ namespace SAP_API.Controllers
                 From OWTR
                 WHERE ""DocEntry"" = '{DocEntry}';");
 
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return NoContent();
             }
 
@@ -163,7 +179,7 @@ namespace SAP_API.Controllers
             temp["TransferRows"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTR1"];
 
             TransferDetail output = temp.ToObject<TransferDetail>();
-            
+
             //Force Garbage Collector. Recommendation by InterLatin Dude. SDK Problem with memory.
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -173,10 +189,11 @@ namespace SAP_API.Controllers
 
         // GET: api/InventoryTransfer/list
         [HttpGet("list/{date}")]
-        public async Task<IActionResult> GetList(string date) {
-            
+        public async Task<IActionResult> GetList(string date)
+        {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
 
             oRecSet.DoQuery(@"
                 Select
@@ -188,7 +205,8 @@ namespace SAP_API.Controllers
                 From OWTR Where ""DocDate"" = '" + date + "'");
 
             int rc = oRecSet.RecordCount;
-            if (rc == 0) {
+            if (rc == 0)
+            {
                 return NotFound();
             }
 
@@ -202,20 +220,20 @@ namespace SAP_API.Controllers
             try
             {
                 SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+                Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
 
-            oRecSet.DoQuery($@"
+                oRecSet.DoQuery($@"
                    Select
                    top 1  ""UomEntry"" 
                    from ""WTR1""
                    where ""ItemCode"" = '{ItemCode}'
                    order by ""DocDate"" desc");
-            
-            int rc = oRecSet.RecordCount;
-            if (rc == 0)
-            {
-                return NotFound();
-            }
+
+                int rc = oRecSet.RecordCount;
+                if (rc == 0)
+                {
+                    return NotFound();
+                }
 
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
@@ -235,15 +253,17 @@ namespace SAP_API.Controllers
 
         // GET: api/InventoryTransfer/5
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(int id) {
-            
+        public async Task<IActionResult> Get(int id)
+        {
+
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.StockTransfer transfer = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oStockTransfer);
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            StockTransfer transfer = (StockTransfer)context.oCompany.GetBusinessObject(BoObjectTypes.oStockTransfer);
+            Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
 
             oRecSet.DoQuery("Select * From OWTR WHERE \"DocNum\" = " + id);
             int rc = oRecSet.RecordCount;
-            if (rc == 0) {
+            if (rc == 0)
+            {
                 return NotFound();
             }
             transfer.Browser.Recordset = oRecSet;
@@ -264,7 +284,7 @@ namespace SAP_API.Controllers
         {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
 
 
             string p = $@"
@@ -382,15 +402,15 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 oRecSet.DoQuery(p);
                 if (oRecSet.RecordCount != 0)
                 {
-                    var invoice = context.FixedXMLTOJSON(oRecSet.GetFixedXML(SAPbobsCOM.RecordsetXMLModeEnum.rxmData));
-                    List<JObject> Lista=JsonConvert.DeserializeObject<List<JObject>>(JsonConvert.SerializeObject(invoice));
-                    JObject pe= (JObject)Lista[0];
-                     String value= (string)pe.GetValue("Articulo");
+                    var invoice = context.FixedXMLTOJSON(oRecSet.GetFixedXML(RecordsetXMLModeEnum.rxmData));
+                    List<JObject> Lista = JsonConvert.DeserializeObject<List<JObject>>(JsonConvert.SerializeObject(invoice));
+                    JObject pe = (JObject)Lista[0];
+                    String value = (string)pe.GetValue("Articulo");
                     var people = from pre in Lista
 
                                  select new
                                  {
-                                    Articulo=pre.GetValue("Artículo").ToString(),
+                                     Articulo = pre.GetValue("Artículo").ToString(),
                                      Producto = pre.GetValue("ItemName").ToString(),
                                      AlmacenCodigo = pre.GetValue("WhsCode").ToString(),
                                      V_ACUMULADA = pre.GetValue("V_ACUMULADA").ToString(),
@@ -399,32 +419,32 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                                      Prom_Mie = pre.GetValue("Prom_Mie").ToString(),
                                      Prom_Jue = pre.GetValue("Prom_Jue").ToString(),
                                      Prom_Vie = pre.GetValue("Prom_Vie").ToString(),
-                                     Prom_Sab= pre.GetValue("Prom_Sab").ToString(),
+                                     Prom_Sab = pre.GetValue("Prom_Sab").ToString(),
                                      Prom_Dom = pre.GetValue("Prom_Dom").ToString(),
                                      OnHand = pre.GetValue("OnHand").ToString(),
                                      Unidad_Medida_Base = pre.GetValue("Col13").ToString(),
                                      UNIDADESxCaja = pre.GetValue("Col14").ToString(),
-                                     STOCKxCaja= pre.GetValue("Col15").ToString(),
+                                     STOCKxCaja = pre.GetValue("Col15").ToString(),
                                      VENTA_PROMEDIO_HISTORICA = pre.GetValue("Col16").ToString(),
                                      PEDIDOSUGERIDO = pre.GetValue("Col17").ToString(),
-                                     VTA_PROM_SEM= pre.GetValue("VTA-PROM-SEM").ToString(),
-                                     DIAS_INV= pre.GetValue("DIAS-INV").ToString(),
+                                     VTA_PROM_SEM = pre.GetValue("VTA-PROM-SEM").ToString(),
+                                     DIAS_INV = pre.GetValue("DIAS-INV").ToString(),
 
-                                
+
                                  };
 
-                     var wb = new XLWorkbook();
-                     var ws = wb.Worksheets.Add("Inserting Tables");
+                    var wb = new XLWorkbook();
+                    var ws = wb.Worksheets.Add("Inserting Tables");
 
-                     var tableWithPeople = ws.Cell(1, 1).InsertTable(people.AsEnumerable());
+                    var tableWithPeople = ws.Cell(1, 1).InsertTable(people.AsEnumerable());
 
-                      using (var stream = new System.IO.MemoryStream())
+                    using (var stream = new System.IO.MemoryStream())
                     {
                         wb.SaveAs(stream);
                         var content = stream.ToArray();
                         return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Sugerido.xlsx");
                     }
-            }
+                }
                 else
                 {
                     return NotFound();
@@ -465,9 +485,9 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
         {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.StockTransfer transferRequest = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
-            SAPbobsCOM.StockTransfer transfer = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oStockTransfer);
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            StockTransfer transferRequest = (StockTransfer)context.oCompany.GetBusinessObject(BoObjectTypes.oInventoryTransferRequest);
+            StockTransfer transfer = (StockTransfer)context.oCompany.GetBusinessObject(BoObjectTypes.oStockTransfer);
+            Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
 
             if (!transferRequest.GetByKey(value.DocEntry))
             {
@@ -491,70 +511,23 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 return BadRequest("Error En Sucursal.");
             }
 
+
             try
             {
-
-                SAPbobsCOM.CompanyService oCS = (SAPbobsCOM.CompanyService)context.oCompany.GetCompanyService();
-
-                if (value.TransferRows.Exists(x => x.BatchList.Exists(x => x.Code == "SI" && !String.IsNullOrEmpty(x.CodeBar))))
+                if (IsAlmacenMayoreo(context, transferRequest.FromWarehouse))
                 {
-                    List<BatchWithCode> batchWithCodes = new List<BatchWithCode>();
-                    SAPbobsCOM.InventoryPostingsService oICS = (InventoryPostingsService)oCS.GetBusinessService(SAPbobsCOM.ServiceTypes.InventoryPostingsService);
-                    SAPbobsCOM.InventoryPosting oIC;
-                    oIC = (InventoryPosting)oICS.GetDataInterface(SAPbobsCOM.InventoryPostingsServiceDataInterfaces.ipsInventoryPosting);
-                    DateTime dt = DateTime.Now;
-                    oIC.CountDate = DateTime.Now;
-                    SAPbobsCOM.Recordset Producto = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
-                    foreach (var item in value.TransferRows)
-                    {
-                        if (item.BatchList.Exists(x => x.Code == "SI" && !String.IsNullOrEmpty(x.CodeBar)))
-                        {
-                            SAPbobsCOM.InventoryPostingLines oICLS = oIC.InventoryPostingLines;
-                            SAPbobsCOM.InventoryPostingLine oICL = oICLS.Add();
-                            oICL.ItemCode = item.ItemCode;
-                            oICL.WarehouseCode = transferRequest.FromWarehouse;
-                            oICL.CountDate = DateTime.Now;
-                            Producto.DoQuery($@"SELECT  * FROM OITW where ""ItemCode""='{item.ItemCode}' and ""WhsCode""='{transferRequest.FromWarehouse}'");
-                            Producto.MoveFirst();
-                            JToken products = context.XMLTOJSON(Producto.GetAsXML())["OITW"][0];
-                            oICL.CountedQuantity = double.Parse(products["OnHand"].ToString());
-                            oICL.UoMCode = item.UomCode;
-                                                        SAPbobsCOM.InventoryPostingBatchNumber batch = oICL.InventoryPostingBatchNumbers.Add();
-                            batch.Quantity = -item.BatchList.Where(x => x.Code == "SI").Sum(x => x.Quantity);
-                            batch.BatchNumber = "SI";
-                            foreach (var lote in item.BatchList)
-                            {
-
-                                if (String.IsNullOrEmpty(lote.CodeBar)) { }
-                                else
-                                {
-                                    if (lote.Code == "SI")
-                                    {
-                                        batch = oICL.InventoryPostingBatchNumbers.Add();
-                                        batch.Quantity = lote.Quantity;
-                                        Console.WriteLine("Quantity:" + lote.Quantity);
-
-                                        batch.BatchNumber = lote.CodeBar.Length > 36 ? lote.CodeBar.Substring(lote.CodeBar.Length - 36) : lote.CodeBar;
-                                        batchWithCodes.Add(new BatchWithCode{Code = batch.BatchNumber,CodeBar = lote.CodeBar});
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    SAPbobsCOM.InventoryPostingParams oICP = oICS.Add(oIC);
-                    foreach (var item in batchWithCodes)
-                    {
-                        ActualizarBatch(context, oCS,item);
-                    }
+                    HacerMovimientoDeStockMayoreo(value, context, transferRequest);
+                }
+                else
+                {
 
                 }
-                
             }
             catch (Exception ex)
             {
                 return BadRequest("Hubo un error al hacer el movimiento entre lotes");
             }
+
             int Serie = (int)oRecSet.Fields.Item("Series").Value;
 
             transfer.DocDate = DateTime.Now;
@@ -566,12 +539,12 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 transfer.Lines.BaseEntry = transferRequest.DocEntry;
                 transfer.Lines.BaseLine = value.TransferRows[i].LineNum;
                 transfer.Lines.Quantity = value.TransferRows[i].Count;
-                transfer.Lines.BaseType = SAPbobsCOM.InvBaseDocTypeEnum.InventoryTransferRequest;
-                
+                transfer.Lines.BaseType = InvBaseDocTypeEnum.InventoryTransferRequest;
+
                 if (value.TransferRows[i].Pallet != String.Empty && value.TransferRows[i].Pallet != null)
                 {
                     transfer.Lines.UserFields.Fields.Item("U_Tarima").Value = value.TransferRows[i].Pallet;
-              }
+                }
 
                 for (int k = 0; k < value.TransferRows[i].BatchList.Count; k++)
                 {
@@ -585,15 +558,15 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                     else
                     {
                         if (value.TransferRows[i].BatchList[k].Code == "SI")
-                    transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].CodeBar.Length>36?value.TransferRows[i].BatchList[k].CodeBar.Substring(value.TransferRows[i].BatchList[k].CodeBar.Length - 36) :value.TransferRows[i].BatchList[k].CodeBar;
+                            transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].CodeBar.Length > 36 ? value.TransferRows[i].BatchList[k].CodeBar.Substring(value.TransferRows[i].BatchList[k].CodeBar.Length - 36) : value.TransferRows[i].BatchList[k].CodeBar;
                         else
                             transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].Code;
 
                         transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList[k].Quantity;
-                    transfer.Lines.BatchNumbers.Add();
+                        transfer.Lines.BatchNumbers.Add();
 
                     }
-                    
+
                 }
 
                 transfer.Lines.Add();
@@ -613,7 +586,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 return BadRequest(error);
             }
 
-                        sendMail(value,transfer,transferRequest);
+            sendMail(value, transfer, transferRequest);
             /*
             if (transferRequest.Lines.FromWarehouseCode != transferRequest.Lines.WarehouseCode)
             {
@@ -630,7 +603,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
             {
                 return Ok();
             }
-            SAPbobsCOM.StockTransfer newRequest = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
+            StockTransfer newRequest = (StockTransfer)context.oCompany.GetBusinessObject(BoObjectTypes.oInventoryTransferRequest);
             newRequest.FromWarehouse = transferRequest.FromWarehouse;
             newRequest.ToWarehouse = transferRequest.ToWarehouse;
             newRequest.Series = transferRequest.Series;
@@ -668,34 +641,105 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
         }
 
         [NonAction]
-        private static void ActualizarBatch(SAPContext context, CompanyService oCS,BatchWithCode batch)
+        private static void HacerMovimientoDeStockMayoreo(Transfer value, SAPContext context, StockTransfer transferRequest)
         {
-            SAPbobsCOM.CompanyService oCompanyService;
-            SAPbobsCOM.BatchNumberDetailsService oBatchNumbersService;
-            oBatchNumbersService = (BatchNumberDetailsService)oCS.GetBusinessService(SAPbobsCOM.ServiceTypes.BatchNumberDetailsService);
-            SAPbobsCOM.BatchNumberDetailParams oBatchNumberDetailParams;
-            oBatchNumberDetailParams = (BatchNumberDetailParams)oBatchNumbersService.GetDataInterface(SAPbobsCOM.BatchNumberDetailsServiceDataInterfaces.bndsBatchNumberDetailParams);
+            CompanyService oCS = (CompanyService)context.oCompany.GetCompanyService();
+
+            if (value.TransferRows.Exists(x => x.BatchList.Exists(x => x.Code == "SI" && !String.IsNullOrEmpty(x.CodeBar))))
+            {
+                List<BatchWithCode> batchWithCodes = new List<BatchWithCode>();
+                InventoryPostingsService oICS = (InventoryPostingsService)oCS.GetBusinessService(ServiceTypes.InventoryPostingsService);
+                InventoryPosting oIC;
+                oIC = (InventoryPosting)oICS.GetDataInterface(InventoryPostingsServiceDataInterfaces.ipsInventoryPosting);
+                DateTime dt = DateTime.Now;
+                oIC.CountDate = DateTime.Now;
+                Recordset Producto = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
+                oIC.Remarks = $"Basado en solicitud: {transferRequest.DocNum}";
+                foreach (var item in value.TransferRows)
+                {
+                    if (item.BatchList.Exists(x => x.Code == "SI" && !String.IsNullOrEmpty(x.CodeBar)))
+                    {
+                        InventoryPostingLines oICLS = oIC.InventoryPostingLines;
+                        InventoryPostingLine oICL = oICLS.Add();
+                        oICL.ItemCode = item.ItemCode;
+
+                        oICL.WarehouseCode = transferRequest.FromWarehouse;
+                        oICL.CountDate = DateTime.Now;
+                        Producto.DoQuery($@"SELECT  * FROM OITW where ""ItemCode""='{item.ItemCode}' and ""WhsCode""='{transferRequest.FromWarehouse}'");
+                        Producto.MoveFirst();
+                        JToken products = context.XMLTOJSON(Producto.GetAsXML())["OITW"][0];
+                        oICL.CountedQuantity = double.Parse(products["OnHand"].ToString());
+                        oICL.UoMCode = item.UomCode;
+                        InventoryPostingBatchNumber batch = oICL.InventoryPostingBatchNumbers.Add();
+                        batch.Quantity = -item.BatchList.Where(x => x.Code == "SI").Sum(x => x.Quantity);
+                        batch.BatchNumber = "SI";
+                        foreach (var lote in item.BatchList)
+                        {
+                            if (String.IsNullOrEmpty(lote.CodeBar)) { }
+                            else
+                            {
+                                if (lote.Code == "SI")
+                                {
+                                    batch = oICL.InventoryPostingBatchNumbers.Add();
+                                    batch.Quantity = lote.Quantity;
+                                    Console.WriteLine("Quantity:" + lote.Quantity);
+
+                                    batch.BatchNumber = lote.CodeBar.Length > 36 ? lote.CodeBar.Substring(lote.CodeBar.Length - 36) : lote.CodeBar;
+                                    batchWithCodes.Add(new BatchWithCode { Code = batch.BatchNumber, CodeBar = lote.CodeBar });
+                                }
+                            }
+                        }
+                    }
+                }
+                InventoryPostingParams oICP = oICS.Add(oIC);
+                foreach (var item in batchWithCodes)
+                {
+                    ActualizarBatch(context, oCS, item);
+                }
+
+            }
+        }
+
+        [NonAction]
+        private bool IsAlmacenMayoreo(SAPContext context, string fromWarehouse)
+        {
+            Recordset OrecordSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
+            OrecordSet.DoQuery($@"SELECT ""U_IL_MAYOREO"" FROM OWHS WHERE ""WhsCode""={fromWarehouse}");
+            OrecordSet.MoveFirst();
+            JToken Almacen = context.XMLTOJSON(OrecordSet.GetAsXML())["OWHS"][0];
+            bool IsMayoreo = (bool)Almacen["U_IL_MAYOREO"];
+            return true;//IsMayoreo;
+        }
+
+        [NonAction]
+        private static void ActualizarBatch(SAPContext context, CompanyService oCS, BatchWithCode batch)
+        {
+            CompanyService oCompanyService;
+            BatchNumberDetailsService oBatchNumbersService;
+            oBatchNumbersService = (BatchNumberDetailsService)oCS.GetBusinessService(ServiceTypes.BatchNumberDetailsService);
+            BatchNumberDetailParams oBatchNumberDetailParams;
+            oBatchNumberDetailParams = (BatchNumberDetailParams)oBatchNumbersService.GetDataInterface(BatchNumberDetailsServiceDataInterfaces.bndsBatchNumberDetailParams);
             try
             {
-                SAPbobsCOM.Recordset Producto = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+                Recordset Producto = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
                 Producto.DoQuery($@"SELECT ""AbsEntry"" FROM OBTN Where ""DistNumber""='{batch.Code}'");
                 Producto.MoveFirst();
                 JToken lote = context.XMLTOJSON(Producto.GetAsXML())["OBTN"][0];
                 oBatchNumberDetailParams.DocEntry = int.Parse(lote["AbsEntry"].ToString());
-                SAPbobsCOM.BatchNumberDetail oBatchNumberDetail;
+                BatchNumberDetail oBatchNumberDetail;
                 oBatchNumberDetail = oBatchNumbersService.Get(oBatchNumberDetailParams);
                 oBatchNumberDetail.UserFields.Item("U_IL_CodBar").Value = batch.CodeBar;
                 oBatchNumbersService.Update(oBatchNumberDetail);
-           
+
             }
             catch (Exception e)
-            {            
-            }     
+            {
+            }
 
         }
 
         [NonAction]
-            public void sendMail(Transfer transferPOST,SAPbobsCOM.StockTransfer transferencia,SAPbobsCOM.StockTransfer transferrequest)
+        public void sendMail(Transfer transferPOST, StockTransfer transferencia, StockTransfer transferrequest)
         {
             MailMessage message = new MailMessage(_configuration["CuentaAutorizacion"], $@"{transferrequest.ToWarehouse}-Pedidos@superchivas.com.mx")
             {
@@ -746,7 +790,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
             try
             {
                 smtpClient.Send(message);
-                return ;
+                return;
             }
             catch (Exception ex)
             {
@@ -761,9 +805,9 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
         {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.StockTransfer request = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
-            SAPbobsCOM.StockTransfer transfer = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oStockTransfer);
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            StockTransfer request = (StockTransfer)context.oCompany.GetBusinessObject(BoObjectTypes.oInventoryTransferRequest);
+            StockTransfer transfer = (StockTransfer)context.oCompany.GetBusinessObject(BoObjectTypes.oStockTransfer);
+            Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
             if (request.GetByKey(value.order))
             {
 
@@ -793,7 +837,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                     transfer.Lines.BaseEntry = request.DocEntry;
                     transfer.Lines.BaseLine = value.products[i].Line;
                     transfer.Lines.Quantity = value.products[i].Count;
-                    transfer.Lines.BaseType = SAPbobsCOM.InvBaseDocTypeEnum.InventoryTransferRequest;
+                    transfer.Lines.BaseType = InvBaseDocTypeEnum.InventoryTransferRequest;
                     transfer.Lines.UserFields.Fields.Item("U_Tarima").Value = value.products[i].Pallet;
 
                     for (int j = 0; j < value.products[i].batch.Count; j++)
@@ -832,7 +876,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                         try
                         {
 
-                            SAPbobsCOM.StockTransfer newRequest = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
+                            StockTransfer newRequest = (StockTransfer)context.oCompany.GetBusinessObject(BoObjectTypes.oInventoryTransferRequest);
 
                             newRequest.FromWarehouse = request.FromWarehouse;
                             newRequest.ToWarehouse = request.ToWarehouse;
@@ -896,7 +940,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
         {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
             String Query = $@"
              SELECT
   RIGHT(T1.""WhsCode"",2) AS ""1"",

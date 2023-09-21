@@ -6,9 +6,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace SAP_API.Models {
+namespace SAP_API.Models
+{
     // Class to Serialize User. External DB.
-    public class User : IdentityUser {
+    public class User : IdentityUser
+    {
 
         [StringLength(50)]
         public string Name { get; set; }
@@ -32,5 +34,7 @@ namespace SAP_API.Models {
         public int Serie { get; set; }
 
         public int WarehouseID { get; set; }
-        }
+
+        public DateTime LastPasswordChangedDate { get; set; }
+    }
 }

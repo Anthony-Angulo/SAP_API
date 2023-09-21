@@ -21,9 +21,9 @@ namespace SAP_API.Models
             //oCompany.CompanyDB = "CCFN_PROD";szzzzzz
             //oCompany.CompanyDB = "CCFN_CORPORATIVO";
             //oCompany.CompanyDB = "CCFN_DEV";
-            oCompany.CompanyDB = "CCFN_B1CORP";
+            //oCompany.CompanyDB = "CCFN_B1CORP";
             //oCompany.CompanyDB = "CCFN_BASECORP";
-            //oCompany.CompanyDB = "CCFN_DEV";
+            oCompany.CompanyDB = "CCFN_DEV";
 
             oCompany.UserName = "SISTEMAS04";
             oCompany.Password = "SAP1234";
@@ -32,7 +32,7 @@ namespace SAP_API.Models
             oCompany.LicenseServer = "192.168.0.92:40000";
             oCompany.language = SAPbobsCOM.BoSuppLangs.ln_Spanish;
         }
-        
+
         static JToken WalkNode(JToken node)
         {
             if (node.Type == JTokenType.Object)
