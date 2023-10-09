@@ -488,7 +488,6 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
             StockTransfer transferRequest = (StockTransfer)context.oCompany.GetBusinessObject(BoObjectTypes.oInventoryTransferRequest);
             StockTransfer transfer = (StockTransfer)context.oCompany.GetBusinessObject(BoObjectTypes.oStockTransfer);
             Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
-
             if (!transferRequest.GetByKey(value.DocEntry))
             {
                 return NoContent();
@@ -505,7 +504,6 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 From NNM1 serie1
                 JOIN NNM1 serie2 ON serie1.""SeriesName"" = serie2.""SeriesName""
                 Where serie1.""ObjectCode"" = 67 AND serie2.""Series"" = '{transferRequest.Series}';");
-
             if (oRecSet.RecordCount == 0)
             {
                 return BadRequest("Error En Sucursal.");
@@ -652,7 +650,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 InventoryPosting oIC;
                 oIC = (InventoryPosting)oICS.GetDataInterface(InventoryPostingsServiceDataInterfaces.ipsInventoryPosting);
                 DateTime dt = DateTime.Now;
-                oIC.CountDate = DateTime.Now;
+                oIC.CountDate = DateTime.Now;   
                 Recordset Producto = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
                 oIC.Remarks = $"Basado en solicitud: {transferRequest.DocNum}";
                 foreach (var item in value.TransferRows)
@@ -703,11 +701,12 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
         [NonAction]
         private bool IsAlmacenMayoreo(SAPContext context, string fromWarehouse)
         {
-            Recordset OrecordSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
-            OrecordSet.DoQuery($@"SELECT ""U_IL_MAYOREO"" FROM OWHS WHERE ""WhsCode""={fromWarehouse}");
+            /*Recordset OrecordSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
+            OrecordSet.DoQuery($@"SELECT ""U_ISMAYOREO"" FROM OWHS WHERE ""WhsCode""={fromWarehouse}");
             OrecordSet.MoveFirst();
             JToken Almacen = context.XMLTOJSON(OrecordSet.GetAsXML())["OWHS"][0];
-            bool IsMayoreo = (bool)Almacen["U_IL_MAYOREO"];
+            bool IsMayoreo = (bool)Almacen["U_ISMAYOREO"];
+            */
             return true;//IsMayoreo;
         }
 

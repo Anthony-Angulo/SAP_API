@@ -79,6 +79,8 @@ namespace SAP_API.Controllers
             public int SAPID { get; set; }
             public string Department { get; set; }
             public string Warehouse { get; set; }
+
+            public DateTime LastChangePasswordDate { get; set; }
             public string Role { get; set; }
             public List<PermissionsOutput> RolePermissions { get; set; }
             public List<PermissionsOutput> PermissionsExtra { get; set; }
@@ -139,6 +141,7 @@ namespace SAP_API.Controllers
                 LastName = user.LastName,
                 Active = user.Active,
                 SAPID = user.SAPID,
+                LastChangePasswordDate = user.LastPasswordChangedDate,
                 Department = user1.FirstOrDefault().Department,
                 Warehouse = user1.FirstOrDefault().Warehouse,
                 Role = userRoleNames.FirstOrDefault(),
@@ -198,14 +201,15 @@ namespace SAP_API.Controllers
             user.Warehouse = warehouse;
             user.Department = department;
 
-            var result = await _userManager.UpdateAsync(user);
 
             if (model.Password != null)
             {
                 await _userManager.RemovePasswordAsync(user);
                 await _userManager.AddPasswordAsync(user, model.Password);
-            }
+                user.LastPasswordChangedDate = DateTime.Now;
 
+            }
+            var result = await _userManager.UpdateAsync(user);
             if (result.Succeeded)
             {
 

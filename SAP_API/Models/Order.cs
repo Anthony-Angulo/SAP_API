@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SAP_API.Models {
-    public class SearchRequest {
+namespace SAP_API.Models
+{
+    public class SearchRequest
+    {
         public int Draw { get; set; }
         public int start { get; set; }
         public int length { get; set; }
@@ -13,7 +15,8 @@ namespace SAP_API.Models {
         public List<Order> order { get; set; }
     }
 
-    public class Column {
+    public class Column
+    {
         public string data { get; set; }
         public string name { get; set; }
         public bool searchable { get; set; }
@@ -21,20 +24,24 @@ namespace SAP_API.Models {
         public Search search { get; set; }
     }
 
-    public class Search {
+    public class Search
+    {
         public string value { get; set; }
         public string regex { get; set; }
     }
 
-    public class Order {
+    public class Order
+    {
         public int column { get; set; }
         public string dir { get; set; }
     }
 
-    public abstract class SearchDetail {
+    public abstract class SearchDetail
+    {
     }
 
-    public class OrderSearchDetail : SearchDetail {
+    public class OrderSearchDetail : SearchDetail
+    {
         public int DocEntry { get; set; }
         public int DocNum { get; set; }
         public string DocDate { get; set; }
@@ -48,7 +55,8 @@ namespace SAP_API.Models {
         public string PymntGroup { get; set; }
     }
 
-    public abstract class SearchResponse<T> where T : SearchDetail {
+    public class SearchResponse<T>
+    {
         public int draw { get; set; }
 
         public int recordsTotal { get; set; }
@@ -58,9 +66,10 @@ namespace SAP_API.Models {
         public IList<T> data { get; set; }
     }
 
-    public class OrderSearchResponse : SearchResponse<OrderSearchDetail> {}
+    public class OrderSearchResponse : SearchResponse<OrderSearchDetail> { }
 
-    public class OrderDetail {
+    public class OrderDetail
+    {
         public int DocEntry { get; set; }
         public int DocNum { get; set; }
         public string DocCur { get; set; }
@@ -84,7 +93,8 @@ namespace SAP_API.Models {
         public List<OrderDetailRow> OrderRows { set; get; }
     }
 
-    public class OrderDetailRow {
+    public class OrderDetailRow
+    {
         public string ItemCode { get; set; }
         public string Dscription { get; set; }
         public double Price { get; set; }
@@ -97,7 +107,8 @@ namespace SAP_API.Models {
         public string U_IL_PesProm { get; set; }
     }
 
-    public class CreateOrder {
+    public class CreateOrder
+    {
         public string cardcode { set; get; }
         public string currency { set; get; }
         public string comments { set; get; }
@@ -115,7 +126,8 @@ namespace SAP_API.Models {
         public string idUsuario { get; set; }
     }
 
-    public class CreateOrderRetail {
+    public class CreateOrderRetail
+    {
         public string cardcode { set; get; }
         public string currency { set; get; }
         public string address { set; get; }
@@ -125,7 +137,8 @@ namespace SAP_API.Models {
         public List<OrderRow> rows { set; get; }
     }
 
-    public class OrderRow {
+    public class OrderRow
+    {
         public double quantity { set; get; }
         public string code { set; get; }
         public int uom { set; get; }
@@ -134,19 +147,22 @@ namespace SAP_API.Models {
         public string meet { set; get; }
     }
 
-    public class UpdateOrder {
+    public class UpdateOrder
+    {
         public List<OrderRow> newProducts { set; get; }
         public List<UpdateOrderRow> ProductsChanged { set; get; }
     }
 
-    public class UpdateOrderRow {
+    public class UpdateOrderRow
+    {
         public int LineNum { set; get; }
         public double quantity { set; get; }
         public int uom { set; get; }
         public double equivalentePV { set; get; }
     }
 
-    public class OrderAuth {
+    public class OrderAuth
+    {
         public int ID { get; set; }
 
         [StringLength(15)]
@@ -187,7 +203,8 @@ namespace SAP_API.Models {
         public DateTime DateCreated { get; set; }
     }
 
-    public class OrderAuthRow {
+    public class OrderAuthRow
+    {
         public int ID { get; set; }
 
         public double Quantity { get; set; }

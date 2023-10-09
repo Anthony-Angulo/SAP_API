@@ -15,7 +15,8 @@ namespace SAP_API.Controllers
 
     [Route("api/[controller]")]
     [ApiController]
-    public class ContactController : ControllerBase {
+    public class ContactController : ControllerBase
+    {
 
         private readonly ApplicationDbContext _context;
         public ContactController(ApplicationDbContext context)
@@ -29,7 +30,7 @@ namespace SAP_API.Controllers
         /// <returns>ClientSearchResponse</returns>
         /// <response code="200">ClientSearchResponse(SearchResponse)</response>
         // POST: api/Contact/Clients/Search
-        [ProducesResponseType(typeof(ClientSearchResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(SearchResponse<ClientSearchDetail>), StatusCodes.Status200OK)]
         [Authorize]
         [HttpPost("Clients/Search")]
         public async Task<IActionResult> GetClients([FromBody] SearchRequest request)
@@ -40,24 +41,34 @@ namespace SAP_API.Controllers
 
             List<string> where = new List<string>();
 
-            if (request.columns[0].search.value != String.Empty) {
+            if (request.columns[0].search.value != String.Empty)
+            {
                 where.Add($"LOWER(\"CardCode\") Like LOWER('%{request.columns[0].search.value}%')");
             }
-            if (request.columns[1].search.value != String.Empty) {
+            if (request.columns[1].search.value != String.Empty)
+            {
                 where.Add($"LOWER(\"CardFName\") Like LOWER('%{request.columns[1].search.value}%')");
             }
-            if (request.columns[2].search.value != String.Empty) {
+            if (request.columns[2].search.value != String.Empty)
+            {
                 where.Add($"LOWER(\"CardName\") Like LOWER('%{request.columns[2].search.value}%')");
             }
 
             string orderby = "";
-            if (request.order[0].column == 0) {
+            if (request.order[0].column == 0)
+            {
                 orderby = $" ORDER BY \"CardCode\" {request.order[0].dir}";
-            } else if (request.order[0].column == 1) {
+            }
+            else if (request.order[0].column == 1)
+            {
                 orderby = $" ORDER BY \"CardFName\" {request.order[0].dir}";
-            } else if (request.order[0].column == 2) {
+            }
+            else if (request.order[0].column == 2)
+            {
                 orderby = $" ORDER BY \"CardName\" {request.order[0].dir}";
-            } else {
+            }
+            else
+            {
                 orderby = $" ORDER BY \"CardCode\" DESC";
             }
 
@@ -67,7 +78,8 @@ namespace SAP_API.Controllers
                 Select ""CardCode"", ""CardName"", ""CardFName""
                 From OCRD Where ""CardType"" = 'C' AND ""CardCode"" NOT LIKE '%-D'";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 query += " AND " + whereClause;
             }
 
@@ -84,14 +96,16 @@ namespace SAP_API.Controllers
                     Count (*) as COUNT
                  From OCRD Where ""CardType"" = 'C' AND ""CardCode"" NOT LIKE '%-D' ";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 queryCount += " AND " + whereClause;
             }
             oRecSet.DoQuery(queryCount);
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0]["COUNT"].ToObject<int>();
 
-            ClientSearchResponse respose = new ClientSearchResponse {
+            SearchResponse<ClientSearchDetail> respose = new SearchResponse<ClientSearchDetail>
+            {
                 data = orders,
                 draw = request.Draw,
                 recordsFiltered = COUNT,
@@ -108,37 +122,51 @@ namespace SAP_API.Controllers
         /// <returns>ProviderSearchResponse</returns>
         /// <response code="200">ProviderSearchResponse(SearchResponse)</response>
         // POST: api/Contact/Providers/Search
-        [ProducesResponseType(typeof(ProviderSearchResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(SearchResponse<ProviderSearchDetail>), StatusCodes.Status200OK)]
         [HttpPost("Providers/Search")]
-        public async Task<IActionResult> GetProviders([FromBody] SearchRequest request) {
+        public async Task<IActionResult> GetProviders([FromBody] SearchRequest request)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             List<string> where = new List<string>();
 
-            if (request.columns[0].search.value != String.Empty) {
+            if (request.columns[0].search.value != String.Empty)
+            {
                 where.Add($"LOWER(\"CardCode\") Like LOWER('%{request.columns[0].search.value}%')");
             }
-            if (request.columns[1].search.value != String.Empty) {
+            if (request.columns[1].search.value != String.Empty)
+            {
                 where.Add($"LOWER(\"CardName\") Like LOWER('%{request.columns[1].search.value}%')");
             }
-            if (request.columns[2].search.value != String.Empty) {
+            if (request.columns[2].search.value != String.Empty)
+            {
                 where.Add($"LOWER(\"CardFName\") Like LOWER('%{request.columns[2].search.value}%')");
             }
-            if (request.columns[3].search.value != String.Empty) {
+            if (request.columns[3].search.value != String.Empty)
+            {
                 where.Add($"LOWER(\"Currency\") Like LOWER('%{request.columns[3].search.value}%')");
             }
 
             string orderby = "";
-            if (request.order[0].column == 0) {
+            if (request.order[0].column == 0)
+            {
                 orderby = $" ORDER BY \"CardCode\" {request.order[0].dir}";
-            } else if (request.order[0].column == 1) {
+            }
+            else if (request.order[0].column == 1)
+            {
                 orderby = $" ORDER BY \"CardName\" {request.order[0].dir}";
-            } else if (request.order[0].column == 2) {
+            }
+            else if (request.order[0].column == 2)
+            {
                 orderby = $" ORDER BY \"CardFName\" {request.order[0].dir}";
-            } else if (request.order[0].column == 3) {
+            }
+            else if (request.order[0].column == 3)
+            {
                 orderby = $" ORDER BY \"Currency\" {request.order[0].dir}";
-            } else {
+            }
+            else
+            {
                 orderby = $" ORDER BY \"CardCode\" DESC";
             }
 
@@ -148,7 +176,8 @@ namespace SAP_API.Controllers
                 Select ""CardCode"", ""CardName"", ""CardFName"", ""Currency""
                 From OCRD Where ""CardType"" = 'S' ";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 query += " AND " + whereClause;
             }
 
@@ -164,13 +193,15 @@ namespace SAP_API.Controllers
                     Count (*) as COUNT
                  From OCRD Where ""CardType"" = 'S' ";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 queryCount += " AND " + whereClause;
             }
             oRecSet.DoQuery(queryCount);
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OCRD"][0]["COUNT"].ToObject<int>();
 
-            ProviderSearchResponse respose = new ProviderSearchResponse {
+            SearchResponse<ProviderSearchDetail> respose = new SearchResponse<ProviderSearchDetail>
+            {
                 data = orders,
                 draw = request.Draw,
                 recordsFiltered = COUNT,
@@ -191,7 +222,8 @@ namespace SAP_API.Controllers
         [ProducesResponseType(typeof(ContactToSell), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("CRMClientToSell/{CardCode}")]
-        public async Task<IActionResult> GetCRMClientToSell(string CardCode) {
+        public async Task<IActionResult> GetCRMClientToSell(string CardCode)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -216,7 +248,8 @@ namespace SAP_API.Controllers
                 LEFT JOIN OPYM paymentMethod ON paymentMethod.""PayMethCod"" = contact.""PymCode""
                 Where ""CardCode"" = '" + CardCode + "'");
 
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return NoContent();
             }
 
@@ -228,7 +261,7 @@ namespace SAP_API.Controllers
                     paymentMethod.""Descript""
                 From CRD2 paymentMethodCardCode
                 JOIN OPYM paymentMethod ON paymentMethod.""PayMethCod"" = paymentMethodCardCode.""PymCode""
-                Where ""CardCode"" = '" + CardCode  + "'");
+                Where ""CardCode"" = '" + CardCode + "'");
 
             temp["PaymentMethods"] = context.XMLTOJSON(oRecSet.GetAsXML())["CRD2"];
 
@@ -253,7 +286,8 @@ namespace SAP_API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("CRMProviderToBuy/{CardCode}")]
-        public async Task<IActionResult> GetCRMProviderToBuy(string CardCode) {
+        public async Task<IActionResult> GetCRMProviderToBuy(string CardCode)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -267,7 +301,8 @@ namespace SAP_API.Controllers
                 From OCRD
                 Where ""CardCode"" = '" + CardCode + "'");
 
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return NoContent();
             }
 
@@ -281,9 +316,10 @@ namespace SAP_API.Controllers
         }
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        
+
         [HttpGet("CRM/{id}")]
-        public async Task<IActionResult> GetCRMID(string id) {
+        public async Task<IActionResult> GetCRMID(string id)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.BusinessPartners items = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
@@ -293,16 +329,19 @@ namespace SAP_API.Controllers
 
             JToken pagos = context.XMLTOJSON(sboTable.GetAsXML())["OCRD"];
 
-            if (items.GetByKey(id)) {
+            if (items.GetByKey(id))
+            {
 
                 JToken temp = context.XMLTOJSON(items.GetAsXML());
                 temp["OCRD"] = temp["OCRD"][0];
 
-                if (seller.GetByKey(temp["OCRD"]["SlpCode"].ToObject<int>())) {
+                if (seller.GetByKey(temp["OCRD"]["SlpCode"].ToObject<int>()))
+                {
                     JToken temp2 = context.XMLTOJSON(seller.GetAsXML());
                     temp["OSLP"] = temp2["OSLP"][0];
                 }
-                if (payment.GetByKey(temp["OCRD"]["GroupNum"].ToObject<int>())) {
+                if (payment.GetByKey(temp["OCRD"]["GroupNum"].ToObject<int>()))
+                {
                     JToken temp3 = context.XMLTOJSON(payment.GetAsXML());
                     temp["OCTG"] = temp3["OCTG"][0];
                 }
@@ -315,7 +354,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Contact/APPCRM/200
         [HttpGet("APPCRM/{id}")]
-        public async Task<IActionResult> GetAPPCRM(int id) {
+        public async Task<IActionResult> GetAPPCRM(int id)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -334,7 +374,8 @@ namespace SAP_API.Controllers
                 JOIN OHEM employee ON ""SlpCode"" = ""salesPrson""
                 Where ""CardType"" = 'C' AND ""empID"" = {id} AND ""CardCode"" NOT LIKE '%-D'");
 
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return Ok(new List<string>());
             }
 
@@ -348,7 +389,8 @@ namespace SAP_API.Controllers
 
         // GET: api/Contact/APPCRM
         [HttpGet("APPCRM")]
-        public async Task<IActionResult> GetAPPCRMs() {
+        public async Task<IActionResult> GetAPPCRMs()
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -373,12 +415,14 @@ namespace SAP_API.Controllers
         }
 
         [HttpGet("{CardCode}")]
-        public async Task<IActionResult> Get(string CardCode) {
+        public async Task<IActionResult> Get(string CardCode)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.BusinessPartners Bp = (SAPbobsCOM.BusinessPartners)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners);
 
-            if (!Bp.GetByKey(CardCode)) {
+            if (!Bp.GetByKey(CardCode))
+            {
                 return NoContent();
             }
             JToken output = context.XMLTOJSON(Bp.GetAsXML());
@@ -388,15 +432,15 @@ namespace SAP_API.Controllers
         [HttpPost("ProductosPreferidos/{CardCode}")]
         public IActionResult AddProductsCliente([FromRoute] string CardCode, [FromBody] List<ProductosPreferidos> Productos)
         {
-            List<ClientsProducts> ProductosCliente = _context.Clientes_Productos.Where(x => x.ClientCode == CardCode).ToList();
+            List<ClientsProductsPreferidos> ProductosCliente = _context.Clientes_Productos.Where(x => x.ClientCode == CardCode).ToList();
             Productos = Productos.Where(x => ProductosCliente.Find(y => y.ClientCode == CardCode && x.ItemCode == y.ProductCode) == null).ToList();
-            List<ClientsProducts> ProductosParaAgregar=new List<ClientsProducts>();
+            List<ClientsProductsPreferidos> ProductosParaAgregar = new List<ClientsProductsPreferidos>();
             foreach (var item in Productos)
             {
                 if (item.status == 0)
                     item.status = 3;
-                ProductosParaAgregar.Add(new ClientsProducts() { ClientCode = CardCode, ProductCode = item.ItemCode, ProductDescription = item.ItemName, ProductGroup = item.ItmsGrpNam, status = item.status });
-               
+                ProductosParaAgregar.Add(new ClientsProductsPreferidos() { ClientCode = CardCode, ProductCode = item.ItemCode, ProductDescription = item.ItemName, ProductGroup = item.ItmsGrpNam, status = item.status });
+
             }
             try
             {
@@ -500,7 +544,7 @@ namespace SAP_API.Controllers
         public IActionResult CambiarStatusProducto([FromRoute] int id,
                                                    [FromRoute] int Status)
         {
-            ClientsProducts ClientsProducts = _context.Clientes_Productos.Where(x => x.idClientes_Productos == id).FirstOrDefault();
+            ClientsProductsPreferidos ClientsProducts = _context.Clientes_Productos.Where(x => x.idClientes_Productos == id).FirstOrDefault();
 
             if (ClientsProducts == null)
                 return NotFound();
@@ -520,12 +564,12 @@ namespace SAP_API.Controllers
         [HttpPost("CargaMasivaProductos")]
         public IActionResult CargaMasivaProductos([FromBody] List<ProductosMasivo> productosMasivos)
         {
-            List<ClientsProducts> products = new List<ClientsProducts>();
+            List<ClientsProductsPreferidos> products = new List<ClientsProductsPreferidos>();
             List<ProductosMasivo> ListadoFiltrado = new List<ProductosMasivo>();
             products = _context.Clientes_Productos.Where(x => productosMasivos.Find(y => y.CardCode == x.ClientCode && y.ItemCode == x.ProductCode) != null).ToList();
             ListadoFiltrado = productosMasivos.Where(x => products.Find(y => y.ClientCode == x.CardCode && y.ProductCode == x.ItemCode) == null).ToList();
 
-            List<ClientsProducts> productsCambio = ListadoFiltrado.Select(product => new ClientsProducts
+            List<ClientsProductsPreferidos> productsCambio = ListadoFiltrado.Select(product => new ClientsProductsPreferidos
             {
                 ClientCode = product.CardCode,
                 ProductCode = product.ItemCode,
@@ -533,7 +577,7 @@ namespace SAP_API.Controllers
                 ProductGroup = product.ItmsGrpNam,
                 status = product.status == 0 ? 3 : product.status
             }).ToList();
-            foreach (ClientsProducts item in products)
+            foreach (ClientsProductsPreferidos item in products)
             {
                 var ProductoMasivo = productosMasivos.Find(x => x.ItemCode == item.ProductCode && x.CardCode == item.ClientCode);
                 if (ProductoMasivo == null) { }

@@ -207,31 +207,31 @@ namespace SAP_API
             //        await next();
             //    });
             //});
-            
-           SAPContext SAPContext = app.ApplicationServices.GetService(typeof(SAPContext)) as SAPContext;
-            
-                        app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action =>
-                         {
-                             action.Use(async (context, next) =>
-                             {
-                                 if (!SAPContext.oCompany.Connected)
-                                 {
-                                     int code = SAPContext.oCompany.Connect();
-                                     if (code != 0)
-                                     {
-                                         string error = SAPContext.oCompany.GetLastErrorDescription();
-                                         var result = JsonConvert.SerializeObject(new { error });
-                                         context.Response.ContentType = "application/json";
-                                         context.Response.StatusCode = 400;
-                                         await context.Response.WriteAsync(result);
-                                         return;
-                                     }
-                                 }
 
-                                 await next();
-                             });
-                         });
-            
+            SAPContext SAPContext = app.ApplicationServices.GetService(typeof(SAPContext)) as SAPContext;
+
+            app.UseWhen(context => !context.Request.Path.Value.Contains("values"), action =>
+             {
+                 action.Use(async (context, next) =>
+                 {
+                     if (!SAPContext.oCompany.Connected)
+                     {
+                         int code = SAPContext.oCompany.Connect();
+                         if (code != 0)
+                         {
+                             string error = SAPContext.oCompany.GetLastErrorDescription();
+                             var result = JsonConvert.SerializeObject(new { error });
+                             context.Response.ContentType = "application/json";
+                             context.Response.StatusCode = 400;
+                             await context.Response.WriteAsync(result);
+                             return;
+                         }
+                     }
+
+                     await next();
+                 });
+             });
+
             app.UseLogMiddleware();
             app.UseAuthentication();
             app.UseMvc();

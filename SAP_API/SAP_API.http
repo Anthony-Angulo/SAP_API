@@ -1,0 +1,5 @@
+﻿@SAP_API_HostAddress = http://localhost/SAP_API
+
+GET {{SAP_API_HostAddress}}/api/currencyrate
+
+###

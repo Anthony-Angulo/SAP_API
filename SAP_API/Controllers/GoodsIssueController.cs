@@ -7,12 +7,14 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
 
-namespace SAP_API.Controllers {
+namespace SAP_API.Controllers
+{
 
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class GoodsIssueController : ControllerBase {
+    public class GoodsIssueController : ControllerBase
+    {
 
         // Note: Use GoodsReceiptSearchResponse because the answer is composed of the same attributes.
         // If these change, a new class would have to be used that adapts to the new data.
@@ -25,48 +27,65 @@ namespace SAP_API.Controllers {
         // POST: api/GoodsIssue/Search
         [ProducesResponseType(typeof(GoodsReceiptSearchDetail), StatusCodes.Status200OK)]
         [HttpPost("Search")]
-        public async Task<IActionResult> Search([FromBody] SearchRequest request) {
+        public async Task<IActionResult> Search([FromBody] SearchRequest request)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
             List<string> where = new List<string>();
-            if (request.columns[0].search.value != String.Empty) {
+            if (request.columns[0].search.value != String.Empty)
+            {
                 where.Add($"LOWER(document.\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
             }
-            if (request.columns[1].search.value != String.Empty) {
+            if (request.columns[1].search.value != String.Empty)
+            {
                 where.Add($"LOWER(warehouse.\"WhsName\") Like LOWER('%{request.columns[1].search.value}%')");
             }
-            if (request.columns[2].search.value != String.Empty) {
+            if (request.columns[2].search.value != String.Empty)
+            {
 
                 List<string> whereOR = new List<string>();
-                if ("Abierto".Contains(request.columns[2].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Abierto".Contains(request.columns[2].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
                     whereOR.Add(@"document.""DocStatus"" = 'O' ");
                 }
-                if ("Cerrado".Contains(request.columns[2].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Cerrado".Contains(request.columns[2].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
                     whereOR.Add(@"document.""DocStatus"" = 'C' ");
                 }
-                if ("Cancelado".Contains(request.columns[2].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Cancelado".Contains(request.columns[2].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
                     whereOR.Add(@"document.""CANCELED"" = 'Y' ");
                 }
 
                 string whereORClause = "(" + String.Join(" OR ", whereOR) + ")";
                 where.Add(whereORClause);
             }
-            if (request.columns[3].search.value != String.Empty) {
+            if (request.columns[3].search.value != String.Empty)
+            {
                 where.Add($"to_char(to_date(SUBSTRING(document.\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[3].search.value}%'");
             }
 
             string orderby = "";
-            if (request.order[0].column == 0) {
+            if (request.order[0].column == 0)
+            {
                 orderby = $" ORDER BY document.\"DocNum\" {request.order[0].dir}";
-            } else if (request.order[0].column == 1) {
+            }
+            else if (request.order[0].column == 1)
+            {
                 orderby = $" ORDER BY warehouse.\"WhsName\" {request.order[0].dir}";
-            } else if (request.order[0].column == 2) {
+            }
+            else if (request.order[0].column == 2)
+            {
                 orderby = $" ORDER BY document.\"DocStatus\" {request.order[0].dir}";
-            } else if (request.order[0].column == 3) {
+            }
+            else if (request.order[0].column == 3)
+            {
                 orderby = $" ORDER BY document.\"DocDate\" {request.order[0].dir}";
-            } else {
+            }
+            else
+            {
                 orderby = $" ORDER BY document.\"DocNum\" DESC";
             }
 
@@ -88,13 +107,15 @@ namespace SAP_API.Controllers {
                 LEFT JOIN NNM1 serie ON document.""Series"" = serie.""Series""
                 LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode"" ";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 query += "Where " + whereClause;
             }
 
             query += orderby;
 
-            if (request.length != -1) {
+            if (request.length != -1)
+            {
                 query += " LIMIT " + request.length + " OFFSET " + request.start + "";
             }
 
@@ -108,14 +129,16 @@ namespace SAP_API.Controllers {
                 LEFT JOIN NNM1 serie ON document.""Series"" = serie.""Series""
                 LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode"" ";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 queryCount += "Where " + whereClause;
             }
 
             oRecSet.DoQuery(queryCount);
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OIGE"][0]["COUNT"].ToObject<int>();
 
-            GoodsReceiptSearchResponse respose = new GoodsReceiptSearchResponse {
+            SearchResponse<GoodsReceiptSearchDetail> respose = new SearchResponse<GoodsReceiptSearchDetail>
+            {
                 data = orders,
                 draw = request.Draw,
                 recordsFiltered = COUNT,
@@ -125,7 +148,8 @@ namespace SAP_API.Controllers {
         }
 
         // Class To Serialize GoodsIssue Query Result 
-        class GoodsIssueDetailLine {
+        class GoodsIssueDetailLine
+        {
             public string ItemCode { set; get; }
             public string Dscription { set; get; }
             public double Quantity { set; get; }
@@ -135,7 +159,8 @@ namespace SAP_API.Controllers {
         }
 
         // Class To Serialize GoodsIssue Query Result
-        class GoodsIssueDetail {
+        class GoodsIssueDetail
+        {
             public uint DocEntry { get; set; }
             public uint DocNum { set; get; }
             public string DocDate { set; get; }
@@ -155,7 +180,8 @@ namespace SAP_API.Controllers {
         [ProducesResponseType(typeof(GoodsIssueDetail), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("{DocEntry}")]
-        public async Task<IActionResult> Get(uint DocEntry) {
+        public async Task<IActionResult> Get(uint DocEntry)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -176,7 +202,8 @@ namespace SAP_API.Controllers {
                 LEFT JOIN OWHS warehouse ON warehouse.""WhsCode"" = series.""SeriesName""
                 WHERE document.""DocEntry"" = '{DocEntry}';");
 
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return NoContent();
             }
 

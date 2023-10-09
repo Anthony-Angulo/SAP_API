@@ -84,7 +84,7 @@ namespace SAP_API.Controllers
         {
 
             var result = await _signInManager.PasswordSignInAsync(loginData.Email, loginData.Password, false, false);
-            
+
             if (result.Succeeded)
             {
                 var appUser = _userManager.Users.SingleOrDefault(r => r.Email == loginData.Email);
@@ -97,20 +97,20 @@ namespace SAP_API.Controllers
                     Name = appUser.Name,
                     User = appUser.UserName,
                     Active_Burn = appUser.Active_Burn,
-                    Serie = appUser.Serie
-
+                    Serie = appUser.Serie,
+                    LastPasswordChange = appUser.LastPasswordChangedDate
                 };
                 var token = await GenerateJwtToken(loginData.Email, appUser);
                 appUser.Warehouse = _context.Warehouses.Find(appUser.WarehouseID);
                 //UserDetailOutput Roles = Redirect($"/api/User/{appUser.Id}");
                 UserController userController = new UserController(_context, _userManager, _roleManager);
-                 var Roles =  (ObjectResult) userController.Get(appUser.Id).Result;
+                var Roles = (ObjectResult)userController.Get(appUser.Id).Result;
                 UserDetailOutput userDetail = (UserDetailOutput)Roles.Value;
                 //Task<IActionResult> RolList = new RoleController(_context,_roleManager).Get(Roles.RoleId);
-                return Ok(new { token, AppLogin, warehouseCode= appUser.Warehouse.WhsCode,userDetail.RolePermissions});
-            }  
+                return Ok(new { token, AppLogin, warehouseCode = appUser.Warehouse.WhsCode, userDetail.RolePermissions });
+            }
             return BadRequest("Error al Intentar Iniciar Sesion");
-        }        
+        }
         public class AppUserLogin
         {
             public Boolean active { get; set; }
@@ -122,7 +122,7 @@ namespace SAP_API.Controllers
             public string Active_Burn { get; set; }
             public int Serie { get; set; }
 
-
+            public DateTime LastPasswordChange { get; set; }
         }
         /// <summary>
         /// Register User.
@@ -164,29 +164,30 @@ namespace SAP_API.Controllers
                 Active = register.Active,
                 Warehouse = warehouse,
                 Department = department,
+                LastPasswordChangedDate = DateTime.Now,
             };
-            
-                var result = await _userManager.CreateAsync(user, register.Password);
 
-                if (result.Succeeded)
+            var result = await _userManager.CreateAsync(user, register.Password);
+
+            if (result.Succeeded)
+            {
+
+                await _userManager.AddToRoleAsync(user, Role.Name);
+
+                foreach (string Permission in register.PermissionsExtra)
                 {
-
-                    await _userManager.AddToRoleAsync(user, Role.Name);
-
-                    foreach (string Permission in register.PermissionsExtra)
-                    {
-                        await _userManager.AddClaimAsync(user, new Claim(CustomClaimTypes.Permission, Permission));
-                    }
-
-                    return Ok();
+                    await _userManager.AddClaimAsync(user, new Claim(CustomClaimTypes.Permission, Permission));
                 }
-                StringBuilder stringBuilder = new StringBuilder();
-                foreach (IdentityError m in result.Errors.ToList())
-                {
-                    stringBuilder.AppendFormat("Codigo: {0} Descripcion: {1}\n", m.Code, m.Description);
-                }
-                return BadRequest(stringBuilder.ToString());
+
+                return Ok();
             }
+            StringBuilder stringBuilder = new StringBuilder();
+            foreach (IdentityError m in result.Errors.ToList())
+            {
+                stringBuilder.AppendFormat("Codigo: {0} Descripcion: {1}\n", m.Code, m.Description);
+            }
+            return BadRequest(stringBuilder.ToString());
+        }
 
         // Generate Identification Token
         private async Task<object> GenerateJwtToken(string email, User user)

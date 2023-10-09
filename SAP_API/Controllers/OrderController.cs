@@ -25,7 +25,7 @@ namespace SAP_API.Controllers
         private readonly LogsContext _contextLogs;
         private readonly ApplicationDbContext _context;
 
-        public OrderController(LogsContext contextLogs,ApplicationDbContext context)
+        public OrderController(LogsContext contextLogs, ApplicationDbContext context)
         {
             _contextLogs = contextLogs;
             _context = context;
@@ -1265,14 +1265,14 @@ GROUP BY TO_NVARCHAR(""U_nwr_Tag"") order by sum(""DocTotal"") desc");
             IList<top10> person = orders.ToObject<IList<top10>>();
             foreach (var item in person)
             {
-                item.Name=_context.Users.Where(x=>x.Id==item.TAG).First().Name;
+                item.Name = _context.Users.Where(x => x.Id == item.TAG).First().Name;
             }
             GC.Collect();
             GC.WaitForPendingFinalizers();
             return Ok(person);
         }
         [HttpGet("CRMAPP/compraspormes/{CardCode}&{Month}&{Year}")]
-        public async Task<IActionResult> comprasporMes(string CardCode,int Month, int Year)
+        public async Task<IActionResult> comprasporMes(string CardCode, int Month, int Year)
         {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
@@ -1289,7 +1289,7 @@ order by T0.""DocDate"" asc
 
             oRecSet.MoveFirst();
             JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"];
-            
+
             GC.Collect();
             GC.WaitForPendingFinalizers();
             return Ok(orders);
@@ -1313,7 +1313,7 @@ GROUP BY ""Dscription"",""ItemCode"" order by sum(T1.""Quantity"") desc
 
             oRecSet.MoveFirst();
             JToken orders = context.XMLTOJSON(oRecSet.GetAsXML())["ORDR"];
-          
+
             GC.Collect();
             GC.WaitForPendingFinalizers();
             return Ok(orders);
@@ -1619,7 +1619,7 @@ SELECT
             order.Series = value.series;
             order.DocCurrency = value.currency;
             order.DocDueDate = value.date;
-          //  order.SalesPersonCode=value.SlpCode!=0?value.SlpCode:104;
+            //  order.SalesPersonCode=value.SlpCode!=0?value.SlpCode:104;
             order.PaymentGroupCode = value.payment;
             if (value.idUsuario != null)
                 order.UserFields.Fields.Item("U_nwr_Tag").Value = value.idUsuario.ToString();

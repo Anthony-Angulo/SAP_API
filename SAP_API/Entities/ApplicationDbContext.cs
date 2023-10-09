@@ -21,7 +21,7 @@ namespace SAP_API.Entities
         public DbSet<OrderAuth> OrderAuths { get; set; }
         public DbSet<OrderAuthRow> OrderAuthRows { get; set; }
         public DbSet<CodeBarDetail> CodeBarDetails { get; set; }
-        public DbSet<ClientsProducts> Clientes_Productos { get; set; }
+        public DbSet<ClientsProductsPreferidos> Clientes_Productos { get; set; }
         public DbSet<LogFacturacion> LogFacturacion { get; set; }
         public DbSet<AutorizacionRequest> AutorizacionRequest { get; set; }
         public DbSet<AutorizacionAlmacenes> AutorizacionAlmacenes { get; set; }
@@ -33,6 +33,7 @@ namespace SAP_API.Entities
         public DbSet<rutas> rutas { get; set; }
         public DbSet<tiendas_ruta> tiendas_ruta { get; set; }
 
+        public DbSet<FacBurn> FacBurn { get; set; }
         public DbSet<QR_ALMACENES> QR_ALMACENES { get; set; }
         /*public DbSet<rutinas> rutinas { get; set; }
         public DbSet<CategoriaPregunta> CategoriaPreguntas { get; set; }
@@ -43,6 +44,30 @@ namespace SAP_API.Entities
 
         public DbSet<tarima> tarima { get; set; }
 
+
+        public enum Series : int
+        {
+            S01_CEDIS = 72,
+            S05_PACHUCO = 76,
+            S06_CENTRAL_DE_ABASTOS = 77,
+            S08_BARULIO_MALDONADO = 78,
+            S10_TIJUANA_OTAY = 81,
+            S12_SAN_LUIS_MAYOREO = 83,
+            S13_TIJUANA_ABASTOS = 84,
+            S15_MAYOREO_BELLAVISTA = 86,
+            S17_BRULIO_FyV = 88,
+            S24_MAYOREO_ENSENADA = 330,
+            S36_TIJUANA_20_NOVIEMBRE = 342,
+            S47_MAYOREO_LAZARO = 353,
+            S49_CENTRAL_DE_ABARROTES = 355,
+            S53_PLANTA_PROCESADORA = 359,
+            S55_PARQUE_MORELOS = 361,
+            S59_TIJUANA_MATAMOROS = 369,
+            S62_ANAHUAC_MAYOREO = 1748,
+            S70_BENITEZ = 1929,
+
+            S63_MAYOREO_BUENA_VISTA_TJ = 1768,
+        }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseMySql(GetConnectionString());

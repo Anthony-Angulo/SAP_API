@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SAP_API.Models
 {
-    public class ClientsProducts
+    public class ClientsProductsPreferidos
     {
         [Key]
         public int idClientes_Productos { get; set; }
@@ -18,16 +18,6 @@ namespace SAP_API.Models
         public string ProductDescription { get; set; }
 
         public string ProductGroup { get; set; }
-
-        public int status { get; set; }
-    }
-    public class ProductosPreferidos
-    {
-        public string ItemCode { get; set; }
-
-        public string ItemName { get; set; }
-
-        public string ItmsGrpNam { get; set; }
 
         public int status { get; set; }
     }

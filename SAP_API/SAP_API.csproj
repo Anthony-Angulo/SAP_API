@@ -46,7 +46,9 @@
 
   <ItemGroup>
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="2.0.1" />
-    <PackageReference Include="BarcodeLib.Core" Version="1.0.9" />
+    <PackageReference Include="BarcodeLib.Core" Version="1.0.9">
+      <GeneratePathProperty>True</GeneratePathProperty>
+    </PackageReference>
     <PackageReference Include="ClosedXML" Version="0.95.4" />
     <PackageReference Include="EntityFramework.Extended" Version="6.1.0.168" />
     <PackageReference Include="Microsoft.AspNetCore" Version="2.1.7" />
@@ -69,6 +71,10 @@
     <PackageReference Include="System.Drawing.Common" Version="4.6.1" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="4.7.0" />
     <PackageReference Include="Twilio" Version="5.68.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SAPAPI.Contracts\SAPAPI.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

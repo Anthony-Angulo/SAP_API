@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
@@ -234,10 +235,8 @@ namespace SAP_API.Controllers
         {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            //string query2 = $@"SELECT * FROM ""@SO1_01DEVOLUCION"" LIMIT 5";
+            string query2 = $@"SELECT ""U_SO1_FECHAFIN"" FROM ""@SO1_01CORTECAJA""  WHERE ""Name""='{NoCorte}'";
             string query = $@"
-
-
 SELECT
   T0.U_SO1_SUCURSAL,
 T0.""FdP"",
@@ -357,20 +356,22 @@ GROUP BY
   T0.U_SO1_SUCURSAL,
 T0.""FdP"",
 T0.""Forma_de_Pago""";
+            SAPbobsCOM.Recordset oRecSet2 = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet2.DoQuery(query2);
             oRecSet.DoQuery(query);
+
             if (oRecSet.RecordCount == 0)
             {
                 return NoContent();
             }
-
-            //JToken row = context.XMLTOJSON(oRecSet.GetAsXML());
 
 
             try
             {
                 //return Ok(context.XMLTOJSON(oRecSet.GetAsXML()));
 
-                return Ok(new { Corte = context.FixedXMLTOJSON(oRecSet.GetFixedXML(SAPbobsCOM.RecordsetXMLModeEnum.rxmData)), Movimientos = _context.TrasladosVirtuales.Where(x => x.NoCorte == NoCorte).ToList() });
+                return Ok(new { FechaCorte = context.XMLTOJSON(oRecSet2.GetAsXML(), "SO1_01CORTECAJA"), Corte = context.FixedXMLTOJSON(oRecSet.GetFixedXML(SAPbobsCOM.RecordsetXMLModeEnum.rxmData)), Movimientos = _context.TrasladosVirtuales.Where(x => x.NoCorte == NoCorte).ToList() });
 
             }
             catch (Exception ex)

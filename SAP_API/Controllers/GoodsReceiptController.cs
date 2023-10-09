@@ -7,12 +7,14 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
 
-namespace SAP_API.Controllers {
+namespace SAP_API.Controllers
+{
 
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class GoodsReceiptController : ControllerBase {
+    public class GoodsReceiptController : ControllerBase
+    {
 
         /// <summary>
         /// Get GoodsReceipt List to WMS web Filter by DatatableParameters.
@@ -21,50 +23,67 @@ namespace SAP_API.Controllers {
         /// <returns>GoodsReceiptSearchResponse</returns>
         /// <response code="200">GoodsReceiptSearchResponse(SearchResponse)</response>
         // POST: api/GoodsReceipt/Search
-        [ProducesResponseType(typeof(GoodsReceiptSearchResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(SearchResponse<GoodsReceiptSearchDetail>), StatusCodes.Status200OK)]
         [HttpPost("Search")]
-        public async Task<IActionResult> Search([FromBody] SearchRequest request) {
+        public async Task<IActionResult> Search([FromBody] SearchRequest request)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
             List<string> where = new List<string>();
-            if (request.columns[0].search.value != String.Empty) {
+            if (request.columns[0].search.value != String.Empty)
+            {
                 where.Add($"LOWER(document.\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
             }
-            if (request.columns[1].search.value != String.Empty) {
+            if (request.columns[1].search.value != String.Empty)
+            {
                 where.Add($"LOWER(warehouse.\"WhsName\") Like LOWER('%{request.columns[1].search.value}%')");
             }
-            if (request.columns[2].search.value != String.Empty) {
+            if (request.columns[2].search.value != String.Empty)
+            {
 
                 List<string> whereOR = new List<string>();
-                if ("Abierto".Contains(request.columns[2].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Abierto".Contains(request.columns[2].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
                     whereOR.Add(@"document.""DocStatus"" = 'O' ");
                 }
-                if ("Cerrado".Contains(request.columns[2].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Cerrado".Contains(request.columns[2].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
                     whereOR.Add(@"document.""DocStatus"" = 'C' ");
                 }
-                if ("Cancelado".Contains(request.columns[2].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Cancelado".Contains(request.columns[2].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
                     whereOR.Add(@"document.""CANCELED"" = 'Y' ");
                 }
 
                 string whereORClause = "(" + String.Join(" OR ", whereOR) + ")";
                 where.Add(whereORClause);
             }
-            if (request.columns[3].search.value != String.Empty) {
+            if (request.columns[3].search.value != String.Empty)
+            {
                 where.Add($"to_char(to_date(SUBSTRING(document.\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[3].search.value}%'");
             }
 
             string orderby = "";
-            if (request.order[0].column == 0) {
+            if (request.order[0].column == 0)
+            {
                 orderby = $" ORDER BY document.\"DocNum\" {request.order[0].dir}";
-            } else if (request.order[0].column == 1) {
+            }
+            else if (request.order[0].column == 1)
+            {
                 orderby = $" ORDER BY warehouse.\"WhsName\" {request.order[0].dir}";
-            } else if (request.order[0].column == 2) {
+            }
+            else if (request.order[0].column == 2)
+            {
                 orderby = $" ORDER BY document.\"DocStatus\" {request.order[0].dir}";
-            } else if (request.order[0].column == 3) {
+            }
+            else if (request.order[0].column == 3)
+            {
                 orderby = $" ORDER BY document.\"DocDate\" {request.order[0].dir}";
-            } else {
+            }
+            else
+            {
                 orderby = $" ORDER BY document.\"DocNum\" DESC";
             }
 
@@ -87,13 +106,15 @@ namespace SAP_API.Controllers {
                 LEFT JOIN NNM1 serie ON document.""Series"" = serie.""Series""
                 LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode"" ";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 query += "Where " + whereClause;
             }
 
             query += orderby;
 
-            if (request.length != -1) {
+            if (request.length != -1)
+            {
                 query += " LIMIT " + request.length + " OFFSET " + request.start + "";
             }
 
@@ -107,14 +128,16 @@ namespace SAP_API.Controllers {
                 LEFT JOIN NNM1 serie ON document.""Series"" = serie.""Series""
                 LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode"" ";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 queryCount += "Where " + whereClause;
             }
 
             oRecSet.DoQuery(queryCount);
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OIGN"][0]["COUNT"].ToObject<int>();
 
-            GoodsReceiptSearchResponse respose = new GoodsReceiptSearchResponse {
+            SearchResponse<GoodsReceiptSearchDetail> respose = new SearchResponse<GoodsReceiptSearchDetail>
+            {
                 data = goodsReceiptList,
                 draw = request.Draw,
                 recordsFiltered = COUNT,
@@ -124,7 +147,8 @@ namespace SAP_API.Controllers {
         }
 
         // Class To Serialize GoodsReceipt Query Result 
-        class GoodsReceiptDetailLine {
+        class GoodsReceiptDetailLine
+        {
             public string ItemCode;
             public string Dscription;
             public double Quantity;
@@ -132,9 +156,10 @@ namespace SAP_API.Controllers {
             public string UomCode2;
             public double InvQty;
         }
-        
+
         // Class To Serialize GoodsReceipt Query Result
-        class GoodsReceiptDetail {
+        class GoodsReceiptDetail
+        {
             public uint DocEntry;
             public uint DocNum;
             public string DocDate;
@@ -154,7 +179,8 @@ namespace SAP_API.Controllers {
         [ProducesResponseType(typeof(GoodsReceiptDetail), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpGet("{DocEntry}")]
-        public async Task<IActionResult> Get(uint DocEntry) {
+        public async Task<IActionResult> Get(uint DocEntry)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -176,7 +202,8 @@ namespace SAP_API.Controllers {
                 WHERE document.""DocEntry"" = '{DocEntry}';");
 
             int rc = oRecSet.RecordCount;
-            if (rc == 0) {
+            if (rc == 0)
+            {
                 return NoContent();
             }
 
@@ -195,7 +222,7 @@ namespace SAP_API.Controllers {
             temp["Lines"] = context.XMLTOJSON(oRecSet.GetAsXML())["IGN1"];
 
             GoodsReceiptDetail output = temp.ToObject<GoodsReceiptDetail>();
-            
+
             //Force Garbage Collector. Recommendation by InterLatin Dude. SDK Problem with memory.
             GC.Collect();
             GC.WaitForPendingFinalizers();
