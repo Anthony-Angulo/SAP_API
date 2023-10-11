@@ -11,7 +11,7 @@ namespace SAP_API.Models
     {
 
         public SAPbobsCOM.Company oCompany;
-
+        //ORYEVBA
         public SAPContext()
         {
             oCompany = new SAPbobsCOM.Company();
@@ -93,7 +93,7 @@ namespace SAP_API.Models
                 JToken token = node[nameNode]["row"];
                 if (token != null)
                 {
-                    node = ArrayFormatRow(node,nameNode);
+                    node = ArrayFormatRow(node, nameNode);
                     node = WalkNode(node);
                 }
                 else
@@ -175,7 +175,7 @@ namespace SAP_API.Models
                 return JToken.FromObject(rowList);
             }
         }
-        static JToken ArrayFormatRow(JToken temp,string nameNode)
+        static JToken ArrayFormatRow(JToken temp, string nameNode)
         {
             if (temp[nameNode]["row"] is JArray)
             {
