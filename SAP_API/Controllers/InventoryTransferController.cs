@@ -512,13 +512,13 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
 
             try
             {
-                if (IsAlmacenMayoreo(context, transferRequest.FromWarehouse))
+                if (transferRequest.ToWarehouse.Equals("TSR"))
                 {
-                    HacerMovimientoDeStockMayoreo(value, context, transferRequest);
+                    //    HacerMovimientoDeStockMenudeo(value, context, transferRequest);
                 }
                 else
                 {
-
+                    HacerMovimientoDeStockMayoreo(value, context, transferRequest);
                 }
             }
             catch (Exception ex)
@@ -543,7 +543,14 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 {
                     transfer.Lines.UserFields.Fields.Item("U_Tarima").Value = value.TransferRows[i].Pallet;
                 }
-
+                /*if (transferRequest.ToWarehouse.Equals("TSR"))
+                {
+                    transfer.Lines.BatchNumbers.BatchNumber = "SI";
+                    transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList.Sum(x => x.Quantity);
+                    transfer.Lines.BatchNumbers.Add();
+                }
+                else
+                {*/
                 for (int k = 0; k < value.TransferRows[i].BatchList.Count; k++)
                 {
                     if (String.IsNullOrEmpty(value.TransferRows[i].BatchList[k].CodeBar))
@@ -566,6 +573,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                     }
 
                 }
+                //}
 
                 transfer.Lines.Add();
             }
@@ -641,7 +649,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
         [NonAction]
         private static void HacerMovimientoDeStockMayoreo(Transfer value, SAPContext context, StockTransfer transferRequest)
         {
-            CompanyService oCS = (CompanyService)context.oCompany.GetCompanyService();
+            CompanyService oCS = context.oCompany.GetCompanyService();
 
             if (value.TransferRows.Exists(x => x.BatchList.Exists(x => x.Code == "SI" && !String.IsNullOrEmpty(x.CodeBar))))
             {
@@ -650,7 +658,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 InventoryPosting oIC;
                 oIC = (InventoryPosting)oICS.GetDataInterface(InventoryPostingsServiceDataInterfaces.ipsInventoryPosting);
                 DateTime dt = DateTime.Now;
-                oIC.CountDate = DateTime.Now;   
+                oIC.CountDate = DateTime.Now;
                 Recordset Producto = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
                 oIC.Remarks = $"Basado en solicitud: {transferRequest.DocNum}";
                 foreach (var item in value.TransferRows)
@@ -697,17 +705,54 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
 
             }
         }
-
         [NonAction]
-        private bool IsAlmacenMayoreo(SAPContext context, string fromWarehouse)
+        private static void HacerMovimientoDeStockMenudeo(Transfer value, SAPContext context, StockTransfer transferRequest)
         {
-            /*Recordset OrecordSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
-            OrecordSet.DoQuery($@"SELECT ""U_ISMAYOREO"" FROM OWHS WHERE ""WhsCode""={fromWarehouse}");
-            OrecordSet.MoveFirst();
-            JToken Almacen = context.XMLTOJSON(OrecordSet.GetAsXML())["OWHS"][0];
-            bool IsMayoreo = (bool)Almacen["U_ISMAYOREO"];
-            */
-            return true;//IsMayoreo;
+            CompanyService oCS = context.oCompany.GetCompanyService();
+
+            if (value.TransferRows.Exists(x => x.BatchList.Exists(x => x.Code != "SI" && !String.IsNullOrEmpty(x.CodeBar))))
+            {
+                InventoryPostingsService oICS = (InventoryPostingsService)oCS.GetBusinessService(ServiceTypes.InventoryPostingsService);
+                InventoryPosting oIC;
+                oIC = (InventoryPosting)oICS.GetDataInterface(InventoryPostingsServiceDataInterfaces.ipsInventoryPosting);
+                DateTime dt = DateTime.Now;
+                oIC.CountDate = dt;
+                Recordset Producto = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
+                oIC.Remarks = $"Basado en solicitud: {transferRequest.DocNum}";
+                foreach (var item in value.TransferRows)
+                {
+                    if (item.BatchList.Exists(x => x.Code != "SI" && !String.IsNullOrEmpty(x.CodeBar)))
+                    {
+                        InventoryPostingLines oICLS = oIC.InventoryPostingLines;
+                        InventoryPostingLine oICL = oICLS.Add();
+                        oICL.ItemCode = item.ItemCode;
+                        oICL.WarehouseCode = transferRequest.FromWarehouse;
+                        oICL.CountDate = dt;
+                        Producto.DoQuery($@"SELECT  * FROM OITW where ""ItemCode""='{item.ItemCode}' and ""WhsCode""='{transferRequest.FromWarehouse}'");
+                        Producto.MoveFirst();
+                        JToken products = context.XMLTOJSON(Producto.GetAsXML())["OITW"][0];
+                        oICL.CountedQuantity = double.Parse(products["OnHand"].ToString());
+                        oICL.UoMCode = item.UomCode;
+                        InventoryPostingBatchNumber batch = oICL.InventoryPostingBatchNumbers.Add();
+                        batch.Quantity = item.BatchList.Where(x => x.Code != "SI").Sum(x => x.Quantity);
+                        batch.BatchNumber = "SI";
+                        foreach (var lote in item.BatchList)
+                        {
+
+                            if (lote.Code != "SI")
+                            {
+                                batch = oICL.InventoryPostingBatchNumbers.Add();
+                                batch.Quantity = -lote.Quantity;
+                                batch.BatchNumber = lote.Code;
+                            }
+
+                        }
+                    }
+                }
+                InventoryPostingParams oICP = oICS.Add(oIC);
+
+
+            }
         }
 
         [NonAction]

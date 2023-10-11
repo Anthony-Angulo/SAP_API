@@ -14,8 +14,6 @@ using System.Net.Mail;
 using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
-using Twilio;
-using Twilio.Rest.Api.V2010.Account;
 
 namespace SAP_API.Controllers
 {
@@ -128,7 +126,7 @@ namespace SAP_API.Controllers
         [HttpPost("Test")]
         public async Task<IActionResult> Test()
         {
-      
+
             string to = "lorenzo.cabrera@superchivas.com.mx";
             MailMessage message = new MailMessage(_configuration["CuentaAutorizacion"], to);
             message.Subject = "Solicitud de Autorizacion";
@@ -184,17 +182,17 @@ namespace SAP_API.Controllers
 
                 return BadRequest(ex.InnerException);
             }
-        
+
 
             string to = _configuration["cuentarecibeAutorizacion"];
             MailMessage message = new MailMessage(_configuration["CuentaAutorizacion"], to);
-       
+
             string to1 = _configuration["cuentaRecibeAutorizacion2"];
-             if (to1 != "")
-             {
-                 MailAddress bcc = new MailAddress(to1);
-                 message.Bcc.Add(bcc);
-             }
+            if (to1 != "")
+            {
+                MailAddress bcc = new MailAddress(to1);
+                message.Bcc.Add(bcc);
+            }
             message.Subject = "Solicitud de Autorizacion de transferencia entre almacenes";
             message.IsBodyHtml = true;
             message.Body = $@"
@@ -280,7 +278,7 @@ namespace SAP_API.Controllers
                 oUserTable.Code = autorizacion.WhsDestino + autorizacion.WhsOrigen + DateTime.Now.ToString("yyyyMMddHHMMss");
                 oUserTable.Name = autorizacion.WhsDestino + autorizacion.WhsOrigen + DateTime.Now.ToString("yyyyMMddHHMMss");
                 oUserTable.UserFields.Fields.Item("U_FECHA").Value = DateTime.Now.Date;
-                oUserTable.UserFields.Fields.Item("U_WH_DEST").Value = "TSR"+autorizacion.WhsDestino;
+                oUserTable.UserFields.Fields.Item("U_WH_DEST").Value = "TSR" + autorizacion.WhsDestino;
                 oUserTable.UserFields.Fields.Item("U_WH_ORIG").Value = autorizacion.WhsOrigen;
                 result = oUserTable.Add();
                 if (result == 0)
@@ -306,7 +304,7 @@ namespace SAP_API.Controllers
 
 
         }
-            
+
         [HttpGet("{id}")]
         public IActionResult AutorizarSolicitud([FromRoute] int id)
         {
@@ -427,8 +425,8 @@ namespace SAP_API.Controllers
                 SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
                 SAPbobsCOM.UserTable oUserTable;
                 oUserTable = context.oCompany.UserTables.Item("WH_AUT");
-                oUserTable.Code = autorizacion.WhsDestino + autorizacion.WhsOrigen+ DateTime.Now.ToString("yyyyMMddHHMMss");
-                oUserTable.Name = autorizacion.WhsDestino+ autorizacion.WhsOrigen + DateTime.Now.ToString("yyyyMMddHHMMss");
+                oUserTable.Code = autorizacion.WhsDestino + autorizacion.WhsOrigen + DateTime.Now.ToString("yyyyMMddHHMMss");
+                oUserTable.Name = autorizacion.WhsDestino + autorizacion.WhsOrigen + DateTime.Now.ToString("yyyyMMddHHMMss");
                 oUserTable.UserFields.Fields.Item("U_FECHA").Value = DateTime.Now.Date;
                 oUserTable.UserFields.Fields.Item("U_WH_DEST").Value = autorizacion.WhsDestino;
                 oUserTable.UserFields.Fields.Item("U_WH_ORIG").Value = autorizacion.WhsOrigen;

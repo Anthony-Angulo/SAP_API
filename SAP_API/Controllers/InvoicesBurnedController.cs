@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis.CSharp;
 using SAP_API.Entities;
@@ -29,7 +30,7 @@ namespace SAP_API.Controllers
             var facturasQuemadas = new List<FacturasNuevas>();
 
             facturasQuemadas = (from facturas in _context.FacBurn.AsEnumerable()
-                                where facturas.DateBurn.Date >= DateTime.Now
+                                where facturas.DateBurn.Date >= DateTime.Now.Date
                                 orderby facturas.Series
                                 select new FacturasNuevas(
 facturas.DocNum,
@@ -54,12 +55,8 @@ facturas.UserName
                 if (facturasSaps == null) { }
                 else
                 {
+                    facturasNoQuemadas = facturasSaps.Where(f1 => facturasQuemadas.All(f2 => f2.NumeroDeDocumento != f1.Folio)).ToList();
 
-                    foreach (var item in facturasSaps)
-                    {
-                        if (!facturasQuemadas.Exists(x => x.NumeroDeDocumento == item.Folio))
-                            facturasNoQuemadas.Add(item);
-                    }
                 }
 
                 return Ok(facturasNoQuemadas);
@@ -74,7 +71,7 @@ facturas.UserName
             var facturasQuemadas = new List<FacturasNuevas>();
 
             facturasQuemadas = (from facturas in _context.FacBurn.AsEnumerable()
-                                where facturas.DateBurn.Date >= DateTime.Now && facturas.Series == Sucursal
+                                where facturas.DateBurn.Date >= DateTime.Now.Date && facturas.Series == Sucursal
                                 orderby facturas.Series
                                 select new FacturasNuevas(
 facturas.DocNum,
@@ -100,11 +97,8 @@ facturas.UserName
                 else
                 {
 
-                    foreach (var item in facturasSaps)
-                    {
-                        if (!facturasQuemadas.Exists(x => x.NumeroDeDocumento == item.Folio))
-                            facturasNoQuemadas.Add(item);
-                    }
+                    facturasNoQuemadas = facturasSaps.Where(f1 => facturasQuemadas.All(f2 => f2.NumeroDeDocumento != f1.Folio)).ToList();
+
                 }
 
                 return Ok(facturasNoQuemadas);
@@ -157,12 +151,8 @@ order by T2.""Remark""";
                 if (facturasSaps == null) { }
                 else
                 {
+                    facturasNoQuemadas = facturasSaps.Where(f1 => facturasQuemadas.All(f2 => f2.NumeroDeDocumento != f1.Folio)).ToList();
 
-                    foreach (var item in facturasSaps)
-                    {
-                        if (!facturasQuemadas.Exists(x => x.NumeroDeDocumento == item.Folio))
-                            facturasNoQuemadas.Add(item);
-                    }
                 }
 
                 return Ok(facturasNoQuemadas.OrderBy(x => x.Fecha));
