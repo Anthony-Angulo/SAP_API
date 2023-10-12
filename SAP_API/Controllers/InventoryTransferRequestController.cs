@@ -14,7 +14,8 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class InventoryTransferRequestController : ControllerBase {
+    public class InventoryTransferRequestController : ControllerBase
+    {
 
 
         /// <summary>
@@ -26,51 +27,71 @@ namespace SAP_API.Controllers
         // POST: api/InventoryTransferRequest/Search
         [ProducesResponseType(typeof(TransferRequestSearchResponse), StatusCodes.Status200OK)]
         [HttpPost("Search")]
-        public async Task<IActionResult> GetSearch([FromBody] SearchRequest request) {
+        public async Task<IActionResult> GetSearch([FromBody] SearchRequest request)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             List<string> where = new List<string>();
-            if (request.columns[0].search.value != String.Empty) {
+            if (request.columns[0].search.value != String.Empty)
+            {
                 where.Add($"LOWER(\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
             }
-            if (request.columns[1].search.value != String.Empty) {
+            if (request.columns[1].search.value != String.Empty)
+            {
                 where.Add($"LOWER(\"Filler\") Like LOWER('%{request.columns[1].search.value}%')");
             }
-            if (request.columns[2].search.value != String.Empty) {
+            if (request.columns[2].search.value != String.Empty)
+            {
                 where.Add($"LOWER(\"ToWhsCode\") Like LOWER('%{request.columns[2].search.value}%')");
             }
-            if (request.columns[3].search.value != String.Empty) {
+            if (request.columns[3].search.value != String.Empty)
+            {
                 List<string> whereOR = new List<string>();
-                if ("Abierto".Contains(request.columns[3].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Abierto".Contains(request.columns[3].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
                     whereOR.Add(@"""DocStatus"" = 'O' ");
                 }
-                if ("Cerrado".Contains(request.columns[3].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Cerrado".Contains(request.columns[3].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
                     whereOR.Add(@"""DocStatus"" = 'C' ");
                 }
-                if ("Cancelado".Contains(request.columns[3].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Cancelado".Contains(request.columns[3].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
                     whereOR.Add(@"""CANCELED"" = 'Y' ");
                 }
 
                 string whereORClause = "(" + String.Join(" OR ", whereOR) + ")";
                 where.Add(whereORClause);
             }
-            if (request.columns[4].search.value != String.Empty) {
+            if (request.columns[4].search.value != String.Empty)
+            {
                 where.Add($"to_char(to_date(SUBSTRING(\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[4].search.value}%'");
             }
 
             string orderby = "";
-            if (request.order[0].column == 0) {
+            if (request.order[0].column == 0)
+            {
                 orderby = $" ORDER BY \"DocNum\" {request.order[0].dir}";
-            } else if (request.order[0].column == 1) {
+            }
+            else if (request.order[0].column == 1)
+            {
                 orderby = $" ORDER BY \"Filler\" {request.order[0].dir}";
-            } else if (request.order[0].column == 2) {
+            }
+            else if (request.order[0].column == 2)
+            {
                 orderby = $" ORDER BY \"ToWhsCode\" {request.order[0].dir}";
-            } else if (request.order[0].column == 3) {
+            }
+            else if (request.order[0].column == 3)
+            {
                 orderby = $" ORDER BY \"DocStatus\" {request.order[0].dir}";
-            } else if (request.order[0].column == 4) {
+            }
+            else if (request.order[0].column == 4)
+            {
                 orderby = $" ORDER BY \"DocDate\" {request.order[0].dir}";
-            } else {
+            }
+            else
+            {
                 orderby = $" ORDER BY \"DocNum\" DESC";
             }
 
@@ -92,7 +113,8 @@ namespace SAP_API.Controllers
                     ""Filler""
                 From OWTQ ";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 query += "Where " + whereClause;
             }
 
@@ -106,14 +128,16 @@ namespace SAP_API.Controllers
 
             string queryCount = @"Select Count (*) as COUNT From OWTQ ";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 queryCount += "Where " + whereClause;
             }
             oRecSet.DoQuery(queryCount);
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"][0]["COUNT"].ToObject<int>();
 
-            TransferRequestSearchResponse respose = new TransferRequestSearchResponse {
+            TransferRequestSearchResponse respose = new TransferRequestSearchResponse
+            {
                 data = orders,
                 draw = request.Draw,
                 recordsFiltered = COUNT,
@@ -126,12 +150,14 @@ namespace SAP_API.Controllers
 
         // GET: api/InventoryTransferRequest/WMSDetail/5/DocEntry
         [HttpGet("WMSDetail/{id}/{doctype}")]
-        public async Task<IActionResult> GetWMSDetail(int id, string doctype) {
+        public async Task<IActionResult> GetWMSDetail(int id, string doctype)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
-            if (!doctype.Equals("DocEntry") && !doctype.Equals("DocNum")) {
+            if (!doctype.Equals("DocEntry") && !doctype.Equals("DocNum"))
+            {
                 return BadRequest(new { error = "Doc Type to Search Invalid" });
             }
 
@@ -156,22 +182,26 @@ namespace SAP_API.Controllers
                 JOIN OWHS whsOrigin ON document.""Filler"" = whsOrigin.""WhsCode""
                 JOIN OWHS whsDest ON document.""ToWhsCode"" = whsDest.""WhsCode""
                 WHERE """ + doctype + @""" = " + id);
-            
-            if (oRecSet.RecordCount == 0) {
+
+            if (oRecSet.RecordCount == 0)
+            {
                 return NotFound("No Existe Documento");
             }
 
             JToken transfer = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"][0];
             int DocEntry;
             int DocNum;
-            if (doctype.Equals("DocEntry")) {
+            if (doctype.Equals("DocEntry"))
+            {
                 DocEntry = id;
                 DocNum = transfer["DocNum"].ToObject<int>();
-            } else {
+            }
+            else
+            {
                 DocEntry = transfer["DocEntry"].ToObject<int>();
                 DocNum = id;
             }
-   
+
             oRecSet.DoQuery(@"
                 SELECT
                     ""LineNum"",
@@ -201,7 +231,8 @@ namespace SAP_API.Controllers
                 FROM OWTR
                 WHERE ""DocEntry"" in (SELECT ""DocEntry"" FROM WTR1 WHERE ""BaseEntry"" = " + DocEntry + ")");
 
-            if (oRecSet.RecordCount != 0) {
+            if (oRecSet.RecordCount != 0)
+            {
                 transfer["TransferList"] = context.XMLTOJSON(oRecSet.GetAsXML())["OWTR"];
 
                 oRecSet.DoQuery(@"
@@ -217,7 +248,8 @@ namespace SAP_API.Controllers
 
                 List<string> DocEntryListToGetBarCodes = new List<string>();
 
-                foreach (JToken transfers in transfer["TransferList"]) {
+                foreach (JToken transfers in transfer["TransferList"])
+                {
                     DocEntryListToGetBarCodes.Add(transfers["DocEntry"].ToString());
                 }
 
@@ -253,7 +285,8 @@ namespace SAP_API.Controllers
 
                     From OWTQ WHERE ""U_SO1_02NUMRECEPCION"" = " + DocNum);
 
-                if (oRecSet.RecordCount != 0) {
+                if (oRecSet.RecordCount != 0)
+                {
 
                     transfer["TransferRequestCopyList"] = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"];
 
@@ -271,14 +304,16 @@ namespace SAP_API.Controllers
             return Ok(transfer);
         }
 
-        class TransferDeliveryOutputLineUom {
+        class TransferDeliveryOutputLineUom
+        {
             public uint BaseEntry { get; set; }
             public string BaseUom { get; set; }
             public uint UomEntry { get; set; }
             public string UomCode { get; set; }
             public double BaseQty { get; set; }
         }
-        class TransferDeliveryOutputLine {
+        class TransferDeliveryOutputLine
+        {
             public string LineStatus { get; set; }
             public uint LineNum { get; set; }
             public string ItemCode { get; set; }
@@ -301,7 +336,8 @@ namespace SAP_API.Controllers
             public List<string> CodeBars { get; set; }
             public List<TransferDeliveryOutputLineUom> Uoms { get; set; }
         }
-        class TransferDeliveryOutput {
+        class TransferDeliveryOutput
+        {
             public uint DocEntry { get; set; }
             public uint DocNum { get; set; }
             public string DocStatus { get; set; }
@@ -327,7 +363,7 @@ namespace SAP_API.Controllers
         [HttpGet("DeliverySAP/{DocNum}")]
         public async Task<IActionResult> GetDeliveryTransferRequest(uint DocNum)
         {
-           
+
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -383,7 +419,7 @@ Detail.""UgpEntry""
             {
 
                 oRecSet.DoQuery($@"
-                    Select ""BcdCode""
+                    Select ""BcdCode"",""UomEntry""
                     From OBCD Where ""ItemCode"" = '{line["ItemCode"]}';");
 
                 var temp = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"].Select(Q => (string)Q["BcdCode"]);
@@ -516,7 +552,8 @@ Detail.""UgpEntry""
 
         // GET: api/InventoryTransferRequest/list
         [HttpGet("list/{date}")]
-        public async Task<IActionResult> GetList(string date) {
+        public async Task<IActionResult> GetList(string date)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -531,7 +568,8 @@ Detail.""UgpEntry""
                 From OWTQ Where ""DocDate"" = '" + date + "'");
 
             int rc = oRecSet.RecordCount;
-            if (rc == 0) {
+            if (rc == 0)
+            {
                 return NotFound();
             }
 
@@ -677,13 +715,15 @@ Detail.""UgpEntry""
 
         // GET: api/InventoryTransferRequest/Detail/5
         [HttpGet("Detail/{id}/{doctype}")]
-        public async Task<IActionResult> GetDetail(int id, string doctype) {
+        public async Task<IActionResult> GetDetail(int id, string doctype)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-            
-            if (!doctype.Equals("DocEntry") && !doctype.Equals("DocNum")) {
-                return BadRequest(new { error  = "Doc Type to Search Invalid"});
+
+            if (!doctype.Equals("DocEntry") && !doctype.Equals("DocNum"))
+            {
+                return BadRequest(new { error = "Doc Type to Search Invalid" });
             }
 
             oRecSet.DoQuery(@"
@@ -696,7 +736,8 @@ Detail.""UgpEntry""
                     ""Filler"",
                     ""ToWhsCode""
                 From OWTQ WHERE """ + doctype + @""" = " + id);
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return NotFound("No Existe Documento");
             }
 
@@ -748,7 +789,8 @@ Detail.""UgpEntry""
                 FROM OWTR 
                 WHERE ""DocEntry"" in (SELECT ""DocEntry"" FROM WTR1 WHERE ""BaseEntry"" = " + docentry + ")");
 
-            if (oRecSet.RecordCount != 0) {
+            if (oRecSet.RecordCount != 0)
+            {
                 transfer["Transfers"] = context.XMLTOJSON(oRecSet.GetAsXML())["OWTR"];
 
                 oRecSet.DoQuery(@"
@@ -763,10 +805,11 @@ Detail.""UgpEntry""
                 transfer["TransfersDetail"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTR1"];
 
                 string docEntrys = "";
-                foreach (JToken transfers in transfer["Transfers"]) {
+                foreach (JToken transfers in transfer["Transfers"])
+                {
                     docEntrys += transfers["DocEntry"] + ",";
                 }
-                docEntrys = docEntrys.Substring(0, docEntrys.Length-1);
+                docEntrys = docEntrys.Substring(0, docEntrys.Length - 1);
                 oRecSet.DoQuery(@"
                     SELECT
                         ""ItemCode"",
@@ -785,7 +828,8 @@ Detail.""UgpEntry""
 
                 oRecSet.DoQuery(@"SELECT ""DocNum"", ""DocEntry"", ""DocDate"" From OWTQ WHERE ""U_SO1_02NUMRECEPCION"" = " + docnum);
 
-                if (oRecSet.RecordCount != 0) {
+                if (oRecSet.RecordCount != 0)
+                {
                     transfer["Requests"] = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"];
 
                     oRecSet.DoQuery(@"
@@ -804,7 +848,8 @@ Detail.""UgpEntry""
 
         // POST: api/InventoryTransferRequest
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] TransferRequest value) {
+        public async Task<IActionResult> Post([FromBody] TransferRequest value)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.StockTransfer newRequest = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
@@ -827,17 +872,20 @@ Detail.""UgpEntry""
             newRequest.FromWarehouse = value.fromwhs.whscode;
             newRequest.ToWarehouse = value.towhs.whscode;
 
-            for (int i = 0; i < value.rows.Count; i++) {
+            for (int i = 0; i < value.rows.Count; i++)
+            {
                 newRequest.Lines.ItemCode = value.rows[i].code;
 
 
-                if (value.rows[i].uom == -2) {
+                if (value.rows[i].uom == -2)
+                {
                     newRequest.Lines.UoMEntry = 185;
                     newRequest.Lines.UserFields.Fields.Item("U_CjsPsVr").Value = value.rows[i].quantity;
                     newRequest.Lines.Quantity = value.rows[i].quantity * value.rows[i].equivalentePV;
                     newRequest.Lines.UseBaseUnits = SAPbobsCOM.BoYesNoEnum.tYES;
                 }
-                else {
+                else
+                {
                     newRequest.Lines.Quantity = value.rows[i].quantity;
                     newRequest.Lines.UoMEntry = value.rows[i].uom;
                     newRequest.Lines.UseBaseUnits = (SAPbobsCOM.BoYesNoEnum)value.rows[i].uomBase;
@@ -849,7 +897,8 @@ Detail.""UgpEntry""
             }
 
             int result = newRequest.Add();
-            if (result != 0) {
+            if (result != 0)
+            {
                 string error = context.oCompany.GetLastErrorDescription();
                 return BadRequest(error);
             }
@@ -858,17 +907,20 @@ Detail.""UgpEntry""
 
         // PUT: api/InventoryTransferRequest/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> Put(int id, [FromBody] UpdateTransferRequest value) {
+        public async Task<IActionResult> Put(int id, [FromBody] UpdateTransferRequest value)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.StockTransfer request = (SAPbobsCOM.StockTransfer)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest);
 
-            if (request.GetByKey(id)) {
+            if (request.GetByKey(id))
+            {
                 request.Lines.SetCurrentLine(0);
                 string from = request.Lines.FromWarehouseCode;
                 string to = request.Lines.WarehouseCode;
                 request.Lines.Add();
-                for (int i = 0; i < value.newProducts.Count; i++) {
+                for (int i = 0; i < value.newProducts.Count; i++)
+                {
                     request.Lines.ItemCode = value.newProducts[i].code;
                     request.Lines.Quantity = value.newProducts[i].quantity;
                     request.Lines.UoMEntry = value.newProducts[i].uom;
@@ -878,23 +930,28 @@ Detail.""UgpEntry""
                     request.Lines.Add();
                 }
 
-                for (int i = 0; i < value.ProductsChanged.Count; i++) {
+                for (int i = 0; i < value.ProductsChanged.Count; i++)
+                {
                     request.Lines.SetCurrentLine(value.ProductsChanged[i].LineNum);
-                    if (request.Lines.Quantity != value.ProductsChanged[i].quantity) {
+                    if (request.Lines.Quantity != value.ProductsChanged[i].quantity)
+                    {
                         request.Lines.Quantity = value.ProductsChanged[i].quantity;
                     }
 
-                    if (request.Lines.UoMEntry != value.ProductsChanged[i].uom) {
+                    if (request.Lines.UoMEntry != value.ProductsChanged[i].uom)
+                    {
                         request.Lines.UseBaseUnits = (SAPbobsCOM.BoYesNoEnum)value.ProductsChanged[i].uomBase;
                         request.Lines.UoMEntry = value.ProductsChanged[i].uom;
                     }
                 }
 
                 int result = request.Update();
-                if (result == 0) {
+                if (result == 0)
+                {
                     return Ok();
                 }
-                else {
+                else
+                {
                     string error = context.oCompany.GetLastErrorDescription();
                     return BadRequest(new { error });
                 }
