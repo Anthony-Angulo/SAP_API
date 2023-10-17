@@ -710,7 +710,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
         {
             CompanyService oCS = context.oCompany.GetCompanyService();
 
-            if (value.TransferRows.Exists(x => x.BatchList.Exists(x => x.Code != "SI" && !String.IsNullOrEmpty(x.CodeBar))))
+            if (value.TransferRows.Exists(x => x.BatchList.Exists(x => x.Code != "SI")))
             {
                 InventoryPostingsService oICS = (InventoryPostingsService)oCS.GetBusinessService(ServiceTypes.InventoryPostingsService);
                 InventoryPosting oIC;
@@ -721,7 +721,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 oIC.Remarks = $"Basado en solicitud: {transferRequest.DocNum}";
                 foreach (var item in value.TransferRows)
                 {
-                    if (item.BatchList.Exists(x => x.Code != "SI" && !String.IsNullOrEmpty(x.CodeBar)))
+                    if (item.BatchList.Exists(x => x.Code != "SI"))
                     {
                         InventoryPostingLines oICLS = oIC.InventoryPostingLines;
                         InventoryPostingLine oICL = oICLS.Add();
