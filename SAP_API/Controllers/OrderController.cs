@@ -745,12 +745,11 @@ Detail.""UgpEntry""
 
             foreach (var line in order["Lines"])
             {
-
                 oRecSet.DoQuery($@"
-                    Select ""BcdCode""
+                    Select ""BcdCode"",""UomEntry""
                     From OBCD Where ""ItemCode"" = '{line["ItemCode"]}';");
 
-                var temp = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"].Select(Q => (string)Q["BcdCode"]);
+                var temp = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
                 line["CodeBars"] = JArray.FromObject(temp);
 
                 oRecSet.DoQuery($@"

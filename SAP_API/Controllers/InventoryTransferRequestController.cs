@@ -333,7 +333,7 @@ namespace SAP_API.Controllers
             public string U_IL_TipPes { get; set; }
             public double NumInSale { get; set; }
             public double NumInBuy { get; set; }
-            public List<string> CodeBars { get; set; }
+            public List<object> CodeBars { get; set; }
             public List<TransferDeliveryOutputLineUom> Uoms { get; set; }
         }
         class TransferDeliveryOutput
@@ -422,7 +422,7 @@ Detail.""UgpEntry""
                     Select ""BcdCode"",""UomEntry""
                     From OBCD Where ""ItemCode"" = '{line["ItemCode"]}';");
 
-                var temp = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"].Select(Q => (string)Q["BcdCode"]);
+                var temp = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
                 line["CodeBars"] = JArray.FromObject(temp);
 
                 oRecSet.DoQuery($@"
