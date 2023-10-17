@@ -22,6 +22,7 @@ namespace SAP_API.Controllers
         {
             _context = context;
         }
+
         [HttpGet]
         public IActionResult Get()
         {
@@ -31,13 +32,14 @@ namespace SAP_API.Controllers
 
             facturasQuemadas = (from facturas in _context.FacBurn.AsEnumerable()
                                 where facturas.DateBurn.Date >= DateTime.Now.Date
+                                orderby facturas.Series
                                 select new FacturasNuevas(
 facturas.DocNum,
 (ApplicationDbContext.Series)facturas.Series,
 facturas.DateBurn,
 facturas.DocDate,
 facturas.UserName
-                                )).OrderBy(x => x.Series).ToList();
+                                )).ToList();
             Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
             string query = @"SELECT T2.""Remark"" as ""Sucursal"",T2.""SeriesName"" as ""Serie"",T0.""DocNum"" as ""Folio"",TO_NVARCHAR(T0.""DocDate"", 'DD-MM-YYYY') as ""Fecha"" FROM  ""OINV"" T0,""NNM1"" T2 WHERE T0.""DocDate"" >=  CURRENT_DATE AND T0.""CANCELED""!='C' and  T0.""GroupNum"" in ('8','19') AND T2.""Series""=T0.""Series"" order by T2.""Remark""";
             oRecSet.DoQuery(query);
@@ -71,13 +73,14 @@ facturas.UserName
 
             facturasQuemadas = (from facturas in _context.FacBurn.AsEnumerable()
                                 where facturas.DateBurn.Date >= DateTime.Now.Date && facturas.Series == Sucursal
+                                orderby facturas.Series
                                 select new FacturasNuevas(
 facturas.DocNum,
 (ApplicationDbContext.Series)facturas.Series,
 facturas.DateBurn,
 facturas.DocDate,
 facturas.UserName
-                                )).OrderBy(x => x.Series).ToList();
+                                )).ToList();
             Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
             string query = $@"SELECT T2.""Remark"" as ""Sucursal"",T2.""SeriesName"" as ""Serie"",T0.""DocNum"" as ""Folio"",TO_NVARCHAR(T0.""DocDate"", 'DD-MM-YYYY') as ""Fecha"" FROM  ""OINV"" T0,""NNM1"" T2 WHERE T0.""DocDate"" >=  CURRENT_DATE AND T0.""CANCELED""!='C' and  T0.""GroupNum"" in ('8','19') AND T2.""Series""=T0.""Series"" AND T2.""Series""='{Sucursal}' order by T2.""Remark""";
             oRecSet.DoQuery(query);
@@ -114,13 +117,14 @@ facturas.UserName
             facturasQuemadas = (from facturas in _context.FacBurn.AsEnumerable()
                                 where (facturas.DateBurn.Date >= FechaInicial && facturas.DateBurn.Date <= FechaFinal)
                                 && facturas.Series == Sucursal
+                                orderby facturas.Series
                                 select new FacturasNuevas(
 facturas.DocNum,
 (ApplicationDbContext.Series)facturas.Series,
 facturas.DateBurn,
 facturas.DocDate,
 facturas.UserName
-                                )).OrderBy(x => x.Series).ToList();
+                                )).ToList();
             Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
             string query = $@"SELECT T2.""Remark"" as ""Sucursal"",T2.""SeriesName"" as ""Serie"",
 T0.""DocNum"" as ""Folio"",
