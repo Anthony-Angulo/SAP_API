@@ -345,7 +345,7 @@ namespace SAP_API.Controllers
             public string Filler { get; set; }
             public List<TransferDeliveryOutputLine> Lines { get; set; }
         }
-
+        ///REFCIFICACION DE DOCUMENTOS
         /// <summary>
         /// Get TransferRequest Detail to WMS App Delivery. This route return header and lines
         /// document, plus BarCodes and Uoms Detail.
