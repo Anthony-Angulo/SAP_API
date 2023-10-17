@@ -7,6 +7,7 @@ using SAP_API.Models;
 using SAPbobsCOM;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 namespace SAP_API.Controllers
@@ -108,10 +109,10 @@ facturas.UserName
         public IActionResult GetByDateSucursal([FromQuery] string InitialDate, [FromQuery] string FinalDate, [FromQuery] int Sucursal)
         {
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-
+            CultureInfo provider = CultureInfo.InvariantCulture;
             var facturasQuemadas = new List<FacturasNuevas>();
-            DateTime FechaInicial = DateTime.Parse(InitialDate);
-            DateTime FechaFinal = DateTime.Parse(FinalDate);
+            DateTime FechaInicial = DateTime.ParseExact(InitialDate, "dd/MM/yyyy", provider);
+            DateTime FechaFinal = DateTime.ParseExact(FinalDate, "dd/MM/yyyy", provider);
 
             facturasQuemadas = (from facturas in _context.FacBurn.AsEnumerable()
                                 where (facturas.DateBurn.Date >= FechaInicial && facturas.DateBurn.Date <= FechaFinal)
