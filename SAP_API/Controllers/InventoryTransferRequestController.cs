@@ -419,8 +419,12 @@ Detail.""UgpEntry""
             {
 
                 oRecSet.DoQuery($@"
-                    Select ""BcdCode"",""UomEntry""
-                    From OBCD Where ""ItemCode"" = '{line["ItemCode"]}';");
+Select  ""BcdCode"",T3.""BaseQty"",T0.""UomEntry""
+ From OBCD T0 
+ LEFT JOIN OUOM T1 on T0.""UomEntry""= T1.""UomEntry"" 
+ LEFT JOIN OUGP T2 on T2.""UgpCode""='{line["ItemCode"]}' 
+ LEFT JOIN UGP1 T3 on T2.""UgpEntry""= T3.""UgpEntry"" AND T0.""UomEntry""=T3.""UomEntry""
+  Where ""ItemCode"" ='{line["ItemCode"]}';");
 
                 var temp = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
                 line["CodeBars"] = JArray.FromObject(temp);
