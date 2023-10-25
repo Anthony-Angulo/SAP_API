@@ -336,6 +336,30 @@ namespace SAP_API.Controllers
             public List<object> CodeBars { get; set; }
             public List<TransferDeliveryOutputLineUom> Uoms { get; set; }
         }
+        class TransferDeliveryOutputLineNew
+        {
+            public string LineStatus { get; set; }
+            public uint LineNum { get; set; }
+            public string ItemCode { get; set; }
+            public uint UomEntry { get; set; }
+            public string WhsCode { get; set; }
+            public string UomCode { get; set; }
+            public double OpenInvQty { get; set; }
+            public double OpenQty { get; set; }
+            public string FromWhsCod { get; set; }
+            public string ItemName { get; set; }
+            public char QryGroup44 { get; set; }
+            public char QryGroup45 { get; set; }
+            public char ManBtchNum { get; set; }
+            public double U_IL_PesMax { get; set; }
+            public double U_IL_PesMin { get; set; }
+            public double U_IL_PesProm { get; set; }
+            public string U_IL_TipPes { get; set; }
+            public double NumInSale { get; set; }
+            public double NumInBuy { get; set; }
+            public List<string> CodeBars { get; set; }
+            public List<TransferDeliveryOutputLineUom> Uoms { get; set; }
+        }
         class TransferDeliveryOutput
         {
             public uint DocEntry { get; set; }
@@ -345,7 +369,15 @@ namespace SAP_API.Controllers
             public string Filler { get; set; }
             public List<TransferDeliveryOutputLine> Lines { get; set; }
         }
-
+        class TransferDeliveryOutputNew
+        {
+            public uint DocEntry { get; set; }
+            public uint DocNum { get; set; }
+            public string DocStatus { get; set; }
+            public string ToWhsCode { get; set; }
+            public string Filler { get; set; }
+            public List<TransferDeliveryOutputLineNew> Lines { get; set; }
+        }
         /// <summary>
         /// Get TransferRequest Detail to WMS App Delivery. This route return header and lines
         /// document, plus BarCodes and Uoms Detail.
@@ -362,6 +394,103 @@ namespace SAP_API.Controllers
         //[Authorize]
         [HttpGet("DeliverySAP/{DocNum}")]
         public async Task<IActionResult> GetDeliveryTransferRequest(uint DocNum)
+        {
+
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery($@"
+                Select
+                    ""DocEntry"",
+                    ""DocNum"",
+                    ""DocStatus"",
+                    ""ToWhsCode"",
+                    ""Filler""
+                From OWTQ WHERE ""DocNum"" = {DocNum};");
+
+            if (oRecSet.RecordCount == 0)
+            {
+                return NoContent();
+            }
+
+            JToken request = context.XMLTOJSON(oRecSet.GetAsXML())["OWTQ"][0];
+
+            if (request["DocStatus"].ToString() != "O")
+            {
+                return BadRequest("Documento Cerrado");
+            }
+
+            oRecSet.DoQuery($@"
+                Select
+                    ""LineStatus"",
+                    ""LineNum"",
+                    Line.""ItemCode"",
+                    ""FromWhsCod"",
+                    ""UomEntry"",
+                    ""WhsCode"",
+                    ""UomCode"",
+                    ""OpenInvQty"",
+                    ""OpenQty"",
+                    ""ItemName"",
+                    ""QryGroup44"",
+                    ""QryGroup45"",
+                    ""ManBtchNum"",
+                    ""U_IL_PesMax"",
+                    ""U_IL_PesMin"",
+                    ""U_IL_PesProm"",
+                    ""U_IL_TipPes"",
+                    ""NumInSale"",
+Detail.""UgpEntry""
+                From WTQ1 as Line
+                JOIN OITM as Detail on Detail.""ItemCode"" = Line.""ItemCode""
+                WHERE Line.""DocEntry"" = {request["DocEntry"]};");
+
+            request["Lines"] = context.XMLTOJSON(oRecSet.GetAsXML())["WTQ1"];
+            foreach (var line in request["Lines"])
+            {
+
+                oRecSet.DoQuery($@"Select ""BcdCode""
+                    From OBCD Where ""ItemCode"" = '{line["ItemCode"]}';");
+
+
+                var temp = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"].Select(Q => (string)Q["BcdCode"]);
+                line["CodeBars"] = JArray.FromObject(temp);
+
+                oRecSet.DoQuery($@"
+                    Select 
+                        header.""BaseUom"" as ""BaseEntry"",
+                        baseUOM.""UomCode"" as ""BaseUom"",
+                        detail.""UomEntry"",
+                        UOM.""UomCode"",
+                        detail.""BaseQty""
+                    From OUGP header
+                    JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                    JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                    JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                    Where header.""UgpEntry"" = '{line["UgpEntry"]}';");
+                line["Uoms"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+            }
+
+            TransferDeliveryOutput output = request.ToObject<TransferDeliveryOutput>();
+            return Ok(output);
+        }
+        /// <summary>
+        /// Get TransferRequest Detail to WMS App Delivery. This route return header and lines
+        /// document, plus BarCodes and Uoms Detail.
+        /// </summary>
+        /// <param name="DocNum">DocNum. An Unsigned Integer that serve as TrasnferRequest Document identifier.</param>
+        /// <returns>A TrasnferRequest Detail To Delivery</returns>
+        /// <response code="200">Returns TransferRequest</response>
+        /// <response code="204">No Order Found</response>
+        /// <response code="400">Document Found, Document Close</response>
+        // GET: api/InventoryTransferRequest/DeliverySAP/:DocNum
+        [ProducesResponseType(typeof(TransferDeliveryOutputNew), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        //[Authorize]
+        [HttpGet("DeliverySAPNew/{DocNum}")]
+        public async Task<IActionResult> GetDeliveryTransferRequestNew(uint DocNum)
         {
 
 
@@ -444,10 +573,9 @@ Select  ""BcdCode"",T3.""BaseQty"",T0.""UomEntry""
                 line["Uoms"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             }
 
-            TransferDeliveryOutput output = request.ToObject<TransferDeliveryOutput>();
+            TransferDeliveryOutputNew output = request.ToObject<TransferDeliveryOutputNew>();
             return Ok(output);
         }
-
         // GET: api/InventoryTransferRequest/5
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(int id)
