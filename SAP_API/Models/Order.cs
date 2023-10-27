@@ -124,6 +124,8 @@ namespace SAP_API.Models
         public List<OrderRow> rows { set; get; }
 
         public string idUsuario { get; set; }
+
+        public int Identificador { get; set; }
     }
 
     public class CreateOrderRetail

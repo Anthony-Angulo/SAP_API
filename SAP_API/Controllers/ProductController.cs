@@ -1471,6 +1471,7 @@ product.""UgpEntry"",
                     ""ItemName"",
                     ""UgpEntry"",
                     ""ItemCode"",
+""U_IL_Marca"",
                     ""QryGroup7"" as ""Meet"",
                     RTRIM(RTRIM(""U_IL_PesProm"", '0'), '.') AS ""U_IL_PesProm""
                 From OITM
