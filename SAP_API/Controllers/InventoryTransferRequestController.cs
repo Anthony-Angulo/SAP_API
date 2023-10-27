@@ -369,6 +369,7 @@ namespace SAP_API.Controllers
             public string Filler { get; set; }
             public List<TransferDeliveryOutputLine> Lines { get; set; }
         }
+
         class TransferDeliveryOutputNew
         {
             public uint DocEntry { get; set; }
@@ -378,6 +379,8 @@ namespace SAP_API.Controllers
             public string Filler { get; set; }
             public List<TransferDeliveryOutputLineNew> Lines { get; set; }
         }
+
+
         /// <summary>
         /// Get TransferRequest Detail to WMS App Delivery. This route return header and lines
         /// document, plus BarCodes and Uoms Detail.
