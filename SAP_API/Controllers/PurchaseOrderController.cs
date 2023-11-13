@@ -15,60 +15,84 @@ namespace SAP_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class PurchaseOrderController : ControllerBase {
+    public class PurchaseOrderController : ControllerBase
+    {
 
         [HttpPost("search")]
-        public async Task<IActionResult> GetSearch([FromBody] SearchRequest request) {
+        public async Task<IActionResult> GetSearch([FromBody] SearchRequest request)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             List<string> where = new List<string>();
 
-            if (request.columns[0].search.value != String.Empty) {
+            if (request.columns[0].search.value != String.Empty)
+            {
                 where.Add($"LOWER(purchaseOrder.\"DocNum\") Like LOWER('%{request.columns[0].search.value}%')");
             }
-            if (request.columns[1].search.value != String.Empty) {
+            if (request.columns[1].search.value != String.Empty)
+            {
                 where.Add($"LOWER(contact.\"CardFName\") Like LOWER('%{request.columns[1].search.value}%')");
             }
-            if (request.columns[2].search.value != String.Empty) {
+            if (request.columns[2].search.value != String.Empty)
+            {
                 where.Add($"LOWER(contact.\"CardName\") Like LOWER('%{request.columns[2].search.value}%')");
             }
-            if (request.columns[3].search.value != String.Empty) {
+            if (request.columns[3].search.value != String.Empty)
+            {
                 where.Add($"LOWER(warehouse.\"WhsName\") Like LOWER('%{request.columns[3].search.value}%')");
             }
-            if (request.columns[4].search.value != String.Empty) {
+            if (request.columns[4].search.value != String.Empty)
+            {
                 List<string> whereOR = new List<string>();
-                if ("Abierto".Contains(request.columns[4].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Abierto".Contains(request.columns[4].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
                     whereOR.Add(@"purchaseOrder.""DocStatus"" = 'O' ");
                 }
-                if ("Cerrado".Contains(request.columns[4].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Cerrado".Contains(request.columns[4].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
                     whereOR.Add(@"purchaseOrder.""DocStatus"" = 'C' ");
                 }
-                if ("Cancelado".Contains(request.columns[4].search.value, StringComparison.CurrentCultureIgnoreCase)) {
+                if ("Cancelado".Contains(request.columns[4].search.value, StringComparison.CurrentCultureIgnoreCase))
+                {
                     whereOR.Add(@"purchaseOrder.""CANCELED"" = 'Y' ");
                 }
 
                 string whereORClause = "(" + String.Join(" OR ", whereOR) + ")";
                 where.Add(whereORClause);
             }
-            if (request.columns[5].search.value != String.Empty) {
+            if (request.columns[5].search.value != String.Empty)
+            {
                 where.Add($"to_char(to_date(SUBSTRING(purchaseOrder.\"DocDate\", 0, 10), 'YYYY-MM-DD'), 'DD-MM-YYYY') Like '%{request.columns[5].search.value}%'");
             }
 
             string orderby = "";
-            if (request.order[0].column == 0) {
+            if (request.order[0].column == 0)
+            {
                 orderby = $" ORDER BY purchaseOrder.\"DocNum\" {request.order[0].dir}";
-            } else if (request.order[0].column == 1) {
+            }
+            else if (request.order[0].column == 1)
+            {
                 orderby = $" ORDER BY contact.\"CardFName\" {request.order[0].dir}";
-            } else if (request.order[0].column == 2) {
+            }
+            else if (request.order[0].column == 2)
+            {
                 orderby = $" ORDER BY contact.\"CardName\" {request.order[0].dir}";
-            } else if (request.order[0].column == 3) {
+            }
+            else if (request.order[0].column == 3)
+            {
                 orderby = $" ORDER BY warehouse.\"WhsName\" {request.order[0].dir}";
-            } else if (request.order[0].column == 4) {
+            }
+            else if (request.order[0].column == 4)
+            {
                 orderby = $" ORDER BY purchaseOrder.\"DocStatus\" {request.order[0].dir}";
-            } else if (request.order[0].column == 5) {
+            }
+            else if (request.order[0].column == 5)
+            {
                 orderby = $" ORDER BY purchaseOrder.\"DocDate\" {request.order[0].dir}";
-            } else {
+            }
+            else
+            {
                 orderby = $" ORDER BY purchaseOrder.\"DocNum\" DESC";
             }
 
@@ -94,7 +118,8 @@ namespace SAP_API.Controllers
                 LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
                 LEFT JOIN OCRD contact ON purchaseOrder.""CardCode"" = contact.""CardCode"" ";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 query += "Where " + whereClause;
             }
 
@@ -113,14 +138,16 @@ namespace SAP_API.Controllers
                 LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
                 LEFT JOIN OCRD contact ON purchaseOrder.""CardCode"" = contact.""CardCode"" ";
 
-            if (where.Count != 0) {
+            if (where.Count != 0)
+            {
                 queryCount += "Where " + whereClause;
             }
             oRecSet.DoQuery(queryCount);
             oRecSet.MoveFirst();
             int COUNT = context.XMLTOJSON(oRecSet.GetAsXML())["OPOR"][0]["COUNT"].ToObject<int>();
 
-            PurchaseOrderSearchResponse respose = new PurchaseOrderSearchResponse {
+            PurchaseOrderSearchResponse respose = new PurchaseOrderSearchResponse
+            {
                 data = orders,
                 draw = request.Draw,
                 recordsFiltered = COUNT,
@@ -273,7 +300,8 @@ namespace SAP_API.Controllers
 
         // GET: api/PurchaseOrder/WMSDetail/(DocEntry)
         [HttpGet("WMSDetail/{DocEntry}")]
-        public async Task<IActionResult> GetWMSDetail(int DocEntry) {
+        public async Task<IActionResult> GetWMSDetail(int DocEntry)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -309,7 +337,8 @@ namespace SAP_API.Controllers
                 LEFT JOIN OWHS warehouse ON serie.""SeriesName"" = warehouse.""WhsCode""
                 LEFT JOIN OCRD contact ON purchaseOrder.""CardCode"" = contact.""CardCode""
                 WHERE purchaseOrder.""DocEntry"" = '" + DocEntry + "'");
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return NotFound("No Existe Documento");
             }
             purchaseOrder = context.XMLTOJSON(oRecSet.GetAsXML())["OPOR"][0];
@@ -345,7 +374,8 @@ namespace SAP_API.Controllers
 
         // GET: api/PurchaseOrder/
         [HttpGet("CRMDetail/{id}")]
-        public async Task<IActionResult> GetCRMDetail(int id) {
+        public async Task<IActionResult> GetCRMDetail(int id)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -402,7 +432,8 @@ namespace SAP_API.Controllers
         // GET: api/PurchaseOrder/Reception/5/{Cerrado:1:0}
         //[HttpGet("Reception/{id}/{Cerrado}")]
         [HttpGet("Reception/{id}")]
-        public async Task<IActionResult> GetReception(int id) {
+        public async Task<IActionResult> GetReception(int id)
+        {
             //public async Task<IActionResult> GetReception(int id, int Cerrado)
             //{
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
@@ -416,7 +447,8 @@ namespace SAP_API.Controllers
                     ""CardCode"",
                     ""U_IL_Pedimento""
                 From OPOR WHERE ""DocNum"" = " + id);
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return NotFound();
             }
 
@@ -428,7 +460,7 @@ namespace SAP_API.Controllers
             //    return BadRequest("Documento Cerrado");
             //}
 
-           if (POrder["OPOR"]["DocStatus"].ToString() != "O")
+            if (POrder["OPOR"]["DocStatus"].ToString() != "O")
             {
                 return BadRequest("Documento Cerrado");
             }
@@ -447,7 +479,8 @@ namespace SAP_API.Controllers
 
             POrder["POR1"] = context.XMLTOJSON(oRecSet.GetAsXML())["POR1"];
 
-            foreach (JToken pro in POrder["POR1"]) {
+            foreach (JToken pro in POrder["POR1"])
+            {
                 oRecSet.DoQuery(@"
                     Select
                         ""ItemCode"",
@@ -463,12 +496,13 @@ namespace SAP_API.Controllers
                         ""U_IL_PesMin"",
                         ""U_IL_PesProm"",
                         ""U_IL_TipPes"",
+                        ""SuppCatNum"",
                         ""NumInSale"",
                         ""NumInBuy""
                     From OITM Where ""ItemCode"" = '" + pro["ItemCode"] + "'");
                 oRecSet.MoveFirst();
-                pro["Detail"] = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];              
-                    oRecSet.DoQuery($@"Select
+                pro["Detail"] = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+                oRecSet.DoQuery($@"Select
                         ""BcdEntry"",
                         ""BcdCode"",
                         ""BcdName"",
@@ -483,7 +517,9 @@ namespace SAP_API.Controllers
 
         [HttpGet("Receptions/{id}")]
         //[Authorize]
-        public async Task<IActionResult> GetDetail(int id) {
+        [AllowAnonymous]
+        public async Task<IActionResult> GetDetail(int id)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -502,7 +538,8 @@ namespace SAP_API.Controllers
                     ""ToWhsCode""
                 From OPOR WHERE ""DocNum"" = " + id);
 
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return NotFound("No Existe Documento");
             }
 
@@ -520,9 +557,12 @@ namespace SAP_API.Controllers
                 FROM OPDN 
                 WHERE ""DocEntry"" in (SELECT ""DocEntry"" FROM PDN1 WHERE ""BaseEntry"" = " + docentry + ")");
 
-            if (oRecSet.RecordCount != 0) {
+            if (oRecSet.RecordCount != 0)
+            {
                 purchaseOrder["PurchaseDelivery"] = context.XMLTOJSON(oRecSet.GetAsXML())["OPDN"];
-            } else {
+            }
+            else
+            {
                 purchaseOrder["PurchaseDelivery"] = new JArray();
             }
 
@@ -534,7 +574,8 @@ namespace SAP_API.Controllers
 
         // POST: api/PurchaseOrder
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] PurchaseOrder value) {
+        public async Task<IActionResult> Post([FromBody] PurchaseOrder value)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Documents order = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
@@ -542,13 +583,15 @@ namespace SAP_API.Controllers
             order.CardCode = value.cardcode;
             order.Series = value.series;
 
-            if (value.currencyrate != 0) {
+            if (value.currencyrate != 0)
+            {
                 order.DocRate = value.currencyrate;
             }
 
             order.NumAtCard = value.numatcard;
 
-            for (int i = 0; i < value.rows.Count; i++) {
+            for (int i = 0; i < value.rows.Count; i++)
+            {
                 order.Lines.ItemCode = value.rows[i].code;
                 order.Lines.UnitPrice = value.rows[i].price;
                 order.Lines.Quantity = value.rows[i].quantity;
@@ -558,9 +601,12 @@ namespace SAP_API.Controllers
             order.Comments = value.comments;
 
             int result = order.Add();
-            if (result == 0) {
+            if (result == 0)
+            {
                 return Ok(new { value = context.oCompany.GetNewObjectKey() });
-            } else {
+            }
+            else
+            {
                 string error = context.oCompany.GetLastErrorDescription();
                 return BadRequest(new { error });
             }
@@ -606,7 +652,8 @@ namespace SAP_API.Controllers
         // GET: api/PurchaseOrder/CRMList
         // Todas las Ordernes - Encabezado para lista CRM
         [HttpGet("CRMList")]
-        public async Task<IActionResult> GetCRMList() {
+        public async Task<IActionResult> GetCRMList()
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -632,7 +679,8 @@ namespace SAP_API.Controllers
         // GET: api/PurchaseOrder/CRMList
         // Todas las Ordernes - Encabezado para lista CRM
         [HttpGet("CRMList/Sucursal/{id}")]
-        public async Task<IActionResult> GetCRMSucursalList(string id) {
+        public async Task<IActionResult> GetCRMSucursalList(string id)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -660,7 +708,8 @@ namespace SAP_API.Controllers
 
         // GET: api/PurchaseOrder/list
         [HttpGet("list/{date}")]
-        public async Task<IActionResult> GetList(string date) {
+        public async Task<IActionResult> GetList(string date)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Documents items = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
@@ -670,13 +719,15 @@ namespace SAP_API.Controllers
 
             oRecSet.DoQuery("Select * From OPOR Where \"DocDate\" = '" + date + "'");
             int rc = oRecSet.RecordCount;
-            if (rc == 0) {
+            if (rc == 0)
+            {
                 return NotFound();
             }
             items.Browser.Recordset = oRecSet;
             items.Browser.MoveFirst();
 
-            while (items.Browser.EoF == false) {
+            while (items.Browser.EoF == false)
+            {
                 JToken temp = context.XMLTOJSON(items.GetAsXML());
                 temp["OPOR"] = temp["OPOR"][0];
                 temp["POR4"]?.Parent.Remove();
@@ -690,7 +741,8 @@ namespace SAP_API.Controllers
 
         // GET: api/PurchaseOrder/list
         [HttpGet("listsolo/{date}")]
-        public async Task<IActionResult> GetListSolo(string date) {
+        public async Task<IActionResult> GetListSolo(string date)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Documents items = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
@@ -713,7 +765,8 @@ namespace SAP_API.Controllers
 
                 From OPOR Where ""DocDate"" = '" + date + @"'");
             int rc = oRecSet.RecordCount;
-            if (rc == 0) {
+            if (rc == 0)
+            {
                 return NotFound();
             }
             JToken temp = context.XMLTOJSON(oRecSet.GetAsXML())["OPOR"];
@@ -722,13 +775,15 @@ namespace SAP_API.Controllers
 
         // GET: api/PurchaseOrder/5
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(int id) {
+        public async Task<IActionResult> Get(int id)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Documents items = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
-            if (items.GetByKey(id)) {
+            if (items.GetByKey(id))
+            {
                 JToken temp = context.XMLTOJSON(items.GetAsXML());
                 temp["OPOR"] = temp["OPOR"][0];
 
@@ -756,7 +811,8 @@ namespace SAP_API.Controllers
 
         // GET: api/PurchaseOrder/5
         [HttpGet("DeliveriesItemCode/{DocEntry}/{itemcode}")]
-        public async Task<IActionResult> GetDeliveriesItemCode(int DocEntry, string itemcode) {
+        public async Task<IActionResult> GetDeliveriesItemCode(int DocEntry, string itemcode)
+        {
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
@@ -767,7 +823,8 @@ namespace SAP_API.Controllers
                 Where ""BaseEntry"" = " + DocEntry + @"
                 AND ""ItemCode"" = '" + itemcode + "'");
 
-            if (oRecSet.RecordCount == 0) {
+            if (oRecSet.RecordCount == 0)
+            {
                 return Ok(new List<int>());
             }
 
@@ -777,237 +834,237 @@ namespace SAP_API.Controllers
 
         // POST: api/PurchaseOrder
         //[HttpPost("Copy")]
-//        public async Task<IActionResult> PostCopy([FromBody] PurchaseOrderCopy  value) {
+        //        public async Task<IActionResult> PostCopy([FromBody] PurchaseOrderCopy  value) {
 
-//            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
-//            //Remove 2nd DB
-//            if (!context.oCompany2.Connected) {
-//                int code = context.oCompany2.Connect();
-//                if (code != 0) {
-//                    string error = context.oCompany2.GetLastErrorDescription();
-//                    return BadRequest(new { error });
-//                }
-//            }
-//            SAPbobsCOM.Documents purchaseOrderOriginal = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
-            
-//            SAPbobsCOM.Recordset oRecSet1 = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+        //            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+        //            //Remove 2nd DB
+        //            if (!context.oCompany2.Connected) {
+        //                int code = context.oCompany2.Connect();
+        //                if (code != 0) {
+        //                    string error = context.oCompany2.GetLastErrorDescription();
+        //                    return BadRequest(new { error });
+        //                }
+        //            }
+        //            SAPbobsCOM.Documents purchaseOrderOriginal = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
 
-//            SAPbobsCOM.Documents purchaseOrderCopy = (SAPbobsCOM.Documents)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
-            
-//            SAPbobsCOM.Recordset oRecSet2 = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-//            string DocEntryString;
-//            int DocEntry;
-//            //~Remove 2nd DB
-//            if (context.oCompany2.InTransaction)
-//            {
-//                context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
-//            }
-//            //1 DB Config
-//            //SAPbobsCOM.Documents purchaseOrder = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
-//            //~1 DB Config
+        //            SAPbobsCOM.Recordset oRecSet1 = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
+        //            SAPbobsCOM.Documents purchaseOrderCopy = (SAPbobsCOM.Documents)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
 
-//            try
-//            {
-//                context.oCompany2.StartTransaction();
-//                if (!purchaseOrderOriginal.GetByKey(value.DocNumBase)) {
-//                    if (context.oCompany2.InTransaction)
-//                    {
-//                        context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
-//                    }
-//                    return BadRequest("No Existe Documento");
-//                }
-
-//                purchaseOrderCopy.CardCode = purchaseOrderOriginal.CardCode;
-//                purchaseOrderCopy.Series = purchaseOrderOriginal.Series;
-//                purchaseOrderCopy.DocDate = purchaseOrderOriginal.DocDate;
-//                purchaseOrderCopy.DocDueDate = purchaseOrderOriginal.DocDueDate;
-//                purchaseOrderCopy.UserFields.Fields.Item("U_IL_Pedimento").Value = purchaseOrderOriginal.UserFields.Fields.Item("U_IL_Pedimento").Value;
-//                purchaseOrderCopy.UserFields.Fields.Item("U_SO1_02FOLIOOPER").Value = purchaseOrderOriginal.DocNum.ToString();
-
-//                if (purchaseOrderOriginal.DocRate != 0) {
-//                    purchaseOrderCopy.DocRate = purchaseOrderOriginal.DocRate;
-//                }
-//                purchaseOrderCopy.Comments = purchaseOrderOriginal.Comments + " BASE: " + purchaseOrderOriginal.DocNum;
-//                purchaseOrderCopy.NumAtCard = purchaseOrderOriginal.NumAtCard;
-
-//                for (int i = 0; i < purchaseOrderOriginal.Lines.Count; i++) {
-//                    purchaseOrderOriginal.Lines.SetCurrentLine(i);
-//                    purchaseOrderCopy.Lines.ItemCode = purchaseOrderOriginal.Lines.ItemCode;
-//                    purchaseOrderCopy.Lines.UnitPrice = purchaseOrderOriginal.Lines.Price;
-//                    purchaseOrderCopy.Lines.Quantity = purchaseOrderOriginal.Lines.Quantity;
-//                    purchaseOrderCopy.Lines.UoMEntry = purchaseOrderOriginal.Lines.UoMEntry;
-//                    purchaseOrderCopy.Lines.WarehouseCode = purchaseOrderOriginal.Lines.WarehouseCode;
-//                    purchaseOrderCopy.Lines.Add();
-//                }
-//                for (int j = 0; j < purchaseOrderOriginal.Expenses.Count; j++) {
-//                    purchaseOrderOriginal.Expenses.SetCurrentLine(j);
-//                    if (purchaseOrderOriginal.Expenses.LineTotal != 0) {
-//                        purchaseOrderCopy.Expenses.ExpenseCode = purchaseOrderOriginal.Expenses.ExpenseCode;
-//                        if (purchaseOrderOriginal.DocCurrency == "MXN") {
-//                            purchaseOrderCopy.Expenses.LineTotal = purchaseOrderOriginal.Expenses.LineTotal;
-//                        }
-//                        else {
-//                            purchaseOrderCopy.Expenses.LineTotal = purchaseOrderOriginal.Expenses.LineTotalFC;
-//                        }
-//                        purchaseOrderCopy.Expenses.TaxCode = purchaseOrderOriginal.Expenses.TaxCode;
-//                        purchaseOrderCopy.Expenses.Remarks = purchaseOrderOriginal.Expenses.Remarks;
-//                        purchaseOrderCopy.Expenses.VatGroup = purchaseOrderOriginal.Expenses.VatGroup;
-//                        purchaseOrderCopy.Expenses.WTLiable = SAPbobsCOM.BoYesNoEnum.tNO;
-//                        purchaseOrderCopy.Expenses.DistributionMethod = purchaseOrderOriginal.Expenses.DistributionMethod;
-//                        purchaseOrderCopy.Expenses.Add();
-//                    }
-
-//                }
-
-//                int result = purchaseOrderCopy.Add();
-
-//                if (result != 0) {
-//                    if (context.oCompany2.InTransaction)
-//                    {
-//                        context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
-//                    }
-//                    string error = context.oCompany2.GetLastErrorDescription();
-//                    return BadRequest(new { error, Location = "Creacion de Orden de Compra" });
-//                }
-
-//                DocEntryString = context.oCompany2.GetNewObjectKey();
-//                DocEntry = Int32.Parse(DocEntryString);
-//                bool r = purchaseOrderCopy.GetByKey(DocEntry);
-
-//                if (!r) {
-//                    if (context.oCompany2.InTransaction)
-//                    {
-//                        context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
-//                    }
-//                    return BadRequest("No se creo correctamente, volver a intentarlo");
-//                }
-
-//                oRecSet1.DoQuery(@"
-//                Select Distinct ""DocEntry""
-//                From PDN1
-//                Where ""BaseEntry"" = " + purchaseOrderOriginal.DocEntry + "");
-
-//                if (oRecSet1.RecordCount == 0) {
-//                    context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
-//                    return Ok("Creado sin Entregas, No existentes");
-//                }
-
-//                JArray purchaseDeliveries = (JArray)context.XMLTOJSON(oRecSet1.GetAsXML())["PDN1"];
-
-//                List<int> DocEntries = new List<int>();
-//                foreach (JToken purchaseDelivery in purchaseDeliveries){
-//                    DocEntries.Add(purchaseDelivery["DocEntry"].ToObject<int>());
-//                }
-
-//                oRecSet1.DoQuery(@"
-//                    Select Distinct ""DocEntry""
-//                    From OPDN
-//                    Where ""DocEntry"" in (" + String.Join(", ", DocEntries) + @") AND ""CANCELED"" = 'N' ");
-
-//                if (oRecSet1.RecordCount == 0) {
-//                    context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
-//                    return Ok("Creado sin Entregas, No existentes");
-//                }
-
-//                purchaseDeliveries = (JArray)context.XMLTOJSON(oRecSet1.GetAsXML())["OPDN"];
-
-//                DocEntries = new List<int>();
-//                foreach (JToken purchaseDelivery in purchaseDeliveries)
-//                {
-//                    DocEntries.Add(purchaseDelivery["DocEntry"].ToObject<int>());
-//                }
-
-//                for (int i = 0; i < DocEntries.Count; i++) {
-
-//                    SAPbobsCOM.Documents purchaseOrderDeliveryOriginal = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseDeliveryNotes);
-//                    SAPbobsCOM.Documents purchaseOrderDeliveryCopy = (SAPbobsCOM.Documents)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseDeliveryNotes);
-
-//                    Console.WriteLine(DocEntries[i]);
-//                    if (!purchaseOrderDeliveryOriginal.GetByKey(DocEntries[i])) {
-//                        if (context.oCompany2.InTransaction)
-//                        {
-//                            context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
-//                        }
-//                        return BadRequest("No se trae correactamente la entrega: " + DocEntries[i]);
-//                    }
-
-//                    purchaseOrderDeliveryCopy.CardCode = purchaseOrderCopy.CardCode;
-//                    purchaseOrderDeliveryCopy.DocDate = purchaseOrderDeliveryOriginal.DocDate;
-//                    purchaseOrderDeliveryCopy.DocDueDate = purchaseOrderDeliveryOriginal.DocDueDate;
-//                    purchaseOrderDeliveryCopy.Comments = purchaseOrderDeliveryOriginal.Comments + "BASE: " + purchaseOrderDeliveryOriginal.DocNum;
-//                    if (purchaseOrderCopy.DocRate != 1) {
-//                        purchaseOrderDeliveryCopy.DocRate = purchaseOrderCopy.DocRate;
-//                    }
-
-//                    if (i == 0) {
-//                        for (int j = 0; j < purchaseOrderCopy.Expenses.Count; j++) {
-//                            purchaseOrderCopy.Expenses.SetCurrentLine(j);
-//                            if (purchaseOrderCopy.Expenses.LineTotal != 0) {
-//                                purchaseOrderDeliveryCopy.Expenses.ExpenseCode = purchaseOrderCopy.Expenses.ExpenseCode;
-//                                if (purchaseOrderCopy.DocCurrency == "MXN") {
-//                                    purchaseOrderDeliveryCopy.Expenses.LineTotal = purchaseOrderCopy.Expenses.LineTotal;
-//                                }
-//                                else {
-//                                    purchaseOrderDeliveryCopy.Expenses.LineTotal = purchaseOrderCopy.Expenses.LineTotalFC;
-//                                }
-//                                purchaseOrderDeliveryCopy.Expenses.TaxCode = purchaseOrderCopy.Expenses.TaxCode;
-//                                purchaseOrderDeliveryCopy.Expenses.Remarks = purchaseOrderCopy.Expenses.Remarks;
-//                                purchaseOrderDeliveryCopy.Expenses.VatGroup = purchaseOrderCopy.Expenses.VatGroup;
-//                                purchaseOrderDeliveryCopy.Expenses.WTLiable = SAPbobsCOM.BoYesNoEnum.tNO;
-//                                purchaseOrderDeliveryCopy.Expenses.DistributionMethod = purchaseOrderCopy.Expenses.DistributionMethod;
-//                                purchaseOrderDeliveryCopy.Expenses.Add();
-//                            }
-//                        }
-//                    }
-
-//                    for (int j = 0; j < purchaseOrderDeliveryOriginal.Lines.Count; j++) {
-
-//                        purchaseOrderDeliveryOriginal.Lines.SetCurrentLine(j);
-//                        purchaseOrderDeliveryCopy.Lines.BaseEntry = DocEntry;
-//                        purchaseOrderDeliveryCopy.Lines.BaseLine = purchaseOrderDeliveryOriginal.Lines.LineNum;
-//                        purchaseOrderDeliveryCopy.Lines.BaseType = 22;
-//                        purchaseOrderDeliveryCopy.Lines.UoMEntry = purchaseOrderDeliveryOriginal.Lines.UoMEntry;
-//                        purchaseOrderDeliveryCopy.Lines.UnitPrice = purchaseOrderDeliveryOriginal.Lines.UnitPrice;
-//                        purchaseOrderDeliveryCopy.Lines.Quantity = purchaseOrderDeliveryOriginal.Lines.Quantity;
-
-//                        for (int k = 0; k < purchaseOrderDeliveryOriginal.Lines.BatchNumbers.Count; k++) {
-
-//                            purchaseOrderDeliveryOriginal.Lines.BatchNumbers.SetCurrentLine(k);
-//                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.BatchNumber = purchaseOrderDeliveryOriginal.Lines.BatchNumbers.BatchNumber;
-//                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.Quantity = purchaseOrderDeliveryOriginal.Lines.BatchNumbers.Quantity;
-//                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.ManufacturerSerialNumber = purchaseOrderDeliveryOriginal.Lines.BatchNumbers.ManufacturerSerialNumber;
-//                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.InternalSerialNumber = purchaseOrderDeliveryOriginal.Lines.BatchNumbers.InternalSerialNumber;
-//                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.ExpiryDate = purchaseOrderDeliveryOriginal.Lines.BatchNumbers.ExpiryDate;
-//                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.UserFields.Fields.Item("U_IL_CodBar").Value = purchaseOrderDeliveryOriginal.Lines.BatchNumbers.UserFields.Fields.Item("U_IL_CodBar").Value;
-//                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.Add();
-//                        }
-//                        purchaseOrderDeliveryCopy.Lines.Add();
-                        
-//                    }
-
-//                    result = purchaseOrderDeliveryCopy.Add();
-//                    Console.WriteLine(11111111111111111111);
-//                    if (result != 0) {
-//                        string error = context.oCompany2.GetLastErrorDescription();
-//                        throw new Exception(error + ", Location: " + DocEntries[i]);
-//                    }
-
-//                }        } catch (Exception ex) {
-//                Console.WriteLine(ex.Message);
-//                Console.WriteLine(ex.StackTrace);
-//                if (context.oCompany2.InTransaction) {
-//                    context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
-//                }
-//                return BadRequest( new { error = ex.Message, Location = ex.StackTrace
-//});
-//            }
+        //            SAPbobsCOM.Recordset oRecSet2 = (SAPbobsCOM.Recordset)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+        //            string DocEntryString;
+        //            int DocEntry;
+        //            //~Remove 2nd DB
+        //            if (context.oCompany2.InTransaction)
+        //            {
+        //                context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+        //            }
+        //            //1 DB Config
+        //            //SAPbobsCOM.Documents purchaseOrder = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
+        //            //~1 DB Config
 
 
-//            context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
-//            return Ok(DocEntry);
+        //            try
+        //            {
+        //                context.oCompany2.StartTransaction();
+        //                if (!purchaseOrderOriginal.GetByKey(value.DocNumBase)) {
+        //                    if (context.oCompany2.InTransaction)
+        //                    {
+        //                        context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+        //                    }
+        //                    return BadRequest("No Existe Documento");
+        //                }
 
-//        }
+        //                purchaseOrderCopy.CardCode = purchaseOrderOriginal.CardCode;
+        //                purchaseOrderCopy.Series = purchaseOrderOriginal.Series;
+        //                purchaseOrderCopy.DocDate = purchaseOrderOriginal.DocDate;
+        //                purchaseOrderCopy.DocDueDate = purchaseOrderOriginal.DocDueDate;
+        //                purchaseOrderCopy.UserFields.Fields.Item("U_IL_Pedimento").Value = purchaseOrderOriginal.UserFields.Fields.Item("U_IL_Pedimento").Value;
+        //                purchaseOrderCopy.UserFields.Fields.Item("U_SO1_02FOLIOOPER").Value = purchaseOrderOriginal.DocNum.ToString();
+
+        //                if (purchaseOrderOriginal.DocRate != 0) {
+        //                    purchaseOrderCopy.DocRate = purchaseOrderOriginal.DocRate;
+        //                }
+        //                purchaseOrderCopy.Comments = purchaseOrderOriginal.Comments + " BASE: " + purchaseOrderOriginal.DocNum;
+        //                purchaseOrderCopy.NumAtCard = purchaseOrderOriginal.NumAtCard;
+
+        //                for (int i = 0; i < purchaseOrderOriginal.Lines.Count; i++) {
+        //                    purchaseOrderOriginal.Lines.SetCurrentLine(i);
+        //                    purchaseOrderCopy.Lines.ItemCode = purchaseOrderOriginal.Lines.ItemCode;
+        //                    purchaseOrderCopy.Lines.UnitPrice = purchaseOrderOriginal.Lines.Price;
+        //                    purchaseOrderCopy.Lines.Quantity = purchaseOrderOriginal.Lines.Quantity;
+        //                    purchaseOrderCopy.Lines.UoMEntry = purchaseOrderOriginal.Lines.UoMEntry;
+        //                    purchaseOrderCopy.Lines.WarehouseCode = purchaseOrderOriginal.Lines.WarehouseCode;
+        //                    purchaseOrderCopy.Lines.Add();
+        //                }
+        //                for (int j = 0; j < purchaseOrderOriginal.Expenses.Count; j++) {
+        //                    purchaseOrderOriginal.Expenses.SetCurrentLine(j);
+        //                    if (purchaseOrderOriginal.Expenses.LineTotal != 0) {
+        //                        purchaseOrderCopy.Expenses.ExpenseCode = purchaseOrderOriginal.Expenses.ExpenseCode;
+        //                        if (purchaseOrderOriginal.DocCurrency == "MXN") {
+        //                            purchaseOrderCopy.Expenses.LineTotal = purchaseOrderOriginal.Expenses.LineTotal;
+        //                        }
+        //                        else {
+        //                            purchaseOrderCopy.Expenses.LineTotal = purchaseOrderOriginal.Expenses.LineTotalFC;
+        //                        }
+        //                        purchaseOrderCopy.Expenses.TaxCode = purchaseOrderOriginal.Expenses.TaxCode;
+        //                        purchaseOrderCopy.Expenses.Remarks = purchaseOrderOriginal.Expenses.Remarks;
+        //                        purchaseOrderCopy.Expenses.VatGroup = purchaseOrderOriginal.Expenses.VatGroup;
+        //                        purchaseOrderCopy.Expenses.WTLiable = SAPbobsCOM.BoYesNoEnum.tNO;
+        //                        purchaseOrderCopy.Expenses.DistributionMethod = purchaseOrderOriginal.Expenses.DistributionMethod;
+        //                        purchaseOrderCopy.Expenses.Add();
+        //                    }
+
+        //                }
+
+        //                int result = purchaseOrderCopy.Add();
+
+        //                if (result != 0) {
+        //                    if (context.oCompany2.InTransaction)
+        //                    {
+        //                        context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+        //                    }
+        //                    string error = context.oCompany2.GetLastErrorDescription();
+        //                    return BadRequest(new { error, Location = "Creacion de Orden de Compra" });
+        //                }
+
+        //                DocEntryString = context.oCompany2.GetNewObjectKey();
+        //                DocEntry = Int32.Parse(DocEntryString);
+        //                bool r = purchaseOrderCopy.GetByKey(DocEntry);
+
+        //                if (!r) {
+        //                    if (context.oCompany2.InTransaction)
+        //                    {
+        //                        context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+        //                    }
+        //                    return BadRequest("No se creo correctamente, volver a intentarlo");
+        //                }
+
+        //                oRecSet1.DoQuery(@"
+        //                Select Distinct ""DocEntry""
+        //                From PDN1
+        //                Where ""BaseEntry"" = " + purchaseOrderOriginal.DocEntry + "");
+
+        //                if (oRecSet1.RecordCount == 0) {
+        //                    context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
+        //                    return Ok("Creado sin Entregas, No existentes");
+        //                }
+
+        //                JArray purchaseDeliveries = (JArray)context.XMLTOJSON(oRecSet1.GetAsXML())["PDN1"];
+
+        //                List<int> DocEntries = new List<int>();
+        //                foreach (JToken purchaseDelivery in purchaseDeliveries){
+        //                    DocEntries.Add(purchaseDelivery["DocEntry"].ToObject<int>());
+        //                }
+
+        //                oRecSet1.DoQuery(@"
+        //                    Select Distinct ""DocEntry""
+        //                    From OPDN
+        //                    Where ""DocEntry"" in (" + String.Join(", ", DocEntries) + @") AND ""CANCELED"" = 'N' ");
+
+        //                if (oRecSet1.RecordCount == 0) {
+        //                    context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
+        //                    return Ok("Creado sin Entregas, No existentes");
+        //                }
+
+        //                purchaseDeliveries = (JArray)context.XMLTOJSON(oRecSet1.GetAsXML())["OPDN"];
+
+        //                DocEntries = new List<int>();
+        //                foreach (JToken purchaseDelivery in purchaseDeliveries)
+        //                {
+        //                    DocEntries.Add(purchaseDelivery["DocEntry"].ToObject<int>());
+        //                }
+
+        //                for (int i = 0; i < DocEntries.Count; i++) {
+
+        //                    SAPbobsCOM.Documents purchaseOrderDeliveryOriginal = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseDeliveryNotes);
+        //                    SAPbobsCOM.Documents purchaseOrderDeliveryCopy = (SAPbobsCOM.Documents)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseDeliveryNotes);
+
+        //                    Console.WriteLine(DocEntries[i]);
+        //                    if (!purchaseOrderDeliveryOriginal.GetByKey(DocEntries[i])) {
+        //                        if (context.oCompany2.InTransaction)
+        //                        {
+        //                            context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+        //                        }
+        //                        return BadRequest("No se trae correactamente la entrega: " + DocEntries[i]);
+        //                    }
+
+        //                    purchaseOrderDeliveryCopy.CardCode = purchaseOrderCopy.CardCode;
+        //                    purchaseOrderDeliveryCopy.DocDate = purchaseOrderDeliveryOriginal.DocDate;
+        //                    purchaseOrderDeliveryCopy.DocDueDate = purchaseOrderDeliveryOriginal.DocDueDate;
+        //                    purchaseOrderDeliveryCopy.Comments = purchaseOrderDeliveryOriginal.Comments + "BASE: " + purchaseOrderDeliveryOriginal.DocNum;
+        //                    if (purchaseOrderCopy.DocRate != 1) {
+        //                        purchaseOrderDeliveryCopy.DocRate = purchaseOrderCopy.DocRate;
+        //                    }
+
+        //                    if (i == 0) {
+        //                        for (int j = 0; j < purchaseOrderCopy.Expenses.Count; j++) {
+        //                            purchaseOrderCopy.Expenses.SetCurrentLine(j);
+        //                            if (purchaseOrderCopy.Expenses.LineTotal != 0) {
+        //                                purchaseOrderDeliveryCopy.Expenses.ExpenseCode = purchaseOrderCopy.Expenses.ExpenseCode;
+        //                                if (purchaseOrderCopy.DocCurrency == "MXN") {
+        //                                    purchaseOrderDeliveryCopy.Expenses.LineTotal = purchaseOrderCopy.Expenses.LineTotal;
+        //                                }
+        //                                else {
+        //                                    purchaseOrderDeliveryCopy.Expenses.LineTotal = purchaseOrderCopy.Expenses.LineTotalFC;
+        //                                }
+        //                                purchaseOrderDeliveryCopy.Expenses.TaxCode = purchaseOrderCopy.Expenses.TaxCode;
+        //                                purchaseOrderDeliveryCopy.Expenses.Remarks = purchaseOrderCopy.Expenses.Remarks;
+        //                                purchaseOrderDeliveryCopy.Expenses.VatGroup = purchaseOrderCopy.Expenses.VatGroup;
+        //                                purchaseOrderDeliveryCopy.Expenses.WTLiable = SAPbobsCOM.BoYesNoEnum.tNO;
+        //                                purchaseOrderDeliveryCopy.Expenses.DistributionMethod = purchaseOrderCopy.Expenses.DistributionMethod;
+        //                                purchaseOrderDeliveryCopy.Expenses.Add();
+        //                            }
+        //                        }
+        //                    }
+
+        //                    for (int j = 0; j < purchaseOrderDeliveryOriginal.Lines.Count; j++) {
+
+        //                        purchaseOrderDeliveryOriginal.Lines.SetCurrentLine(j);
+        //                        purchaseOrderDeliveryCopy.Lines.BaseEntry = DocEntry;
+        //                        purchaseOrderDeliveryCopy.Lines.BaseLine = purchaseOrderDeliveryOriginal.Lines.LineNum;
+        //                        purchaseOrderDeliveryCopy.Lines.BaseType = 22;
+        //                        purchaseOrderDeliveryCopy.Lines.UoMEntry = purchaseOrderDeliveryOriginal.Lines.UoMEntry;
+        //                        purchaseOrderDeliveryCopy.Lines.UnitPrice = purchaseOrderDeliveryOriginal.Lines.UnitPrice;
+        //                        purchaseOrderDeliveryCopy.Lines.Quantity = purchaseOrderDeliveryOriginal.Lines.Quantity;
+
+        //                        for (int k = 0; k < purchaseOrderDeliveryOriginal.Lines.BatchNumbers.Count; k++) {
+
+        //                            purchaseOrderDeliveryOriginal.Lines.BatchNumbers.SetCurrentLine(k);
+        //                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.BatchNumber = purchaseOrderDeliveryOriginal.Lines.BatchNumbers.BatchNumber;
+        //                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.Quantity = purchaseOrderDeliveryOriginal.Lines.BatchNumbers.Quantity;
+        //                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.ManufacturerSerialNumber = purchaseOrderDeliveryOriginal.Lines.BatchNumbers.ManufacturerSerialNumber;
+        //                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.InternalSerialNumber = purchaseOrderDeliveryOriginal.Lines.BatchNumbers.InternalSerialNumber;
+        //                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.ExpiryDate = purchaseOrderDeliveryOriginal.Lines.BatchNumbers.ExpiryDate;
+        //                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.UserFields.Fields.Item("U_IL_CodBar").Value = purchaseOrderDeliveryOriginal.Lines.BatchNumbers.UserFields.Fields.Item("U_IL_CodBar").Value;
+        //                            purchaseOrderDeliveryCopy.Lines.BatchNumbers.Add();
+        //                        }
+        //                        purchaseOrderDeliveryCopy.Lines.Add();
+
+        //                    }
+
+        //                    result = purchaseOrderDeliveryCopy.Add();
+        //                    Console.WriteLine(11111111111111111111);
+        //                    if (result != 0) {
+        //                        string error = context.oCompany2.GetLastErrorDescription();
+        //                        throw new Exception(error + ", Location: " + DocEntries[i]);
+        //                    }
+
+        //                }        } catch (Exception ex) {
+        //                Console.WriteLine(ex.Message);
+        //                Console.WriteLine(ex.StackTrace);
+        //                if (context.oCompany2.InTransaction) {
+        //                    context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+        //                }
+        //                return BadRequest( new { error = ex.Message, Location = ex.StackTrace
+        //});
+        //            }
+
+
+        //            context.oCompany2.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
+        //            return Ok(DocEntry);
+
+        //        }
 
 
         // POST: api/PurchaseOrder
@@ -1263,7 +1320,7 @@ namespace SAP_API.Controllers
         //    SAPbobsCOM.Documents purchaseOrderDeliveryCopy = (SAPbobsCOM.Documents)context.oCompany2.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseDeliveryNotes);
         //    int result;
         //    ResultC re = new ResultC();
-            
+
         //    Console.WriteLine(DocEntry);
         //    if (!purchaseOrderDeliveryOriginal.GetByKey(DocEntry))
         //    {
