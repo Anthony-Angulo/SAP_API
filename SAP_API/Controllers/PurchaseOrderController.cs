@@ -497,6 +497,8 @@ namespace SAP_API.Controllers
                         ""U_IL_PesProm"",
                         ""U_IL_TipPes"",
                         ""SuppCatNum"",
+                        ""U_IL_DiasCong"",
+                        ""U_IL_DiasCad"",
                         ""NumInSale"",
                         ""NumInBuy""
                     From OITM Where ""ItemCode"" = '" + pro["ItemCode"] + "'");

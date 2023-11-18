@@ -496,9 +496,9 @@ namespace SAP_API.Controllers
                     purchaseOrderdelivery.Lines.BaseEntry = purchaseOrder.DocEntry;
                     purchaseOrderdelivery.Lines.BaseLine = value.products[i].Line;
                     purchaseOrderdelivery.Lines.BaseType = 22;
-                    if (item.GetByKey(value.products[i].ItemCode))
+                    if (item.GetByKey(value.products[i].ItemCode) || value.products[i].SupplierCode != null)
                     {
-                        if (String.IsNullOrEmpty(item.SupplierCatalogNo))
+                        if (String.IsNullOrEmpty(item.SupplierCatalogNo) && value.products[i].SupplierCode != null)
                         {
                             item.SupplierCatalogNo = value.products[i].SupplierCode;
                             item.Update();
