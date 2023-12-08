@@ -541,7 +541,6 @@ namespace SAP_API.Controllers
                         purchaseOrderdelivery.Lines.BatchNumbers.InternalSerialNumber = value.products[i].batch[j].attr1;
                         purchaseOrderdelivery.Lines.BatchNumbers.ExpiryDate = value.products[i].batch[j].expirationDate.Date;
                         purchaseOrderdelivery.Lines.BatchNumbers.ManufacturingDate = value.products[i].batch[j].manufacturingDate.Date;
-
                         purchaseOrderdelivery.Lines.BatchNumbers.UserFields.Fields.Item("U_IL_CodBar").Value = value.products[i].batch[j].code;
                         purchaseOrderdelivery.Lines.BatchNumbers.Add();
 

@@ -2170,27 +2170,36 @@ header.""UgpEntry"",
                 From OITM Where ""ItemCode"" = '" + id + "'");
             if (oRecSet.RecordCount == 0) return NotFound("No existe articulo");
             JToken Detail = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+            oRecSet.DoQuery($@"
+                    Select
+                    ""BcdEntry"",
+                    ""BcdCode"",
+                    ""BcdName"",
+                    ""ItemCode"",
+                    ""UomEntry""
+                    From OBCD Where ""ItemCode"" = '{id}';");
+            oRecSet.MoveFirst();
+            JToken CodeBars = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
 
             oRecSet.DoQuery($@"
-                SELECT 
-            T2.""UgpCode"",
-            T2.""BaseUom"",
-			T1.""UomCode"" as baseUOM,
-			T0.""BcdCode"",
-			T3.""UomEntry"",
-			T3.""BaseQty"",
-			T1.""UomCode""            
-            FROM OBCD T0
-            LEFT JOIN OUOM T1 on T0.""UomEntry""= T1.""UomEntry"" 
-			LEFT JOIN OUGP T2 on T2.""UgpCode""='{id}' 
-			LEFT JOIN UGP1 T3 on T2.""UgpEntry""= T3.""UgpEntry"" AND T0.""UomEntry""=T3.""UomEntry"" 
-             WHERE ""ItemCode""='{id}';");
+                Select 
+                    header.""UgpCode"",
+                    header.""BaseUom"",
+                    baseUOM.""UomCode"" as baseUOM,
+                    detail.""UomEntry"",
+                    UOM.""UomCode"",
+                    detail.""BaseQty""
+                From OUGP header
+                JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                Where header.""UgpEntry"" = '" + Detail["UgpEntry"] + "'");
 
-            JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
+            JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
 
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            return Ok(new { Detail, uom });
+            return Ok(new { Detail, CodeBars, uom });
         }
 
 

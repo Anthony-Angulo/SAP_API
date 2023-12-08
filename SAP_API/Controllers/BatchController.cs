@@ -81,5 +81,30 @@ namespace SAP_API.Controllers
 
             return Ok(batchList);
         }
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [HttpGet("Location/{Location}")]
+        public async Task<IActionResult> GetByLocation(string Location)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRecSet.DoQuery($@"SELECT * FROM OIBT WHERE ""Located""='{Location}'");
+
+            if (oRecSet.RecordCount == 0)
+            {
+                return NoContent();
+            }
+
+            var LotesInLocation = context.XMLTOJSON(oRecSet.GetAsXML())["OBTN"];
+
+            //Force Garbage Collector. Recommendation by InterLatin Dude. SDK Problem with memory.
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(LotesInLocation);
+
+        }
     }
 }

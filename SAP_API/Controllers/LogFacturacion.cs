@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -46,10 +47,11 @@ namespace SAP_API.Controllers
             }
         }
         [HttpGet("SendMail")]
+        [AllowAnonymous]
         public IActionResult SendMail()
         {
-            string to =_configuration["cuentaenvio"];
-            MailMessage message = new MailMessage(_configuration["cuentacorreo"], to);
+            string to = _configuration["cuentaenvio"];
+            MailMessage message = new MailMessage(_configuration["cuentacorreo"], "lorenzo.cabrera@superchivas.com.mx");
             message.Subject = "Bitácora de precios de venta fuera del intervalo autorizado";
             message.Body = @"";
             var smtpClient = new SmtpClient(_configuration["smtpserver"])
@@ -59,12 +61,12 @@ namespace SAP_API.Controllers
                 EnableSsl = true
             };
             var csv = new StringBuilder();
-            DateTime FechaInicial = DateTime.Now;
+            DateTime FechaInicial = DateTime.Now.Date;
             DateTime FechaFinal = DateTime.Now;
-            FechaInicial = FechaInicial.AddDays(-1);
+            FechaInicial = FechaInicial.AddDays(-7);
             csv.Append("sep=;" + Environment.NewLine);
             //List<LogFacturacion> logFacturacions = _context.LogFacturacion.Where(x=>x.fecha>=FechaInicial).OrderBy(x=>x.fecha).ToList();
-            List<LogFacturacion> logFacturacions = _context.LogFacturacion.ToList();
+            List<LogFacturacion> logFacturacions = _context.LogFacturacion.Where(x => x.fecha >= FechaInicial).OrderByDescending(x => x.fecha).ToList();
             var wb = new XLWorkbook();
             var ws = wb.Worksheets.Add("preciosFueraDeIntervalo");
             var people = from p in logFacturacions
@@ -94,8 +96,6 @@ namespace SAP_API.Controllers
             var attachment = new System.Net.Mail.Attachment(memoryStream,
                                                     "precios_de_venta_fuera_de_intervalo_autorizado.xlsx", MediaTypeNames.Application.Octet);
             message.Attachments.Add(attachment);
-            // Credentials are necessary if the server requires the client
-            // to authenticate before it will send email on the client's behalf.
             try
             {
                 if (logFacturacions.Count != 0)
@@ -106,6 +106,7 @@ namespace SAP_API.Controllers
             }
             catch (Exception ex)
             {
+
                 return BadRequest(ex.ToString());
 
             }
