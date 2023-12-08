@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
+using SAPbobsCOM;
 
 namespace SAP_API.Controllers
 {
@@ -29,7 +30,87 @@ namespace SAP_API.Controllers
             }
             return NotFound("No Existe Producto");
         }
+        [HttpPost("UpdateGTIN")]
+        public async Task<IActionResult> UpdateGtin(GTIPPost GTIN)
+        {
 
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.IItems items = (SAPbobsCOM.IItems)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems);
+            if (items.GetByKey(GTIN.id))
+            {
+
+                items.SupplierCatalogNo = GTIN.SupplierNumber;
+                int updated = items.Update();
+                if (updated != 0)
+                {
+                    return BadRequest("Error al actualizar");
+                }
+                return Ok("Actualizado correctamente");
+            }
+            return NotFound("No Existe Producto");
+        }
+        [HttpGet("GetbyGTIN/{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetbyGTIN(string id)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            string query = $"SELECT \"ItemCode\" FROM OITM where \"SuppCatNum\" ='{id}'";
+            oRecSet.DoQuery(query);
+            oRecSet.MoveFirst();
+            JToken Product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+
+            oRecSet.DoQuery($@"
+                Select
+                    ""ItemCode"",
+                    ""ItemName"",
+                    ""QryGroup7"",
+                    ""QryGroup41"",
+                    ""QryGroup45"",
+                    ""ManBtchNum"",
+                    ""U_IL_PesMax"",
+                    ""U_IL_PesMin"",
+                    ""U_IL_PesProm"",
+""UgpEntry"",
+""SuppCatNum"",
+                    ""U_IL_TipPes"",
+                    ""NumInSale"",
+                    ""NumInBuy""
+                From OITM Where ""ItemCode"" = '{Product["ItemCode"]}'");
+            if (oRecSet.RecordCount == 0) return NotFound("Articulo no encontrado");
+            JToken Detail = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+            oRecSet.DoQuery($@"
+                    Select
+                    ""BcdEntry"",
+                    ""BcdCode"",
+                    ""BcdName"",
+                    ""ItemCode"",
+                    ""UomEntry""
+                    From OBCD Where ""ItemCode"" = '{Product["ItemCode"]}';");
+            oRecSet.MoveFirst();
+            JToken CodeBars = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
+
+            oRecSet.DoQuery($@"
+                Select 
+                    header.""UgpCode"",
+                    header.""BaseUom"",
+                    baseUOM.""UomCode"" as baseUOM,
+                    detail.""UomEntry"",
+                    UOM.""UomCode"",
+                    detail.""BaseQty""
+                From OUGP header
+                JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                Where header.""UgpEntry"" = '" + Detail["UgpEntry"] + "'");
+
+            JToken uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return Ok(new { Detail, CodeBars, uom });
+        }
         [HttpPost("Search/ToSell")]
         public async Task<IActionResult> GetSearchToSell([FromBody] SearchRequest request)
         {
@@ -2063,6 +2144,7 @@ header.""UgpEntry"",
 
         // GET: api/Products/Detail/5
         [HttpGet("Detail/{id}")]
+        [AllowAnonymous]
         //[Authorize]
         public async Task<IActionResult> GetDetail(string id)
         {
@@ -2082,11 +2164,22 @@ header.""UgpEntry"",
                     ""U_IL_PesMin"",
                     ""U_IL_PesProm"",
 ""UgpEntry"",
-                    ""U_IL_TipPes"",
+                    ""U_IL_TipPes"",""SuppCatNum"",
                     ""NumInSale"",
                     ""NumInBuy""
                 From OITM Where ""ItemCode"" = '" + id + "'");
+            if (oRecSet.RecordCount == 0) return NotFound("No existe articulo");
             JToken Detail = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+            oRecSet.DoQuery($@"
+                    Select
+                    ""BcdEntry"",
+                    ""BcdCode"",
+                    ""BcdName"",
+                    ""ItemCode"",
+                    ""UomEntry""
+                    From OBCD Where ""ItemCode"" = '{id}';");
+            oRecSet.MoveFirst();
+            JToken CodeBars = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
 
             oRecSet.DoQuery($@"
                 Select 
@@ -2106,7 +2199,7 @@ header.""UgpEntry"",
 
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            return Ok(new { Detail, uom });
+            return Ok(new { Detail, CodeBars, uom });
         }
 
 

@@ -33,7 +33,7 @@ namespace SAP_API.Controllers
         {
             _context = context;
         }
-       
+
         // GET: api/Impresion/
         [HttpGet("Impresoras")]
         //[Authorize]
@@ -95,7 +95,7 @@ namespace SAP_API.Controllers
             PdfDocument outputDocument = new PdfDocument();
             outputDocument.Info.Title = "";
 
-                pdfList.Add(GetCotizacionPdfDocument(Int32.Parse(cotId)));
+            pdfList.Add(GetCotizacionPdfDocument(Int32.Parse(cotId)));
 
             for (int i = 0; i < pdfList.Count; i++)
             {
@@ -153,7 +153,7 @@ namespace SAP_API.Controllers
 
         private MemoryStream GetRoutePdfDocument(int DocEntry)
         {
-           
+
 
             MemoryStream ms = new MemoryStream();
             Section section;
@@ -206,7 +206,7 @@ namespace SAP_API.Controllers
             row.Format.Font.Bold = true;
             row.Cells[0].AddParagraph("Codigo Cliente");
             row.Cells[0].Format.Font.Bold = true;
-            row.Cells[0].Format.Font.Underline= Underline.Single;
+            row.Cells[0].Format.Font.Underline = Underline.Single;
 
             row.Cells[0].Format.Alignment = ParagraphAlignment.Left;
             row.Cells[0].VerticalAlignment = VerticalAlignment.Center;
@@ -221,7 +221,7 @@ namespace SAP_API.Controllers
             row.Cells[4].Format.Font.Underline = Underline.Single;
             row.Cells[4].Format.Alignment = ParagraphAlignment.Left;
             row.Cells[4].VerticalAlignment = VerticalAlignment.Top;
-          
+
             row = table.AddRow();
             row.Cells[1].AddParagraph("No. de Factura");
             row.Cells[1].Format.Alignment = ParagraphAlignment.Left;
@@ -259,11 +259,11 @@ namespace SAP_API.Controllers
             PdfDocumentRenderer pdfRenderer = new PdfDocumentRenderer(unicode); try
             {
 
-            pdfRenderer.Document = document;
-            pdfRenderer.RenderDocument();
-            ms = new MemoryStream();
-            pdfRenderer.PdfDocument.Info.Title = "Prueba de Ruta";
-            pdfRenderer.PdfDocument.Save(ms, false);
+                pdfRenderer.Document = document;
+                pdfRenderer.RenderDocument();
+                ms = new MemoryStream();
+                pdfRenderer.PdfDocument.Info.Title = "Prueba de Ruta";
+                pdfRenderer.PdfDocument.Save(ms, false);
                 return ms;
 
             }
@@ -932,7 +932,7 @@ namespace SAP_API.Controllers
             if (cotizaciones.Date.AddDays(1) < DateTime.Now)
             {
                 paragraph.AddLineBreak();
-                paragraph.AddFormattedText("COTIZACIÓN SOBREPASA LAS 24 HORAS DE DISPONIBILIDAD",TextFormat.Bold);
+                paragraph.AddFormattedText("COTIZACIÓN SOBREPASA LAS 24 HORAS DE DISPONIBILIDAD", TextFormat.Bold);
             }
             paragraph.AddLineBreak();
             row = table.AddRow();
@@ -951,7 +951,7 @@ namespace SAP_API.Controllers
             paragraph.AddLineBreak();
             paragraph.AddText("Telefono: 6865541535");
             paragraph.AddLineBreak();
-        
+
             paragraph.AddText("Observaciones:");
             paragraph.AddLineBreak();
 
@@ -1013,7 +1013,7 @@ namespace SAP_API.Controllers
                 row.Borders.Right.Visible = false;
                 row.Cells[0].AddParagraph(item.Code);
                 row.Cells[1].AddParagraph(item.Descripcion);
-                row.Cells[2].AddParagraph((double.Parse(item.Price)*item.EquivalentePV) + " " + item.Currency);
+                row.Cells[2].AddParagraph((double.Parse(item.Price) * item.EquivalentePV) + " " + item.Currency);
                 row.Cells[3].AddParagraph(item.Quantity + " " + item.UomDescripcion);
             }
 
@@ -1113,17 +1113,17 @@ namespace SAP_API.Controllers
         public IActionResult PostQRTARIMAS()
         {
             ;
-            var IdNuevo= _context.tarima.Count() != 0 ?_context.tarima.OrderBy(x => x.id).Last().id:0;
+            var IdNuevo = _context.tarima.Count() != 0 ? _context.tarima.OrderBy(x => x.id).Last().id : 0;
 
             IdNuevo++;
-            
+
             string s = "^XA\n";
             s += $"^FO120,50^BQ,2,10^FDQA, {IdNuevo} ^FS";
             s += $"^CF0,30";
             s += $"^FO140,320^FD{IdNuevo}^FS";
             s += "^XZ";
 
-                       var bytes = Encoding.ASCII.GetBytes(s);
+            var bytes = Encoding.ASCII.GetBytes(s);
             // Send a printer-specific to the printer.
             for (int i = 0; i < 2; i++)
             {
@@ -1133,16 +1133,19 @@ namespace SAP_API.Controllers
             _context.tarima.Add(new tarima
             {
                 id = IdNuevo,
-                ubicacion=""
+                ubicacion = ""
             });
             _context.SaveChanges();
             return Ok(IdNuevo);
 
         }
-
+        [AllowAnonymous]
         [HttpGet("PruebaReciboTarima")]
-        public IActionResult PrintTarimRecibo(string ItemCode, decimal Total, string UoM,string DocNum,int Cajas=0,string printer = "Tarima")
+        public IActionResult PrintTarimRecibo(string ItemCode, decimal Total, string UoM, string DocNum, int Cajas = 0, string printer = "Tarima")
         {
+            var IdNuevo = _context.tarima.Count() != 0 ? _context.tarima.OrderBy(x => x.id).Last().id : 0;
+
+            IdNuevo++;
 
             try
             {
@@ -1162,9 +1165,9 @@ namespace SAP_API.Controllers
             SELECT ""UomCode"" FROM ""OUOM"" WHERE ""UomEntry""={UoM}");
                 oRecSet.MoveFirst();
                 uom = context.XMLTOJSON(oRecSet.GetAsXML())["OUOM"][0]["UomCode"].ToObject<string>();
-                
-            
- string s = $@"^XA
+
+
+                string s = $@"^XA
 ^PW1000
             ^CF0,40
 ^FO100,50 ^FB700,3 ^FD{Descripcion}^FS
@@ -1172,30 +1175,37 @@ namespace SAP_API.Controllers
 ^FO50,180 ^GB700,3,3 ^FS
 ^FO50,320 ^GB700,3,3 ^FS
 ^CF0,50
-^FO50,220 ^FB250,3 ^FD{ItemCode} ^FS
+^FO300,220 ^FB250,3 ^FD{ItemCode} ^FS
 ^BY3,3,40
-^FO300,200 ^BCN,100,N,N,^FD{ItemCode} ^FS
 ^CFA,30
 ^FO50,340 ^FDTotal Tarima: {Math.Round(Total, 2)} {(UoM == "196" || UoM == "116" ? "KG" : uom)} ^FS
 ^FO50,370 ^FD2 UM: {Cajas} CAJAS ^FS
-^FO50,400 ^FDFecha de recibo: {DateTime.Now} ^FS
+^FO50,400 ^FDFecha de recibo: {DateTime.Now} ^FS 
 ^FO50,570^FDPedido:{DocNum} ^FS  
-^FO20,430 ^BCN,80,,N,^FD{Math.Round(Total, 2)} ^FS
+^FO450,570^FDLote:{IdNuevo} ^FS  
+^FO300,430 ^BCN,80,,N,^FD{IdNuevo} ^FS
 ^XZ";
                 var bytes = Encoding.ASCII.GetBytes(s);
                 // Send a printer-specific to the printer.
                 for (int i = 0; i < 2; i++)
                 {
-                    RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\"+printer, bytes, bytes.Length);
+                    RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\" + printer, bytes, bytes.Length);
                 }
-                return Ok();
+
+                _context.tarima.Add(new tarima
+                {
+                    id = IdNuevo,
+                    ubicacion = ""
+                });
+                _context.SaveChanges();
+                return Ok(IdNuevo);
             }
             catch (Exception Ex)
             {
                 return BadRequest(Ex.Message);
             }
-            
-          
+
+
         }
         [NonAction]
         public void PrintTarimReciboWithoutReturn(string ItemCode, double Total, int UoM)

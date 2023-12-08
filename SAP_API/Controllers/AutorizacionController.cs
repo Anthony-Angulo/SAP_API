@@ -30,23 +30,7 @@ namespace SAP_API.Controllers
             _configuration = configuration;
 
         }
-        /*  [HttpPost("TwilioAutorizacion")]
-          public async Task<IActionResult> SendTwilioAsync()
-          {
-              TwilioClient.Init("AC325fc690a873079a3b6f77f3512cc872", "25f7b22387f439b5937c4874f1e87ee3");
-              AutorizacionRequest request = _context.AutorizacionRequest.Where(x => x.id == 43).FirstOrDefault();
-              double preciobase = double.Parse(request.PrecioBase) * double.Parse(request.CantidadBase);
 
-              String Body = $@"El usuario {request.Usuario} de la sucursal {request.Sucursal} solicita autorización para vender un producto a precio diferente al autorizado.{Environment.NewLine}Cliente:{request.Cliente}.{Environment.NewLine}Producto:{request.Producto}.{Environment.NewLine}Cantidad:{request.Cantidad}.{Environment.NewLine}Precio base:{preciobase} {request.Currency}.{Environment.NewLine}Precio introducido:{request.PrecioSolicitado.Substring(4)} {request.PrecioSolicitado.Substring(0, 4)}.{Environment.NewLine} Si desea aprobarlo escriba:{request.id}";
-              var message = MessageResource.Create(
-                  body: Body,
-                  from: new Twilio.Types.PhoneNumber("whatsapp:+14155238886"),
-                  to: new Twilio.Types.PhoneNumber("whatsapp:+5216864259059")
-              );
-              //var messages = MessageResource.Read(to: new Twilio.Types.PhoneNumber("whatsapp:+5216864259059"));
-              return Ok();
-          }
-          */
         [HttpPost("RequestAutorizacion")]
         public async Task<IActionResult> SendMailAsync([FromBody] AutorizacionRequest request)
         {
@@ -65,20 +49,21 @@ namespace SAP_API.Controllers
 
                 return BadRequest(ex.InnerException);
             }
-
-            string to = _configuration["cuentarecibeAutorizacion"];
-            MailMessage message = new MailMessage(_configuration["CuentaAutorizacion"], to);
-            string to1 = _configuration["cuentaRecibeAutorizacion2"];
-            if (to1 != "")
+            try
             {
-                MailAddress bcc = new MailAddress(to1);
-                message.Bcc.Add(bcc);
-            }
-            message.Subject = "Solicitud de Autorizacion";
-            message.IsBodyHtml = true;
-            double preciobase = double.Parse(request.PrecioBase) * double.Parse(request.CantidadBase);
+                string to = _configuration["cuentarecibeAutorizacion"];
+                MailMessage message = new MailMessage(_configuration["CuentaAutorizacion"], to);
+                string to1 = _configuration["cuentaRecibeAutorizacion2"];
+                if (to1 != "")
+                {
+                    MailAddress bcc = new MailAddress(to1);
+                    message.Bcc.Add(bcc);
+                }
+                message.Subject = "Solicitud de Autorizacion";
+                message.IsBodyHtml = true;
+                double preciobase = double.Parse(request.PrecioBase) * double.Parse(request.CantidadBase);
 
-            message.Body = $@"
+                message.Body = $@"
             <html>
             <body>
 	        <p>El usuario <b>{request.Usuario}</b> de la sucursal <b>{request.Sucursal}</b> solicita autorización para vender un producto a precio diferente al autorizado.</p>
@@ -103,62 +88,67 @@ namespace SAP_API.Controllers
      
                     </body>
 	        </html>";
-            var smtpClient = new SmtpClient(_configuration["smtpserver"])
-            {
-                Port = int.Parse(_configuration["port"]),
-                Credentials = new NetworkCredential(_configuration["CuentaAutorizacion"], _configuration["PassAutorizacion"]),
-                EnableSsl = true,
-            };
-            // Credentials are necessary if the server requires the client
-            // to authenticate before it will send email on the client's behalf.
+                var smtpClient = new SmtpClient(_configuration["smtpserver"])
+                {
+                    Port = int.Parse(_configuration["port"]),
+                    Credentials = new NetworkCredential(_configuration["CuentaAutorizacion"], _configuration["PassAutorizacion"]),
+                    EnableSsl = true,
+                };
+                // Credentials are necessary if the server requires the client
+                // to authenticate before it will send email on the client's behalf.
 
-            try
-            {
                 smtpClient.Send(message);
                 return Ok();
             }
             catch (Exception ex)
             {
+                SAPbobsCOM.CompanyService ErrorCompanyService;
+                MessagesService ErroroMessageService;
+                SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+                ErrorCompanyService = context.oCompany.GetCompanyService();
+                ErroroMessageService = (SAPbobsCOM.MessagesService)ErrorCompanyService.GetBusinessService(ServiceTypes.MessagesService);
+
+                SAPbobsCOM.Message oMessage = null;
+                RecipientCollection oRecipientCollection = null;
+
+                // get the data interface for the new message
+                oMessage = ((SAPbobsCOM.Message)(ErroroMessageService.GetDataInterface(MessagesServiceDataInterfaces.msdiMessage)));
+                // fill subject
+                oMessage.Subject = "Error a la hora de mandar solicitud de autorizaciones";
+                oMessage.Text = $"{System.DateTime.Now}\n" +
+                    $"Hubo un error: {ex}";
+                oMessage.Priority = BoMsgPriorities.pr_High;
+                // Add Recipient 
+                oRecipientCollection = oMessage.RecipientCollection;
+
+                // se agregan usuarios a los cuales les llegara el mensaje/alerta
+                oRecipientCollection.Add();
+                oRecipientCollection.Item(0).SendInternal = BoYesNoEnum.tYES; // send internal message
+                oRecipientCollection.Item(0).UserCode = "SISTEMAS14"; // add existing user name
+                oRecipientCollection.Item(0).UserType = BoMsgRcpTypes.rt_InternalUser;
+                oRecipientCollection.Add();
+                oRecipientCollection.Item(1).SendInternal = BoYesNoEnum.tYES; // send internal message
+                oRecipientCollection.Item(1).UserCode = "SISTEMAS15";
+                oRecipientCollection.Item(1).UserType = BoMsgRcpTypes.rt_InternalUser;
+                oRecipientCollection.Add();
+                oRecipientCollection.Item(2).SendInternal = BoYesNoEnum.tYES; // send internal message
+                oRecipientCollection.Item(2).UserCode = "SISTEMAS13";
+                oRecipientCollection.Item(2).UserType = BoMsgRcpTypes.rt_InternalUser;
+                oRecipientCollection.Add();
+                oRecipientCollection.Item(3).SendInternal = BoYesNoEnum.tYES; // send internal message
+                oRecipientCollection.Item(3).UserCode = "SISTEMAS08";
+                oRecipientCollection.Item(3).UserType = BoMsgRcpTypes.rt_InternalUser;
+                oRecipientCollection.Add();
+                oRecipientCollection.Item(4).SendInternal = BoYesNoEnum.tYES; // send internal message
+                oRecipientCollection.Item(4).UserType = BoMsgRcpTypes.rt_InternalUser;
+                oRecipientCollection.Item(4).UserCode = "SISTEMAS06";
+                // send the message
+                ErroroMessageService.SendMessage(oMessage);
                 return BadRequest(ex.ToString());
 
             }
         }
-        [HttpPost("Test")]
-        public async Task<IActionResult> Test()
-        {
 
-            string to = "lorenzo.cabrera@superchivas.com.mx";
-            MailMessage message = new MailMessage(_configuration["CuentaAutorizacion"], to);
-            message.Subject = "Solicitud de Autorizacion";
-            message.IsBodyHtml = true;
-
-            message.Body = $@"
-            <html>
-            <body>
-	MAIL DE PRUEBA
-     
-                    </body>
-	        </html>";
-            var smtpClient = new SmtpClient(_configuration["smtpserver"])
-            {
-                Port = int.Parse(_configuration["port"]),
-                Credentials = new NetworkCredential(_configuration["CuentaAutorizacion"], _configuration["PassAutorizacion"]),
-                EnableSsl = true,
-            };
-            // Credentials are necessary if the server requires the client
-            // to authenticate before it will send email on the client's behalf.
-
-            try
-            {
-                smtpClient.Send(message);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.ToString());
-
-            }
-        }
         [HttpPost("RequestAutorizacionAlmacenes")]
         public async Task<IActionResult> SendMailAsyncAlmacenes([FromBody] AutorizacionAlmacenes request)
         {
@@ -473,57 +463,21 @@ namespace SAP_API.Controllers
                 Credentials = new NetworkCredential(_configuration["cuentacorreo"], _configuration["passcorreo"]),
                 EnableSsl = true
             };
-            /*List<String> CorreosCostos= _configuration["CorreosCostosAutorizaciones"].Split(",").ToList();
-            foreach (string item in CorreosCostos)
-            {
-                message.To.Add(item);
-            }*/
-
             var csv = new StringBuilder();
-            DateTime FechaInicial = DateTime.Now;
+            DateTime FechaInicial = DateTime.Now.Date;
             DateTime FechaFinal = DateTime.Now;
-            FechaInicial = FechaInicial.AddDays(-1);
+            FechaInicial = FechaInicial.AddDays(-7);
             FechaInicial = new DateTime(FechaInicial.Year, FechaInicial.Month, FechaInicial.Day);
             csv.Append("sep=;" + Environment.NewLine);
-            List<AutorizacionRequest> logFacturacions = _context.AutorizacionRequest.Where(x => x.Fecha >= FechaInicial).OrderBy(x => x.Fecha).ToList();
+            List<AutorizacionRequest> logFacturacions = _context.AutorizacionRequest.Where(x => x.Fecha >= FechaInicial).OrderByDescending(x => x.Fecha).ToList();
             //List<LogFacturacion> logFacturacions = _context.LogFacturacion.ToList();
-
-            csv.Append(string.Format("Fecha" +
-                ";Usuario" +
-                ";Sucursal" +
-                ";Cliente" +
-                ";Codigo Cliente" +
-                ";Producto" +
-                ";Codigo Producto" +
-                ";Precio Base" +
-                ";Moneda Base" +
-                ";Cantidad Base" +
-                ";PrecioSolicitado" +
-                ";Autorizado" +
-                ";Costo" +
-                ";NumeroDeDocumentoCosto" +
-                ";Fecha Autorizado;") + Environment.NewLine);
-
-            foreach (var item in logFacturacions)
-            {
-                csv.Append(string.Format("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9},{10},{11},{12},{13},{14}",
-                    item.Fecha, item.Usuario,
-                    item.Sucursal, item.Cliente, item.CardCode,
-                    item.Producto, item.ProductCode,
-                    (double.Parse(item.CantidadBase) * double.Parse(item.PrecioBase)).ToString(),
-                    item.Currency,
-                    item.CantidadBase,
-                    item.PrecioSolicitado,
-                    item.Autorizado == 1 ? "Autorizado" : "No Autorizado",
-                    item.Costo,
-                    item.DocNumCosto, item.FechaAutorizado) + Environment.NewLine);
-            }
             var wb = new XLWorkbook();
             var ws = wb.Worksheets.Add("Inserting Tables");
             var people = from p in logFacturacions
 
                          select new
                          {
+                             Fecha = p.Fecha,
                              Usuario = p.Usuario,
                              Sucursal = p.Sucursal,
                              Cliente = p.Cliente,
@@ -545,12 +499,10 @@ namespace SAP_API.Controllers
             var memoryStream = new System.IO.MemoryStream();
             wb.SaveAs(memoryStream);
             byte[] contentAsBytes = Encoding.UTF8.GetBytes("C:\\test.xlsx");
-
             memoryStream.Write(contentAsBytes, 0, contentAsBytes.Length);
-
             memoryStream.Seek(0, SeekOrigin.Begin);
             var attachment = new System.Net.Mail.Attachment(memoryStream,
-                                                    "autorizaciones_SAP_B1.xlsx", MediaTypeNames.Application.Octet);
+                                                    "autorizaciones_SAP_B1.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             message.Attachments.Add(attachment);
             try
             {
@@ -563,7 +515,6 @@ namespace SAP_API.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ex.ToString());
-
             }
         }
 

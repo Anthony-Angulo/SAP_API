@@ -514,7 +514,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
             {
                 if (transferRequest.ToWarehouse.Equals("TSR"))
                 {
-                    //    HacerMovimientoDeStockMenudeo(value, context, transferRequest);
+                    HacerMovimientoDeStockMenudeo(value, context, transferRequest);
                 }
                 else
                 {
@@ -543,37 +543,37 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 {
                     transfer.Lines.UserFields.Fields.Item("U_Tarima").Value = value.TransferRows[i].Pallet;
                 }
-                /*if (transferRequest.ToWarehouse.Equals("TSR"))
+                if (transferRequest.ToWarehouse.Equals("TSR"))
                 {
                     transfer.Lines.BatchNumbers.BatchNumber = "SI";
                     transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList.Sum(x => x.Quantity);
                     transfer.Lines.BatchNumbers.Add();
                 }
                 else
-                {*/
-                for (int k = 0; k < value.TransferRows[i].BatchList.Count; k++)
                 {
-                    if (String.IsNullOrEmpty(value.TransferRows[i].BatchList[k].CodeBar))
+                    for (int k = 0; k < value.TransferRows[i].BatchList.Count; k++)
                     {
+                        if (String.IsNullOrEmpty(value.TransferRows[i].BatchList[k].CodeBar))
+                        {
 
-                        transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].Code;
-                        transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList[k].Quantity;
-                        transfer.Lines.BatchNumbers.Add();
-                    }
-                    else
-                    {
-                        if (value.TransferRows[i].BatchList[k].Code == "SI")
-                            transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].CodeBar.Length > 36 ? value.TransferRows[i].BatchList[k].CodeBar.Substring(value.TransferRows[i].BatchList[k].CodeBar.Length - 36) : value.TransferRows[i].BatchList[k].CodeBar;
-                        else
                             transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].Code;
+                            transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList[k].Quantity;
+                            transfer.Lines.BatchNumbers.Add();
+                        }
+                        else
+                        {
+                            if (value.TransferRows[i].BatchList[k].Code == "SI")
+                                transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].CodeBar.Length > 36 ? value.TransferRows[i].BatchList[k].CodeBar.Substring(value.TransferRows[i].BatchList[k].CodeBar.Length - 36) : value.TransferRows[i].BatchList[k].CodeBar;
+                            else
+                                transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].Code;
 
-                        transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList[k].Quantity;
-                        transfer.Lines.BatchNumbers.Add();
+                            transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList[k].Quantity;
+                            transfer.Lines.BatchNumbers.Add();
+
+                        }
 
                     }
-
                 }
-                //}
 
                 transfer.Lines.Add();
             }
@@ -642,7 +642,6 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 string error = Errors.ToString();
                 return Conflict(error);
             }
-
             return Ok(newRequest);
         }
 

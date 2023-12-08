@@ -40,6 +40,7 @@ namespace SAP_API.Controllers
         // POST: api/Order/Search
         [ProducesResponseType(typeof(OrderSearchResponse), StatusCodes.Status200OK)]
         [HttpPost("Search")]
+        [AllowAnonymous]
         public async Task<IActionResult> Search([FromBody] SearchRequest request)
         {
 

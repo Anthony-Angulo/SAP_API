@@ -45,6 +45,7 @@ namespace SAP_API.Controllers
             if (oRecSet.RecordCount == 0)
             {
                 return NoContent();
+                //return Ok(new NotFoundReturning { Detail = null, CodeBars = null, uom = null });
             }
 
             string ItemCode = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"][0]["ItemCode"].ToString();
@@ -175,5 +176,12 @@ namespace SAP_API.Controllers
             }
 
         }
+    }
+
+    internal class NotFoundReturning
+    {
+        public object Detail { get; set; }
+        public object CodeBars { get; set; }
+        public object uom { get; set; }
     }
 }

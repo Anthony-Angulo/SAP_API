@@ -333,7 +333,7 @@ namespace SAP_API.Controllers
             public string U_IL_TipPes { get; set; }
             public double NumInSale { get; set; }
             public double NumInBuy { get; set; }
-            public List<object> CodeBars { get; set; }
+            public List<string> CodeBars { get; set; }
             public List<TransferDeliveryOutputLineUom> Uoms { get; set; }
         }
         class TransferDeliveryOutputLineNew
@@ -357,7 +357,7 @@ namespace SAP_API.Controllers
             public string U_IL_TipPes { get; set; }
             public double NumInSale { get; set; }
             public double NumInBuy { get; set; }
-            public List<string> CodeBars { get; set; }
+            public List<object> CodeBars { get; set; }
             public List<TransferDeliveryOutputLineUom> Uoms { get; set; }
         }
         class TransferDeliveryOutput
