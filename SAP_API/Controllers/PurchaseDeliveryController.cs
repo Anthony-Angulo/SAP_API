@@ -430,6 +430,7 @@ namespace SAP_API.Controllers
             SAPbobsCOM.Documents purchaseOrderdelivery = (SAPbobsCOM.Documents)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseDeliveryNotes);
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             List<ItemPrint> itemsToPrint = new List<ItemPrint>();
+            //string ba = "";
             if (purchaseOrder.GetByKey(value.order))
             {
 
@@ -504,48 +505,71 @@ namespace SAP_API.Controllers
                             item.Update();
                         }
                     }
-                    if (value.products[i].UoMEntry == 116 || value.products[i].UoMEntry == 196)
-                    {
 
-                        purchaseOrder.Lines.SetCurrentLine(value.products[i].Line);
-                        if (value.products[i].Group == 43)
+                    if (value.products[i].ItemType.Equals("V"))
+                    {
+                        if (value.products[i].UoMEntry == 486 || value.products[i].UoMEntry == 487)
                         {
-                            oRecSet.DoQuery(@"
+
+                            purchaseOrder.Lines.SetCurrentLine(value.products[i].Line);
+
+                            if (value.products[i].Group == 43)
+                            {
+                                oRecSet.DoQuery(@"
                                 Select
                                     ""NumInBuy"",
                                     ""IUoMEntry""
+                                    ""QryGroup51""
                                 From OITM Where ""ItemCode"" = '" + value.products[i].ItemCode + "'");
-                            oRecSet.MoveFirst();
-                            double price = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["NumInBuy"].ToObject<double>();
-                            purchaseOrderdelivery.Lines.UoMEntry = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["IUoMEntry"].ToObject<int>();
-                            purchaseOrderdelivery.Lines.UnitPrice = purchaseOrder.Lines.UnitPrice / price;
-                        }
-                        else
-                        {
-                            purchaseOrderdelivery.Lines.UoMEntry = 185;
-                            purchaseOrderdelivery.Lines.UnitPrice = purchaseOrder.Lines.UnitPrice * 2.20462;
-                        }
+                                oRecSet.MoveFirst();
+                                double price = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["NumInBuy"].ToObject<double>();
+                                //ba = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["QryGroup51"].ToObject<string>();
+                                purchaseOrderdelivery.Lines.UoMEntry = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["IUoMEntry"].ToObject<int>();
+                                purchaseOrderdelivery.Lines.UnitPrice = purchaseOrder.Lines.UnitPrice / price;
+                            }
+                            else
+                            {
+                                purchaseOrderdelivery.Lines.UoMEntry = 485;
+                                purchaseOrderdelivery.Lines.UnitPrice = purchaseOrder.Lines.UnitPrice * 2.20462;
+                            }
 
 
+                        }
                     }
+
 
                     purchaseOrderdelivery.Lines.Quantity = value.products[i].Count;
 
-                    for (int j = 0; j < value.products[i].batch.Count; j++)
+                    oRecSet.DoQuery(@"
+                                Select
+                                    ""NumInBuy"",
+                                    ""IUoMEntry"",
+                                    ""ManBtchNum"",
+                                    ""QryGroup51""
+                                From OITM Where ""ItemCode"" = '" + value.products[i].ItemCode + "'");
+                    oRecSet.MoveFirst();
+                    //double price = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["NumInBuy"].ToObject<double>();
+                    string ba = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["ManBtchNum"].ToObject<string>();
+
+                    if (ba.Equals("Y"))
                     {
+                        for (int j = 0; j < value.products[i].batch.Count; j++)
+                        {
 
-                        purchaseOrderdelivery.Lines.BatchNumbers.BatchNumber = value.products[i].batch[j].name;
-                        purchaseOrderdelivery.Lines.BatchNumbers.Quantity = value.products[i].batch[j].quantity;
+                            purchaseOrderdelivery.Lines.BatchNumbers.BatchNumber = value.products[i].batch[j].name;
+                            purchaseOrderdelivery.Lines.BatchNumbers.Quantity = value.products[i].batch[j].quantity;
 
-                        purchaseOrderdelivery.Lines.BatchNumbers.ManufacturerSerialNumber = value.products[i].batch[j].pedimento;
-                        purchaseOrderdelivery.Lines.BatchNumbers.InternalSerialNumber = value.products[i].batch[j].attr1;
-                        purchaseOrderdelivery.Lines.BatchNumbers.ExpiryDate = value.products[i].batch[j].expirationDate.Date;
-                        purchaseOrderdelivery.Lines.BatchNumbers.ManufacturingDate = value.products[i].batch[j].manufacturingDate.Date;
-                        purchaseOrderdelivery.Lines.BatchNumbers.UserFields.Fields.Item("U_IL_CodBar").Value = value.products[i].batch[j].code;
-                        purchaseOrderdelivery.Lines.BatchNumbers.Add();
+                            purchaseOrderdelivery.Lines.BatchNumbers.ManufacturerSerialNumber = value.products[i].batch[j].pedimento;
+                            purchaseOrderdelivery.Lines.BatchNumbers.InternalSerialNumber = value.products[i].batch[j].attr1;
+                            purchaseOrderdelivery.Lines.BatchNumbers.ExpiryDate = value.products[i].batch[j].expirationDate.Date;
+                            purchaseOrderdelivery.Lines.BatchNumbers.ManufacturingDate = value.products[i].batch[j].manufacturingDate.Date;
+                            purchaseOrderdelivery.Lines.BatchNumbers.UserFields.Fields.Item("U_IL_CodBar").Value = value.products[i].batch[j].code;
+                            purchaseOrderdelivery.Lines.BatchNumbers.Add();
 
+                        }
+                        purchaseOrderdelivery.Lines.Add();
                     }
-                    purchaseOrderdelivery.Lines.Add();
+
                 }
 
                 int result = purchaseOrderdelivery.Add();

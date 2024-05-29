@@ -468,14 +468,17 @@ namespace SAP_API.Controllers
                 Select
                     ""LineStatus"",
                     ""LineNum"",
-                    ""ItemCode"",
+                    Line.""ItemCode"",
                     ""Dscription"",
                     ""UomEntry"",
                     ""WhsCode"",
                     ""UomCode"",
                     ""OpenInvQty"",
-                    ""OpenQty""
-                From POR1 WHERE ""DocEntry"" = " + POrder["OPOR"]["DocEntry"]);
+                    ""OpenQty"",
+                    Detail.""UgpEntry""
+                From POR1 as Line 
+                JOIN OITM as Detail on Detail.""ItemCode"" = Line.""ItemCode""
+                WHERE Line.""DocEntry"" = " + POrder["OPOR"]["DocEntry"]);
 
             POrder["POR1"] = context.XMLTOJSON(oRecSet.GetAsXML())["POR1"];
 
@@ -491,6 +494,7 @@ namespace SAP_API.Controllers
                         ""QryGroup43"",
                         ""QryGroup44"",
                         ""QryGroup45"",
+                        ""QryGroup51"",
                         ""ManBtchNum"",
                         ""U_IL_PesMax"",
                         ""U_IL_PesMin"",
@@ -514,6 +518,20 @@ namespace SAP_API.Controllers
                     From OBCD Where ""ItemCode"" in ('{pro["ItemCode"]}G','{pro["ItemCode"]}')");
                 oRecSet.MoveFirst();
                 pro["CodeBars"] = context.XMLTOJSON(oRecSet.GetAsXML())["OBCD"];
+
+                oRecSet.DoQuery($@"
+                    Select 
+                        header.""BaseUom"" as ""BaseEntry"",
+                        baseUOM.""UomCode"" as ""BaseUom"",
+                        detail.""UomEntry"",
+                        UOM.""UomCode"",
+                        detail.""BaseQty""
+                    From OUGP header
+                    JOIN UGP1 detail ON header.""UgpEntry"" = detail.""UgpEntry""
+                    JOIN OUOM baseUOM ON header.""BaseUom"" = baseUOM.""UomEntry""
+                    JOIN OUOM UOM ON detail.""UomEntry"" = UOM.""UomEntry""
+                    Where header.""UgpEntry"" = '{pro["UgpEntry"]}';");
+                pro["Uoms"] = context.XMLTOJSON(oRecSet.GetAsXML())["OUGP"];
             }
             return Ok(POrder);
         }

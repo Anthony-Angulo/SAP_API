@@ -350,6 +350,7 @@ namespace SAP_API.Controllers
             public string ItemName { get; set; }
             public char QryGroup44 { get; set; }
             public char QryGroup45 { get; set; }
+            public char QryGroup51 { get; set; }
             public char ManBtchNum { get; set; }
             public double U_IL_PesMax { get; set; }
             public double U_IL_PesMin { get; set; }
@@ -535,13 +536,14 @@ Detail.""UgpEntry""
                     ""ItemName"",
                     ""QryGroup44"",
                     ""QryGroup45"",
+                    ""QryGroup51"",
                     ""ManBtchNum"",
                     ""U_IL_PesMax"",
                     ""U_IL_PesMin"",
                     ""U_IL_PesProm"",
                     ""U_IL_TipPes"",
                     ""NumInSale"",
-Detail.""UgpEntry""
+                    Detail.""UgpEntry""
                 From WTQ1 as Line
                 JOIN OITM as Detail on Detail.""ItemCode"" = Line.""ItemCode""
                 WHERE Line.""DocEntry"" = {request["DocEntry"]};");

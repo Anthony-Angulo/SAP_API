@@ -236,15 +236,24 @@ namespace SAP_API.Controllers
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+//            oRecSet.DoQuery(@"
+//                Select
+//                    warehouse.""WhsCode"",
+//                    warehouse.""WhsName"",
+//                    serie.""Series""
+//                From OWHS warehouse
+//                LEFT JOIN NNM1 serie ON serie.""SeriesName"" = warehouse.""WhsCode""
+//                Where serie.""ObjectCode"" = 17 AND warehouse.""WhsCode""  in ('S01','S70'
+//, 'S06', 'S07','S17', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62', 'S63') ");
+
             oRecSet.DoQuery(@"
                 Select
                     warehouse.""WhsCode"",
                     warehouse.""WhsName"",
                     serie.""Series""
-                From OWHS warehouse
-                LEFT JOIN NNM1 serie ON serie.""SeriesName"" = warehouse.""WhsCode""
-                Where serie.""ObjectCode"" = 17 AND warehouse.""WhsCode""  in ('S01','S70'
-, 'S06', 'S07','S17', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36', 'S47', 'S55', 'S59', 'S62', 'S63') ");
+            From OWHS warehouse
+            LEFT JOIN NNM1 serie ON serie.""SeriesName"" = warehouse.""WhsCode""
+            Where serie.""ObjectCode"" = 17 AND warehouse.""County"" IN ('1')");
             JToken warehouseList = context.XMLTOJSON(oRecSet.GetAsXML())["OWHS"];
             List<WarehouseWithSerie> warehouseWithSeries = warehouseList.ToObject<List<WarehouseWithSerie>>();
             oRecSet = null;
@@ -309,14 +318,23 @@ namespace SAP_API.Controllers
 
             SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
             SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            //oRecSet.DoQuery(@"
+            //    Select
+            //        warehouse.""WhsCode"",
+            //        warehouse.""WhsName"",
+            //        serie.""Series""
+            //    From OWHS warehouse
+            //    LEFT JOIN NNM1 serie ON serie.""SeriesName"" = warehouse.""WhsCode""
+            //    Where serie.""ObjectCode"" = 17 AND warehouse.""WhsCode""  in ('S01','S70','S17', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36','S47', 'S55', 'S59', 'S62','S63') ");
+
             oRecSet.DoQuery(@"
                 Select
                     warehouse.""WhsCode"",
                     warehouse.""WhsName"",
                     serie.""Series""
-                From OWHS warehouse
-                LEFT JOIN NNM1 serie ON serie.""SeriesName"" = warehouse.""WhsCode""
-                Where serie.""ObjectCode"" = 17 AND warehouse.""WhsCode""  in ('S01','S70','S17', 'S06', 'S07', 'S10', 'S12', 'S13', 'S15', 'S24', 'S36','S47', 'S55', 'S59', 'S62','S63') ");
+            From OWHS warehouse
+            LEFT JOIN NNM1 serie ON serie.""SeriesName"" = warehouse.""WhsCode""
+            Where serie.""ObjectCode"" = 17 AND warehouse.""County"" IN ('1', '0')");
             oRecSet.MoveFirst();
             JToken warehouseList = context.XMLTOJSON(oRecSet.GetAsXML())["OWHS"];
             return Ok(warehouseList);
@@ -398,14 +416,23 @@ namespace SAP_API.Controllers
             //    JOIN OWHS warehouse2 ON warehouse.""WhsName"" = warehouse2.""WhsName"" AND warehouse.""WhsCode"" != warehouse2.""WhsCode""
             //    Where warehouse.""WhsCode"" LIKE 'TSR%'");
 
+            //oRecSet.DoQuery(@"
+            //    Select
+            //        warehouse.""WhsCode"" as WhsTSRCode,
+            //warehouse2.""WhsCode"" as WhsCode,
+            //warehouse.""WhsName""
+            //From OWHS warehouse
+            //JOIN OWHS warehouse2 ON warehouse.""WhsName"" = warehouse2.""WhsName"" AND warehouse.""WhsCode"" != warehouse2.""WhsCode""
+            //Where warehouse.""WhsCode"" LIKE 'TSR%'");
+
             oRecSet.DoQuery(@"
                 Select
                     warehouse.""WhsCode"" as WhsTSRCode,
-            warehouse2.""WhsCode"" as WhsCode,
-            warehouse.""WhsName""
+                    warehouse.""WhsCode"" as WhsCode,
+                    warehouse.""WhsName"",
+                    warehouse.""County""
             From OWHS warehouse
-            JOIN OWHS warehouse2 ON warehouse.""WhsName"" = warehouse2.""WhsName"" AND warehouse.""WhsCode"" != warehouse2.""WhsCode""
-            Where warehouse.""WhsCode"" LIKE 'TSR%'");
+            Where warehouse.""County"" IN ('1', '0')");
             oRecSet.MoveFirst();
             JToken warehouseList = context.XMLTOJSON(oRecSet.GetAsXML())["OWHS"];
             return Ok(warehouseList);

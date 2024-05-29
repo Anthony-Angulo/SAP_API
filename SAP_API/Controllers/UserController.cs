@@ -10,8 +10,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using SAP_API.Entities;
 using SAP_API.Models;
+using SAPbobsCOM;
 using static SAP_API.Controllers.AccountController;
 using static SAP_API.Models.Permission;
+using static SAP_API.Models.User;
 
 namespace SAP_API.Controllers
 {
@@ -180,11 +182,11 @@ namespace SAP_API.Controllers
             {
                 return BadRequest("No Warehouse");
             }
-            Department department = _context.Departments.Find(model.Department);
-            if (department == null)
-            {
-                return BadRequest("No Departamento");
-            }
+            //Department department = _context.Departments.Find(model.Department);
+            //if (department == null)
+            //{
+            //    return BadRequest("No Departamento");
+            //}
 
             IdentityRole Role = await _roleManager.FindByIdAsync(model.Role);
             if (Role == null)
@@ -199,7 +201,7 @@ namespace SAP_API.Controllers
             user.SAPID = model.SAPID;
             user.Active = model.Active;
             user.Warehouse = warehouse;
-            user.Department = department;
+            //user.Department = department;
 
 
             if (model.Password != null)
@@ -253,6 +255,105 @@ namespace SAP_API.Controllers
                 stringBuilder.AppendFormat("Codigo: {0} Descripcion: {1}\n", m.Code, m.Description);
             }
             return BadRequest(stringBuilder.ToString());
+
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody] List<UserSap> user)
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SalesPersons salesPerson = (SalesPersons)context.oCompany.GetBusinessObject(BoObjectTypes.oSalesPersons);
+            EmployeesInfo employe = (EmployeesInfo)context.oCompany.GetBusinessObject(BoObjectTypes.oEmployeesInfo);
+            Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
+
+            for (int i = 0; i < user.Count; i++)
+            {
+                employe.FirstName = user[i].firstName;
+                employe.MiddleName = user[i].middleName;
+                employe.LastName = user[i].lastName;
+                employe.ExternalEmployeeNumber = user[i].extEmpNo;
+                employe.JobTitle = user[i].dept;
+
+                oRecSet.DoQuery($@"
+            Select
+                p.""posID""
+            From OHPS p
+            Where p.""name"" = '{user[i].position}'");
+
+                if (oRecSet.RecordCount == 0)
+                {
+                    return BadRequest("La posicion del empleado no fue encontrada");
+                }
+
+                int posicion = (int)oRecSet.Fields.Item("posID").Value;
+
+                employe.Position = posicion;
+
+                oRecSet.DoQuery($@"
+            Select
+                p.""Code""
+            From OUDP p
+            Where p.""Name"" = '{user[i].dept}'");
+
+
+                if (oRecSet.RecordCount == 0)
+                {
+                    return BadRequest("El departamento del empleado no fue encontrado.");
+                }
+
+                int departamento = (int)oRecSet.Fields.Item("Code").Value;
+
+                employe.Department = departamento;
+
+                oRecSet.DoQuery($@"
+            Select
+                p.""Code""
+            From OUBR p
+            Where p.""Name"" = '{user[i].branch}'");
+
+                if (oRecSet.RecordCount == 0)
+                {
+                    return BadRequest("La Sucursal para el empleado no fue encontrada.");
+                }
+
+                int sucursal = (int)oRecSet.Fields.Item("Code").Value;
+
+                employe.Branch = sucursal;
+
+                if (employe.Add() != 0)
+                {
+                    string error = context.oCompany.GetLastErrorDescription();
+                    return BadRequest(error);
+                }
+                else
+                {
+                    createSalesMan(context.oCompany.GetNewObjectKey(), context, user[i].SlpName, user[i].Memo);
+                }
+
+            }
+
+            return Ok();
+        }
+
+        public static bool createSalesMan(string key, SAPContext context, string slpName, string Memo)
+        {
+            //SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SalesPersons salesPerson = (SalesPersons)context.oCompany.GetBusinessObject(BoObjectTypes.oSalesPersons);
+            Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
+
+            salesPerson.SalesEmployeeName = slpName;
+            salesPerson.Remarks = Memo;
+            //salesPerson.EmployeeID = int.Parse(key);
+            if (salesPerson.Add() != 0)
+            {
+                string error = context.oCompany.GetLastErrorDescription();
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+
 
         }
     }

@@ -1178,7 +1178,7 @@ namespace SAP_API.Controllers
 ^FO300,220 ^FB250,3 ^FD{ItemCode} ^FS
 ^BY3,3,40
 ^CFA,30
-^FO50,340 ^FDTotal Tarima: {Math.Round(Total, 2)} {(UoM == "196" || UoM == "116" ? "KG" : uom)} ^FS
+^FO50,340 ^FDTotal Tarima: {Math.Round(Total, 2)} {(UoM == "486" || UoM == "487" ? "KG" : uom)} ^FS
 ^FO50,370 ^FD2 UM: {Cajas} CAJAS ^FS
 ^FO50,400 ^FDFecha de recibo: {DateTime.Now} ^FS 
 ^FO50,570^FDPedido:{DocNum} ^FS  
@@ -1189,7 +1189,7 @@ namespace SAP_API.Controllers
                 // Send a printer-specific to the printer.
                 for (int i = 0; i < 2; i++)
                 {
-                    RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\" + printer, bytes, bytes.Length);
+                    RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.32\\" + "S01-recepcion01", bytes, bytes.Length);
                 }
 
                 _context.tarima.Add(new tarima
@@ -1251,7 +1251,7 @@ namespace SAP_API.Controllers
                 // Send a printer-specific to the printer.
                 for (int i = 0; i < 2; i++)
                 {
-                    RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\Tarima", bytes, bytes.Length);
+                    RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.32\\Tarima", bytes, bytes.Length);
                 }
             }
             catch (Exception Ex)
@@ -1382,7 +1382,7 @@ namespace SAP_API.Controllers
 
             var bytes = Encoding.ASCII.GetBytes(s);
             // Send a printer-specific to the printer.
-            RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.10\\" + IDPrinter, bytes, bytes.Length);
+            RawPrinterHelper.SendBytesToPrinter("\\\\192.168.0.32\\" + IDPrinter, bytes, bytes.Length);
         }
 
 

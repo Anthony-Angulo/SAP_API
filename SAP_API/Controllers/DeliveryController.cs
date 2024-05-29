@@ -13,7 +13,7 @@ namespace SAP_API.Controllers {
 
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    //[Authorize]
     public class DeliveryController : ControllerBase {
 
         // Note: Use OrderSearchResponse because the answer is composed of the same attributes.
@@ -267,12 +267,32 @@ namespace SAP_API.Controllers {
                 JOIN NNM1 serie2 ON serie1.""SeriesName"" = serie2.""SeriesName""
                 Where serie1.""ObjectCode"" = 15 AND serie2.""Series"" = '{order.Series}';");
 
+
+
             if (oRecSet.RecordCount == 0)
             {
                 return BadRequest("Error Con la Sucursal");
             }
 
+
+
             int Serie = context.XMLTOJSON(oRecSet.GetAsXML())["NNM1"][0]["Series"].ToObject<int>();
+
+            oRecSet.DoQuery($@"
+                Select
+                    s.""U_D1""
+                From ""@IL_CECOS"" s
+                Where s.""Code"" = '{value.whsCode}';");
+
+            oRecSet.MoveFirst();
+
+            if (oRecSet.RecordCount == 0)
+            {
+                return BadRequest("Cuenta de Centros de Costo No Encontrada Para Ese Almacen. " +  order.Series  +"");
+            }
+
+
+            string cuenta = (string)oRecSet.Fields.Item("U_D1").Value;
 
             for (int i = 0; i < deliveryList.Length; i++)
             {
@@ -291,16 +311,34 @@ namespace SAP_API.Controllers {
                     deliveryList[j].Lines.BaseEntry = order.DocEntry;
                     deliveryList[j].Lines.BaseLine = value.DeliveryRows[i].LineNum;
                     deliveryList[j].Lines.UoMEntry = value.DeliveryRows[i].DeliveryRowDetailList[j].UomEntry;
+                    deliveryList[j].Lines.CostingCode = cuenta;
+                    deliveryList[j].Lines.UserFields.Fields.Item("U_IL_CeCo").Value = cuenta;
                     deliveryList[j].Lines.BaseType = (int)SAPbobsCOM.BoAPARDocumentTypes.bodt_Order;
                     deliveryList[j].Lines.Quantity = value.DeliveryRows[i].DeliveryRowDetailList[j].Count;
 
-                    for (int k = 0; k < value.DeliveryRows[i].DeliveryRowDetailList[j].BatchList.Count; k++)
-                    {
+                    oRecSet.DoQuery(@"
+                                Select
+                                    ""NumInBuy"",
+                                    ""IUoMEntry"",
+                                    ""QryGroup51"",
+                                    ""ManBtchNum"",
+                                    ""U_IL_TipPes""
+                                From OITM Where ""ItemCode"" = '" + value.DeliveryRows[i].DeliveryRowDetailList[j].ItemCode + "'");
+                    oRecSet.MoveFirst();
+                    //double price = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["NumInBuy"].ToObject<double>();
+                    string ba = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["ManBtchNum"].ToObject<string>();
+                    string pe = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["U_IL_TipPes"].ToObject<string>();
 
-                        deliveryList[j].Lines.BatchNumbers.BaseLineNumber = deliveryList[j].Lines.LineNum;
-                        deliveryList[j].Lines.BatchNumbers.BatchNumber = value.DeliveryRows[i].DeliveryRowDetailList[j].BatchList[k].Code;
-                        deliveryList[j].Lines.BatchNumbers.Quantity = value.DeliveryRows[i].DeliveryRowDetailList[j].BatchList[k].Quantity;
-                        deliveryList[j].Lines.BatchNumbers.Add();
+                    if (ba.Equals("Y"))
+                    {
+                        for (int k = 0; k < value.DeliveryRows[i].DeliveryRowDetailList[j].BatchList.Count; k++)
+                        {
+
+                            deliveryList[j].Lines.BatchNumbers.BaseLineNumber = deliveryList[j].Lines.LineNum;
+                            deliveryList[j].Lines.BatchNumbers.BatchNumber = value.DeliveryRows[i].DeliveryRowDetailList[j].BatchList[k].Code;
+                            deliveryList[j].Lines.BatchNumbers.Quantity = value.DeliveryRows[i].DeliveryRowDetailList[j].BatchList[k].Quantity;
+                            deliveryList[j].Lines.BatchNumbers.Add();
+                        }
                     }
 
                     deliveryList[j].Lines.Add();
@@ -344,7 +382,7 @@ namespace SAP_API.Controllers {
             if (order.GetByKey(value.order))
             {
                 delivery.CardCode = order.CardCode;
-                delivery.DocDate = DateTime.Now;
+                //delivery.DocDate = DateTime.Now;
                 delivery.DocDueDate = DateTime.Now;
 
                 oRecSet.DoQuery(@"

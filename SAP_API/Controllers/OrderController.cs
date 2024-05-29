@@ -679,6 +679,7 @@ namespace SAP_API.Controllers
             public char QryGroup42 { get; set; }
             public char QryGroup44 { get; set; }
             public char QryGroup45 { get; set; }
+            public char QryGroup51 { get; set; }
             public char ManBtchNum { get; set; }
             public double U_IL_PesMax { get; set; }
             public double U_IL_PesMin { get; set; }
@@ -861,6 +862,7 @@ Detail.""UgpEntry""
                     ""QryGroup42"",
                     ""QryGroup44"",
                     ""QryGroup45"",
+                    ""QryGroup51"",
                     ""ManBtchNum"",
                     ""U_IL_PesMax"",
                     ""U_IL_PesMin"",

@@ -15,19 +15,19 @@ namespace SAP_API.Models
         public SAPContext()
         {
             oCompany = new SAPbobsCOM.Company();
-            oCompany.Server = "192.168.0.92:30015";
+            oCompany.Server = "NDB@192.168.0.220:30013";
             oCompany.DbServerType = SAPbobsCOM.BoDataServerTypes.dst_HANADB;
-            //oCompany.CompanyDB = "CCFN_PRODUCCCION"; 
+            //oCompany.CompanyDB = "CCFN_PRODUCCCION";   
             //oCompany.CompanyDB = "CCFN_PROD";szzzzzz
             //oCompany.CompanyDB = "CCFN_CORPORATIVO";
             //oCompany.CompanyDB = "CCFN_DEV";
-            oCompany.CompanyDB = "CCFN_B1CORP";
-
+            oCompany.CompanyDB = "SBO_CCFN_PROD";
             oCompany.UserName = "SISTEMAS04";
-            oCompany.Password = "SAP1234";
-            oCompany.DbUserName = "SYSTEM";
+            oCompany.Password = "Ccfn2023.";
+            oCompany.DbUserName = "B1ADMIN";
             oCompany.DbPassword = "B1AdminH2";
-            oCompany.LicenseServer = "192.168.0.92:40000";
+            oCompany.LicenseServer = "192.168.0.219:40000";
+            oCompany.UseTrusted = false;
             oCompany.language = SAPbobsCOM.BoSuppLangs.ln_Spanish;
         }
 

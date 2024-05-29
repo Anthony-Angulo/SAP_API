@@ -956,7 +956,7 @@ ORDER BY ""ItmsGrpNam""
                     JOIN OITW stock ON stock.""ItemCode"" = product.""ItemCode""
                     Where product.""ItemCode"" = '" + id + @"'
                     AND stock.""WhsCode"" = '" + warehouse + @"'
-                    AND priceList.""PriceList"" = " + priceList);
+                    AND priceList.""PriceList"" = " + 3);
                 product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
 
                 oRecSet.DoQuery(@"
@@ -2158,6 +2158,7 @@ header.""UgpEntry"",
                     ""ItemName"",
                     ""QryGroup7"",
                     ""QryGroup41"",
+                    ""QryGroup51"",
                     ""QryGroup45"",
                     ""ManBtchNum"",
                     ""U_IL_PesMax"",

@@ -36,5 +36,23 @@ namespace SAP_API.Models
         public int WarehouseID { get; set; }
 
         public DateTime LastPasswordChangedDate { get; set; }
+
+
+        public class UserSap
+        {
+
+            public string SlpName { get; set; }
+            public string Memo { get; set; }
+            public string firstName { get; set; }
+            public string middleName { get; set; }
+            public string lastName { get; set; }
+            public string extEmpNo { get; set; }
+            public string jobTitle { get; set; }
+            public string position { get; set; }
+            public string dept { get; set; }
+            public string branch { get; set; }
+
+
+        }
     }
 }

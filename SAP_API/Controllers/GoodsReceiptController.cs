@@ -1,18 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using DocumentFormat.OpenXml.Drawing.Charts;
+using DocumentFormat.OpenXml.VariantTypes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using SAP_API.Models;
+using SAPbobsCOM;
 
 namespace SAP_API.Controllers
 {
 
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    //[Authorize]
     public class GoodsReceiptController : ControllerBase
     {
 
@@ -233,6 +236,292 @@ namespace SAP_API.Controllers
             //Console.WriteLine(((double)(s1.Elapsed.TotalMilliseconds * 1000 * 1000) / _max).ToString("0.00 ns"));
 
             return Ok(output);
+        }
+
+        public class GoodReciept
+        {
+            public string serie;
+            public List<GoodRecieptRows> Rows;
+
+        }
+
+        public class GoodRecieptRows
+        {
+            public string ItemCode;
+            public double quantity;
+            public string whsCode;
+            public double cost;
+        }
+
+
+
+        [HttpPost]
+        public async Task<IActionResult> PostGoodsReciept([FromBody] GoodReciept value)
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            Documents goods = (Documents)context.oCompany.GetBusinessObject(BoObjectTypes.oInventoryGenEntry);
+            oRecSet.DoQuery($@"
+                Select
+                    serie1.""SeriesName"",
+                    serie1.""Series"",
+                    serie1.""ObjectCode""
+                From NNM1 serie1
+                Where serie1.""ObjectCode"" = 59 AND serie1.""SeriesName"" = '{value.serie}';");
+
+            int Serie = (int)oRecSet.Fields.Item("Series").Value;
+
+            if (oRecSet.RecordCount == 0)
+            {
+                return BadRequest("Error En Sucursal.");
+            }
+
+            goods.TaxDate = DateTime.Now;
+            goods.Series = Serie;
+
+            oRecSet.DoQuery($@"
+                Select
+                    s.""U_D1""
+                From ""@IL_CECOS"" s
+                Where s.""Code"" = '{value.serie}';");
+
+            oRecSet.MoveFirst();
+
+            if (oRecSet.RecordCount == 0)
+            {
+                return BadRequest("Cuenta de Centros de Costo No Encontrada Para Ese Almacen.");
+            }
+
+
+            string cuenta = (string)oRecSet.Fields.Item("U_D1").Value;
+
+            for (int i = 0; i < value.Rows.Count; i++)
+            {
+                goods.Lines.ItemCode = value.Rows[i].ItemCode;
+                goods.Lines.Quantity = value.Rows[i].quantity;
+                //goods.Lines.UnitPrice = value.Rows[i].StockPrice;
+                goods.Lines.UnitPrice = value.Rows[i].cost;
+                goods.Lines.WarehouseCode = value.Rows[i].whsCode;
+                goods.Lines.CostingCode = cuenta;
+                oRecSet.DoQuery(@"
+                    Select T2.""DfltProfit"",
+                            T2.""WhsCode"",
+                            T0.""ItemCode""
+                    From OITM T0 INNER JOIN OITB T1 ON T0.""ItmsGrpCod"" = T1.""ItmsGrpCod""
+                    INNER JOIN OGAR T2 ON T1.""ItmsGrpCod"" = T2.""ItmsGrpCod"" 
+                    Where T2.""WhsCode"" = '!^|' AND T0.""ItemCode"" = '" + value.Rows[i].ItemCode + "'");
+                oRecSet.MoveFirst();
+                if (oRecSet.RecordCount == 0)
+                {
+                    return BadRequest("Uno o varios productos no existen en SAP V10.");
+                }
+                JToken accCode = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+
+                if (accCode["DfltProfit"].Equals(null))
+                {
+                    JToken accCode1 = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][1];
+                    goods.Lines.AccountCode = (string)accCode1["DfltProfit"];
+                }
+                else
+                {
+                    goods.Lines.AccountCode = (string)accCode["DfltProfit"];
+                }
+
+
+                oRecSet.DoQuery(@"
+                    Select ""ItemCode"", 
+                           ""ManBtchNum"",
+                           ""ItmsGrpCod""
+                    From OITM Where ""ItemCode"" = '" + value.Rows[i].ItemCode + "'");
+                oRecSet.MoveFirst();
+                if (oRecSet.RecordCount == 0)
+                {
+                    return BadRequest("Uno o varios productos no existen en SAP V10.");
+                }
+                JToken product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+
+                String lote = product["ManBtchNum"].ToObject<String>();
+
+
+                if (lote.Equals("Y"))
+                {
+                    goods.Lines.BatchNumbers.BatchNumber = "SI";
+                    goods.Lines.BatchNumbers.Quantity = value.Rows[i].quantity;
+                    goods.Lines.BatchNumbers.Add();
+                }
+
+                //int Serie = (int)oRecSet.Fields.Item("Series").Value;
+                //string accCode = (string)oRecSet.Fields.Item("DfltProfit
+
+                goods.Lines.Add();
+            }
+
+
+
+
+            if (goods.Add() == 0)
+            {
+                //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
+                return Ok(new { value = context.oCompany.GetNewObjectKey() });
+            }    
+            else
+            {
+                string error = context.oCompany.GetLastErrorDescription();
+                //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                return BadRequest(new { error });
+            }
+
+        }
+
+        public class GoodRecieptAut
+        {
+            public string Filler;
+            public int DocEntry;
+            public int DocNum;
+            public string ToWhsCode;
+            public string U_SO1_01SUCURSAL;
+            public List<GoodRecieptRowsAut> Rows;
+        }
+
+        public class GoodRecieptRowsAut
+        {
+            public string ItemCode;
+            public double Quantity;
+            public string StockPrice;
+            public string WhsCode;
+            public string FromWhsCod;
+            public double InvQty;
+        }
+
+        [HttpPost("Replica")]
+        public async Task<IActionResult> PostGoodsRecieptAut([FromBody] GoodRecieptAut value)
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            Documents goods = (Documents)context.oCompany.GetBusinessObject(BoObjectTypes.oInventoryGenEntry);
+
+            oRecSet.DoQuery($@"
+                Select
+                    s.""U_SO1_02NUMRECEPCION""
+                From OIGN s
+                Where s.""U_SO1_02NUMRECEPCION"" = '{value.DocNum}';");
+
+            if (oRecSet.RecordCount != 0)
+            {
+                return Ok();
+            }
+
+            oRecSet.DoQuery($@"
+                Select
+                    serie1.""SeriesName"",
+                    serie1.""Series"",
+                    serie1.""ObjectCode""
+                From NNM1 serie1
+                Where serie1.""ObjectCode"" = 59 AND serie1.""SeriesName"" = '{value.Filler.Substring(0,3)}';");
+
+            int Serie = (int)oRecSet.Fields.Item("Series").Value;
+
+            if (oRecSet.RecordCount == 0)
+            {
+                return BadRequest("Error En Sucursal.");
+            }
+
+            goods.TaxDate = DateTime.Now;
+            goods.Series = Serie;
+            goods.UserFields.Fields.Item("U_SO1_02NUMRECEPCION").Value = value.DocNum.ToString();
+
+            oRecSet.DoQuery($@"
+                Select
+                    s.""U_D1""
+                From ""@IL_CECOS"" s
+                Where s.""Code"" = '{value.Filler.Substring(0, 3)}';");
+
+            oRecSet.MoveFirst();
+
+            if (oRecSet.RecordCount == 0)
+            {
+                return BadRequest("Cuenta de Centros de Costo No Encontrada Para Ese Almacen.");
+            }
+
+
+            string cuenta = (string)oRecSet.Fields.Item("U_D1").Value;
+
+            for (int i = 0; i < value.Rows.Count; i++)
+            {
+                goods.Lines.ItemCode = value.Rows[i].ItemCode;
+                goods.Lines.Quantity = value.Rows[i].InvQty;
+                //goods.Lines.UnitPrice = value.Rows[i].StockPrice;
+                goods.Lines.UnitPrice = double.Parse(value.Rows[i].StockPrice);
+                goods.Lines.WarehouseCode = value.Rows[i].FromWhsCod.Substring(0, 3);
+                goods.Lines.CostingCode = cuenta;
+                oRecSet.DoQuery(@"
+                    Select T2.""DfltProfit"",
+                            T2.""WhsCode"",
+                            T0.""ItemCode""
+                    From OITM T0 INNER JOIN OITB T1 ON T0.""ItmsGrpCod"" = T1.""ItmsGrpCod""
+                    INNER JOIN OGAR T2 ON T1.""ItmsGrpCod"" = T2.""ItmsGrpCod"" 
+                    Where T2.""WhsCode"" = '!^|' AND T0.""ItemCode"" = '" + value.Rows[i].ItemCode + "'");
+                oRecSet.MoveFirst();
+                if (oRecSet.RecordCount == 0)
+                {
+                    return BadRequest("Uno o varios productos no existen en SAP V10.");
+                }
+                JToken accCode = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+
+                if (accCode["DfltProfit"].Equals(null))
+                {
+                    JToken accCode1 = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][1];
+                    goods.Lines.AccountCode = (string)accCode1["DfltProfit"];
+                }
+                else
+                {
+                    goods.Lines.AccountCode = (string)accCode["DfltProfit"];
+                }
+
+
+                oRecSet.DoQuery(@"
+                    Select ""ItemCode"", 
+                           ""ManBtchNum"",
+                           ""ItmsGrpCod""
+                    From OITM Where ""ItemCode"" = '" + value.Rows[i].ItemCode + "'");
+                oRecSet.MoveFirst();
+                if (oRecSet.RecordCount == 0)
+                {
+                    return BadRequest("Uno o varios productos no existen en SAP V10.");
+                }
+                JToken product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+
+                String lote = product["ManBtchNum"].ToObject<String>();
+
+
+                if (lote.Equals("Y"))
+                {
+                    goods.Lines.BatchNumbers.BatchNumber = "SI";
+                    goods.Lines.BatchNumbers.Quantity = value.Rows[i].InvQty;
+                    goods.Lines.BatchNumbers.Add();
+                }
+
+                //int Serie = (int)oRecSet.Fields.Item("Series").Value;
+                //string accCode = (string)oRecSet.Fields.Item("DfltProfit
+
+                goods.Lines.Add();
+            }
+
+
+
+
+            if (goods.Add() == 0)
+            {
+                //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
+                return Ok(new { value = context.oCompany.GetNewObjectKey() });
+            }
+            else
+            {
+                string error = context.oCompany.GetLastErrorDescription();
+                //context.oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                return BadRequest(new { error });
+            }
+
         }
 
     }

@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.ExtendedProperties;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +20,7 @@ namespace SAP_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    //[Authorize]
     public class InventoryTransferController : ControllerBase
     {
         private readonly IConfiguration _configuration;
@@ -492,44 +493,66 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
             {
                 return NoContent();
             }
-
             oRecSet.DoQuery($@"
                 Select
                     serie1.""SeriesName"",
                     serie1.""Series"",
-                    serie1.""ObjectCode"",
-                    serie2.""SeriesName""as s1,
-                    serie2.""Series"" as s2,
-                    serie2.""ObjectCode"" as s3
+                    serie1.""ObjectCode""
                 From NNM1 serie1
-                JOIN NNM1 serie2 ON serie1.""SeriesName"" = serie2.""SeriesName""
-                Where serie1.""ObjectCode"" = 67 AND serie2.""Series"" = '{transferRequest.Series}';");
+                Where serie1.""ObjectCode"" = 67 AND serie1.""SeriesName"" = '{value.serie}';");
+
+            //oRecSet.DoQuery($@"
+            //    Select
+            //        serie1.""SeriesName"",
+            //        serie1.""Series"",
+            //        serie1.""ObjectCode"",
+            //        serie2.""SeriesName""as s1,
+            //        serie2.""Series"" as s2,
+            //        serie2.""ObjectCode"" as s3
+            //    From NNM1 serie1
+            //    JOIN NNM1 serie2 ON serie1.""SeriesName"" = serie2.""SeriesName""
+            //    Where serie1.""ObjectCode"" = 67 AND serie2.""Series"" = '{transferRequest.Series}';");
             if (oRecSet.RecordCount == 0)
             {
                 return BadRequest("Error En Sucursal.");
             }
 
 
-            try
-            {
-                if (transferRequest.ToWarehouse.Equals("TSR"))
-                {
-                    HacerMovimientoDeStockMenudeo(value, context, transferRequest);
-                }
-                else
-                {
-                    HacerMovimientoDeStockMayoreo(value, context, transferRequest);
-                }
-            }
-            catch (Exception ex)
-            {
-                return BadRequest("Hubo un error al hacer el movimiento entre lotes");
-            }
+            //try
+            //{
+            //    if (transferRequest.ToWarehouse.Equals("TSR"))
+            //    {
+            //        HacerMovimientoDeStockMenudeo(value, context, transferRequest);
+            //    }
+            //    else
+            //    {
+            //        HacerMovimientoDeStockMayoreo(value, context, transferRequest);
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    return BadRequest("Hubo un error al hacer el movimiento entre lotes");
+            //}
 
             int Serie = (int)oRecSet.Fields.Item("Series").Value;
 
             transfer.DocDate = DateTime.Now;
             transfer.Series = Serie;
+
+            oRecSet.DoQuery($@"
+                Select
+                    s.""U_D1""
+                From ""@IL_CECOS"" s
+                Where s.""Code"" = '{value.serie}';");
+
+            oRecSet.MoveFirst();
+
+            if (oRecSet.RecordCount == 0)
+            {
+                return BadRequest("Cuenta de Centros de Costo No Encontrada Para Ese Almacen.");
+            }
+
+            string cuenta = (string)oRecSet.Fields.Item("U_D1").Value;
 
             for (int i = 0; i < value.TransferRows.Count; i++)
             {
@@ -537,6 +560,7 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 transfer.Lines.BaseEntry = transferRequest.DocEntry;
                 transfer.Lines.BaseLine = value.TransferRows[i].LineNum;
                 transfer.Lines.Quantity = value.TransferRows[i].Count;
+                transfer.Lines.DistributionRule = cuenta;
                 transfer.Lines.BaseType = InvBaseDocTypeEnum.InventoryTransferRequest;
 
                 if (value.TransferRows[i].Pallet != String.Empty && value.TransferRows[i].Pallet != null)
@@ -545,34 +569,68 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 }
                 if (transferRequest.ToWarehouse.Equals("TSR"))
                 {
-                    transfer.Lines.BatchNumbers.BatchNumber = "SI";
-                    transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList.Sum(x => x.Quantity);
-                    transfer.Lines.BatchNumbers.Add();
+                    oRecSet.DoQuery(@"
+                                Select
+                                    ""ManBtchNum""
+                                From OITM Where ""ItemCode"" = '" + value.TransferRows[i].ItemCode + "'");
+                    oRecSet.MoveFirst();
+                    //double price = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["NumInBuy"].ToObject<double>();
+                    string ba = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["ManBtchNum"].ToObject<string>();
+                    if (ba.Equals("Y"))
+                    {
+                        transfer.Lines.BatchNumbers.BatchNumber = "SI";
+                        transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList.Sum(x => x.Quantity);
+                        transfer.Lines.BatchNumbers.Add();
+                    }
+
                 }
                 else
                 {
-                    for (int k = 0; k < value.TransferRows[i].BatchList.Count; k++)
+                    oRecSet.DoQuery(@"
+                                Select
+                                    ""NumInBuy"",
+                                    ""IUoMEntry"",
+                                    ""QryGroup51"",
+                                    ""ManBtchNum"",
+                                    ""U_IL_TipPes""
+                                From OITM Where ""ItemCode"" = '" + value.TransferRows[i].ItemCode + "'");
+                    oRecSet.MoveFirst();
+                    //double price = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["NumInBuy"].ToObject<double>();
+                    string ba = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["ManBtchNum"].ToObject<string>();
+                    string pe = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0]["U_IL_TipPes"].ToObject<string>();
+
+                    if(ba.Equals("Y"))
                     {
-                        if (String.IsNullOrEmpty(value.TransferRows[i].BatchList[k].CodeBar))
+                        for (int k = 0; k < value.TransferRows[i].BatchList.Count; k++)
                         {
 
                             transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].Code;
                             transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList[k].Quantity;
                             transfer.Lines.BatchNumbers.Add();
+
+
+                            //if (String.IsNullOrEmpty(value.TransferRows[i].BatchList[k].CodeBar))
+                            //{
+
+                            //    transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].Code;
+                            //    transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList[k].Quantity;
+                            //    transfer.Lines.BatchNumbers.Add();
+                            //}
+                            //else
+                            //{
+                            //    if (value.TransferRows[i].BatchList[k].Code == "SI")
+                            //        transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].CodeBar.Length > 36 ? value.TransferRows[i].BatchList[k].CodeBar.Substring(value.TransferRows[i].BatchList[k].CodeBar.Length - 36) : value.TransferRows[i].BatchList[k].CodeBar;
+                            //    else
+                            //        transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].Code;
+
+                            //    transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList[k].Quantity;
+                            //    transfer.Lines.BatchNumbers.Add();
+
+                            //}
+
                         }
-                        else
-                        {
-                            if (value.TransferRows[i].BatchList[k].Code == "SI")
-                                transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].CodeBar.Length > 36 ? value.TransferRows[i].BatchList[k].CodeBar.Substring(value.TransferRows[i].BatchList[k].CodeBar.Length - 36) : value.TransferRows[i].BatchList[k].CodeBar;
-                            else
-                                transfer.Lines.BatchNumbers.BatchNumber = value.TransferRows[i].BatchList[k].Code;
-
-                            transfer.Lines.BatchNumbers.Quantity = value.TransferRows[i].BatchList[k].Quantity;
-                            transfer.Lines.BatchNumbers.Add();
-
-                        }
-
                     }
+                    
                 }
 
                 transfer.Lines.Add();
@@ -643,6 +701,293 @@ ORDER BY T1.""U_SO1_NUMEROARTICULO""
                 return Conflict(error);
             }
             return Ok(newRequest);
+        }
+
+        public class TransferSAP10
+        {
+            public string serie;
+            public string sucRetail;
+            public string folioDoc;
+            public List<TransferSAP10Rows> Rows;
+
+        }
+
+        public class TransferSAP10Rows
+        {
+            public string ItemCode;
+            public double quantity;
+            public double invQty;
+            public int baseUnit;
+            public string toWhsCode;
+            public int uomEntry;
+            public string fromWhsCode;
+        }
+
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status409Conflict)]
+        //[Authorize]
+        [HttpPost("SAP10")]
+        [AllowAnonymous]
+        public async Task<IActionResult> InventoryTransferPostSAP10([FromBody] TransferSAP10 value)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            //StockTransfer transferRequest = (StockTransfer)context.oCompany.GetBusinessObject(BoObjectTypes.oInventoryTransferRequest);
+            StockTransfer transfer = (StockTransfer)context.oCompany.GetBusinessObject(BoObjectTypes.oStockTransfer);
+            Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
+            //if (!transferRequest.GetByKey(value.DocEntry))
+            //{
+            //    return NoContent();
+            //}
+
+            oRecSet.DoQuery($@"
+                Select
+                    serie1.""SeriesName"",
+                    serie1.""Series"",
+                    serie1.""ObjectCode""
+                From NNM1 serie1
+                Where serie1.""ObjectCode"" = 67 AND serie1.""SeriesName"" = '{value.serie}';");
+            oRecSet.MoveFirst();
+            if (oRecSet.RecordCount == 0)
+            {
+                return BadRequest("Error En Sucursal.");
+            }
+
+
+            int Serie = (int)oRecSet.Fields.Item("Series").Value; 
+
+            transfer.DocDate = DateTime.Now;
+            transfer.Series = Serie;
+            transfer.ToWarehouse = value.Rows[0].toWhsCode;
+            transfer.FromWarehouse = value.Rows[0].fromWhsCode;
+            transfer.PriceList = 6;
+            transfer.UserFields.Fields.Item("U_SO1_01SUCURSAL").Value = value.sucRetail;
+            transfer.Comments = value.folioDoc;
+
+            oRecSet.DoQuery($@"
+                Select
+                    s.""U_D1""
+                From ""@IL_CECOS"" s
+                Where s.""Code"" = '{value.serie}';");
+
+            oRecSet.MoveFirst();
+
+            if (oRecSet.RecordCount == 0)
+            {
+                return BadRequest("Cuenta de Centros de Costo No Encontrada Para Ese Almacen.");
+            }
+
+            string cuenta = (string)oRecSet.Fields.Item("U_D1").Value;
+
+            for (int i = 0; i < value.Rows.Count; i++)
+            {
+
+
+                transfer.Lines.Quantity = value.Rows[i].invQty;
+                transfer.Lines.ItemCode = value.Rows[i].ItemCode;
+                transfer.Lines.WarehouseCode = value.Rows[i].toWhsCode;
+                transfer.Lines.FromWarehouseCode = value.Rows[i].fromWhsCode;
+                transfer.Lines.DistributionRule = cuenta;
+
+
+                oRecSet.DoQuery(@"
+                    Select ""ItemCode"", 
+                           ""ManBtchNum"",
+                           ""ItmsGrpCod""
+                    From OITM Where ""ItemCode"" = '" + value.Rows[i].ItemCode + "'");
+                oRecSet.MoveFirst();
+
+                if (oRecSet.RecordCount == 0)
+                {
+                    return BadRequest("Uno o varios productos no existen en SAP V10.");
+                }
+
+                JToken product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+                String lote = product["ManBtchNum"].ToObject<String>();
+
+                if (lote.Equals("Y"))
+                {
+                    transfer.Lines.BatchNumbers.BatchNumber = "SI";
+                    transfer.Lines.BatchNumbers.Quantity = value.Rows[i].invQty;
+                    transfer.Lines.BatchNumbers.Add();
+                }
+
+
+                transfer.Lines.Add();
+            }
+
+
+            StringBuilder Errors = new StringBuilder();
+            if (transfer.Add() != 0)
+            {
+                Errors.AppendLine($"Documento Transferencia: ");
+                Errors.AppendLine(context.oCompany.GetLastErrorDescription());
+                
+            }
+
+            if (Errors.Length != 0)
+            {
+                string error = Errors.ToString();
+                return BadRequest(error);
+            }
+
+            //sendMail(value, transfer, transferRequest);
+
+            return Ok();
+
+
+        }
+        public class TransferSAP10Aut
+        {
+            public string Filler;
+            public int DocEntry;
+            public int DocNum;
+            public string ToWhsCode;
+            public string U_SO1_01SUCURSAL;
+            public List<TransferSAP10RowsAut> Rows;
+        }
+
+        public class TransferSAP10RowsAut
+        {
+            public string ItemCode;
+            public double Quantity;
+            public string StockPrice;
+            public string WhsCode;
+            public string FromWhsCod;
+            public double InvQty;
+        }
+
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status409Conflict)]
+        //[Authorize]
+        [HttpPost("SAP10Aut")]
+        [AllowAnonymous]
+        public async Task<IActionResult> InventoryTransferPostSAP10Aut([FromBody] TransferSAP10Aut value)
+        {
+
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            //StockTransfer transferRequest = (StockTransfer)context.oCompany.GetBusinessObject(BoObjectTypes.oInventoryTransferRequest);
+            StockTransfer transfer = (StockTransfer)context.oCompany.GetBusinessObject(BoObjectTypes.oStockTransfer);
+            Recordset oRecSet = (Recordset)context.oCompany.GetBusinessObject(BoObjectTypes.BoRecordset);
+            //if (!transferRequest.GetByKey(value.DocEntry))
+            //{
+            //    return NoContent();
+            //}
+
+            oRecSet.DoQuery($@"
+                Select
+                    s.""DocNum""
+                From OWTR s
+                Where s.""Comments"" = '{value.DocNum}';");
+
+            if (oRecSet.RecordCount != 0)
+            {
+                return Ok();
+            }
+
+
+
+            oRecSet.DoQuery($@"
+                Select
+                    serie1.""SeriesName"",
+                    serie1.""Series"",
+                    serie1.""ObjectCode""
+                From NNM1 serie1
+                Where serie1.""ObjectCode"" = 67 AND serie1.""SeriesName"" = '{value.Filler.Substring(0, 3)}';");
+            oRecSet.MoveFirst();
+            if (oRecSet.RecordCount == 0)
+            {
+                return BadRequest("Error En Sucursal.");
+            }
+
+
+            int Serie = (int)oRecSet.Fields.Item("Series").Value;
+
+            transfer.DocDate = DateTime.Now;
+            transfer.Series = Serie;
+            transfer.ToWarehouse = value.ToWhsCode.Substring(0, 3);
+            transfer.FromWarehouse = value.Rows[0].FromWhsCod.Substring(0, 3);
+            transfer.PriceList = 6;
+            transfer.UserFields.Fields.Item("U_SO1_01SUCURSAL").Value = value.U_SO1_01SUCURSAL;
+            transfer.Comments = value.DocNum.ToString();
+
+            oRecSet.DoQuery($@"
+                Select
+                    s.""U_D1""
+                From ""@IL_CECOS"" s
+                Where s.""Code"" = '{value.Filler.Substring(0, 3)}';");
+
+            oRecSet.MoveFirst();
+            
+            if (oRecSet.RecordCount == 0)
+            {
+                return BadRequest("Cuenta de Centros de Costo No Encontrada Para Ese Almacen.");
+            }
+
+            string cuenta = (string)oRecSet.Fields.Item("U_D1").Value;
+
+            for (int i = 0; i < value.Rows.Count; i++)
+            {
+
+
+                transfer.Lines.Quantity = value.Rows[i].InvQty;
+                transfer.Lines.ItemCode = value.Rows[i].ItemCode;
+
+                transfer.Lines.WarehouseCode = value.Rows[i].WhsCode.Substring(0, 3);
+                transfer.Lines.FromWarehouseCode = value.Rows[i].FromWhsCod.Substring(0, 3);
+                transfer.Lines.DistributionRule = cuenta;
+
+
+                oRecSet.DoQuery(@"
+                    Select ""ItemCode"", 
+                           ""ManBtchNum"",
+                           ""ItmsGrpCod""
+                    From OITM Where ""ItemCode"" = '" + value.Rows[i].ItemCode + "'");
+                oRecSet.MoveFirst();
+
+                if (oRecSet.RecordCount == 0)
+                {
+                    return BadRequest("Uno o varios productos no existen en SAP V10.");
+                }
+
+                JToken product = context.XMLTOJSON(oRecSet.GetAsXML())["OITM"][0];
+                String lote = product["ManBtchNum"].ToObject<String>();
+
+                if (lote.Equals("Y"))
+                {
+                    transfer.Lines.BatchNumbers.BatchNumber = "SI";
+                    transfer.Lines.BatchNumbers.Quantity = value.Rows[i].InvQty;
+                    transfer.Lines.BatchNumbers.Add();
+                }
+
+
+                transfer.Lines.Add();
+            }
+
+
+            StringBuilder Errors = new StringBuilder();
+            if (transfer.Add() != 0)
+            {
+                Errors.AppendLine($"Documento Transferencia: ");
+                Errors.AppendLine(context.oCompany.GetLastErrorDescription());
+
+            }
+
+            if (Errors.Length != 0)
+            {
+                string error = Errors.ToString();
+                return BadRequest(error);
+            }
+
+            //sendMail(value, transfer, transferRequest);
+
+            return Ok();
+
+
         }
 
         [NonAction]

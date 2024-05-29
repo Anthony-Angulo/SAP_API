@@ -73,7 +73,7 @@ namespace SAP_API.Controllers
  <li>Cantidad: <b>{request.Cantidad}</b></li>
 <li>Costo del artículo*: <b>{double.Parse(request.Costo):##.0000}</b> </li>
     <li>Precio base: <b>{preciobase:##.0000} {request.Currency}</b></li>
-    <li>Precio introducido: <b>{double.Parse(request.PrecioSolicitado.Substring(4)):##.0000} {request.PrecioSolicitado.Substring(0, 4)}</b></li>
+    <li>Precio introducido: <b>{double.Parse(request.PrecioSolicitado.Substring(0, 6)):##.0000} {request.PrecioSolicitado.Substring(7)}</b></li>
 </ul>    
 <p>*El costo del artículo es en base a la última entrada de mercancía registrada</p>
 <a href=""{_configuration["DireccionAutorizacion"]}{request.id}"" target=""blank""><button
@@ -307,11 +307,12 @@ namespace SAP_API.Controllers
                 }
                 else if (autorizacion.Autorizado == 1)
                 {
-                    return Ok("Autorizacion ya fue aprobada anteriormente");
+                    return Ok("Autorización ya fue aprobada anteriormente");
                 }
                 autorizacion.Autorizado = 1;
                 autorizacion.FechaAutorizado = DateTime.Now;
                 _context.SaveChanges();
+               
 
             }
             catch (Exception ex)
@@ -343,7 +344,7 @@ namespace SAP_API.Controllers
                     $"Cliente: {autorizacion.Cliente}\n" +
                     $"Producto: {autorizacion.Producto}\n" +
                     $"Precio base: {preciobase:##.0000} {autorizacion.Currency}\n" +
-                    $"Precio introducido: {double.Parse(autorizacion.PrecioSolicitado.Substring(4)):##.0000} {autorizacion.PrecioSolicitado.Substring(0, 4)}\n" +
+                    $"Precio introducido: {double.Parse(autorizacion.PrecioSolicitado.Substring(0, 6)):##.0000} {autorizacion.PrecioSolicitado.Substring(7)}\n" +
                     $"Tiene 60 minutos para registrar la factura antes de que la autorización expire.";
 
                 // Add Recipient 
@@ -389,7 +390,9 @@ namespace SAP_API.Controllers
                 int result = oUserTable.Add();
                 if (result == 0)
                 {
-                    return Content(@"<script>window.close();</script>", "text/html");
+                    //return Content(@"<script>window.close();</script>", "text/html");
+                    return Ok("Autorización fue Realizada");
+
                 }
                 else
                 {
@@ -403,7 +406,7 @@ namespace SAP_API.Controllers
                 return BadRequest(ex);
             }
 
-
+            
         }
         [HttpGet("InsertarSAP")]
         public IActionResult InsertarSAP()

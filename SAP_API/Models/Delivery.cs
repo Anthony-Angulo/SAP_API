@@ -6,6 +6,7 @@ namespace SAP_API.Models {
 
     public class Delivery {
         public int DocEntry { set; get; }
+        public string whsCode { set; get; }
         public List<DeliveryRow> DeliveryRows { set; get; }
     }
 
@@ -41,6 +42,7 @@ namespace SAP_API.Models {
 
     public class DeliveryRowDetail {
         public double Count { set; get; }
+        public string ItemCode { set; get; }
         public int UomEntry { set; get; }
         public List<DeliveryRowBatch> BatchList { set; get; }
     }

@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using Microsoft.AspNetCore.Authorization;
 using SAP_API.Models;
+using SAPbobsCOM;
+using System.Collections.Generic;
 
 namespace SAP_API.Controllers
 {
@@ -56,6 +58,7 @@ namespace SAP_API.Controllers
                     ""UgpEntry"",
                     ""ItemName"",
                     ""QryGroup7"",
+""QryGroup51"",
                     ""QryGroup41"",
                     ""ManBtchNum"",
                     ""U_IL_PesMax"",
@@ -176,7 +179,39 @@ namespace SAP_API.Controllers
             }
 
         }
+
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [HttpDelete]
+        public async Task<IActionResult> DeleteCodeBar([FromBody] List<Int32> codebar)
+        {
+            SAPContext context = HttpContext.RequestServices.GetService(typeof(SAPContext)) as SAPContext;
+            SAPbobsCOM.CompanyService services = context.oCompany.GetCompanyService();
+            SAPbobsCOM.BarCodesService barCodesService = (SAPbobsCOM.BarCodesService)services.GetBusinessService(SAPbobsCOM.ServiceTypes.BarCodesService);
+            SAPbobsCOM.BarCode barCode = (SAPbobsCOM.BarCode)barCodesService.GetDataInterface(SAPbobsCOM.BarCodesServiceDataInterfaces.bsBarCode);
+            //SAPbobsCOM.Recordset oRecSet = (SAPbobsCOM.Recordset)context.oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            SAPbobsCOM.BarCodeParams oBarCodeParams = (SAPbobsCOM.BarCodeParams)barCodesService.GetDataInterface(BarCodesServiceDataInterfaces.bsBarCodeParams);
+
+            for (int i = 0; i < codebar.Count; i++)
+            {
+                oBarCodeParams.AbsEntry = codebar[i];
+                try
+                {
+                    barCodesService.Delete(oBarCodeParams);
+
+                }
+                catch (Exception x)
+                {
+                    return BadRequest(x.Message);
+                }
+            }
+
+            return Ok("BorradoCorrectamente");
+
+        }
     }
+
+
 
     internal class NotFoundReturning
     {

@@ -52,6 +52,7 @@ namespace SAP_API.Models
 
     public class Transfer {
         public int DocEntry { set; get; }
+        public string serie {  set; get; }
         public List<TransferRow> TransferRows { set; get; }
     }
 
